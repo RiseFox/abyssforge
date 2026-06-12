@@ -6,7 +6,9 @@ AbyssForge is a browser-based 2D mining, crafting, and survival prototype inspir
 
 - Procedural mine world with seed-based terrain and a quality-gated spawn area.
 - Mining, block placement, ladders, torches, crafting, mobs, loot, health, energy, and depth progression.
-- Torch and headlamp lighting, day/night mood, background music, and compact pixel-art UI.
+- Secret vault rooms with cache chests, rare relic materials, and hidden depth bosses.
+- Torch and headlamp lighting, day/night mood, situational background music, and compact pixel-art UI.
+- Expanded relic crafting for stronger blades, blast satchels, health/energy charms, and shadow ward protection.
 - Local Playwright smoke check for spawn stability across many seeds.
 
 ## Controls

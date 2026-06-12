@@ -15,6 +15,8 @@
     bat: "Bats picked you apart in the dark.",
     slime: "Dissolved by a cave slime.",
     golem: "Crushed by a deep golem.",
+    broodmother: "The Broodmother dragged you into the webbed vault.",
+    warden: "The Abyss Warden broke your descent.",
     lava: "You fell into lava.",
     dark: "The deep darkness drained you.",
     fall: "You hit the ground too hard.",
@@ -368,9 +370,9 @@
       }
 
       if (Math.abs(vx) > 0 && onFloor) {
-        this.sim.energy = clamp(this.sim.energy - dt * (sprinting ? 7.5 : 2.4), 0, 100);
+        this.sim.energy = clamp(this.sim.energy - dt * (sprinting ? 7.5 : 2.4), 0, this.sim.maxEnergy);
       } else {
-        this.sim.energy = clamp(this.sim.energy + dt * 5.5, 0, 100);
+        this.sim.energy = clamp(this.sim.energy + dt * 5.5, 0, this.sim.maxEnergy);
       }
       this.updateSurvivalRegen(dt, onFloor, inLava);
 
@@ -441,8 +443,32 @@
     }
 
     currentMusicMode() {
-      if (this.depthMeters() > 10) return "cave";
+      const depth = this.depthMeters();
+      if (this.hasActiveBoss()) return "boss";
+      if (this.hasNearbyDanger()) return "danger";
+      if (this.nearUnopenedSecretChest()) return "treasure";
+      if (depth > 130) return "deep";
+      if (depth > 10) return "cave";
       return this.phaseName() === "Night" ? "night" : "surface";
+    }
+
+    hasActiveBoss() {
+      return this.enemies?.getChildren().some((enemy) => enemy.active && ENEMIES[enemy.kind]?.boss) || false;
+    }
+
+    hasNearbyDanger() {
+      if (!this.enemies) return false;
+      return this.enemies.getChildren().some((enemy) =>
+        enemy.active && Phaser.Math.Distance.Between(enemy.x, enemy.y, this.player.x, this.player.y) < 220
+      );
+    }
+
+    nearUnopenedSecretChest() {
+      const px = this.player.x / TILE;
+      const py = this.player.y / TILE;
+      return (this.sim.secrets || []).some((secret) =>
+        !secret.opened && secret.chest && Math.abs(secret.chest.x - px) <= 8 && Math.abs(secret.chest.y - py) <= 6
+      );
     }
 
     updateSky() {
@@ -469,6 +495,7 @@
 
     playerLight() {
       let best = Math.max(this.ambientLight(), LAMPS[this.sim.lamp].glow);
+      if (this.sim.ward) best = Math.max(best, 0.28);
       const px = this.player.x / TILE;
       const py = this.player.y / TILE;
       for (const light of this.sim.lights) {
@@ -609,13 +636,13 @@
     applyDamage(amount, cause) {
       if (this.dead) return;
       this.lastDamageAt = this.time.now;
-      this.sim.health = clamp(this.sim.health - amount, 0, 100);
+      this.sim.health = clamp(this.sim.health - amount, 0, this.sim.maxHealth);
       ML.flashDamage();
       if (this.sim.health <= 0) this.failDescent(cause);
     }
 
     updateSurvivalRegen(dt, onFloor, inLava) {
-      if (inLava || !onFloor || this.sim.health >= 100) return;
+      if (inLava || !onFloor || this.sim.health >= this.sim.maxHealth) return;
       if (this.time.now - this.lastDamageAt < 5200) return;
       if (this.sim.energy < 30) return;
       const danger = this.enemies.getChildren().some((enemy) =>
@@ -628,7 +655,7 @@
       if (!surfaceRest && !litRest) return;
       const rate = surfaceRest ? 1.15 : 0.55;
       const before = this.sim.health;
-      this.sim.health = clamp(this.sim.health + dt * rate, 0, 100);
+      this.sim.health = clamp(this.sim.health + dt * rate, 0, this.sim.maxHealth);
       if (Math.floor(before) !== Math.floor(this.sim.health) && (!this.actionHoldUntil || this.time.now > this.actionHoldUntil)) {
         this.currentAction = "Recover";
       }
@@ -658,11 +685,23 @@
 
     describePointerTarget() {
       const enemy = this.findEnemyAtPointer(this.input.activePointer);
-      if (enemy) return ENEMIES[enemy.kind] ? enemy.kind.charAt(0).toUpperCase() + enemy.kind.slice(1) : "Enemy";
+      if (enemy) return this.enemyName(enemy.kind);
       const target = this.targetTile(this.input.activePointer);
       if (!target) return "Out of range";
       if (target.tile === AIR) return "Air";
       return BLOCKS[target.tile]?.name || "Unknown";
+    }
+
+    enemyName(kind) {
+      const names = {
+        crawler: "Crawler",
+        bat: "Bat",
+        slime: "Slime",
+        golem: "Deep golem",
+        broodmother: "Broodmother",
+        warden: "Abyss Warden"
+      };
+      return names[kind] || "Enemy";
     }
 
     findEnemyAtPointer(pointer) {
@@ -779,7 +818,7 @@
       let stamina = 0.55 + this.sim.energy / 220;
       if (this.sim.energy < 5) stamina *= 0.55;
       this.mineProgress += (delta / 1000) * PICKS[this.sim.pickLevel].speed * stamina / block.hardness;
-      this.sim.energy = clamp(this.sim.energy - (delta / 1000) * 9.5, 0, 100);
+      this.sim.energy = clamp(this.sim.energy - (delta / 1000) * 9.5, 0, this.sim.maxEnergy);
       this.targetLabel = block.name;
       this.setAction("Mining", 220);
       if (this.time.now > this.pickSwingUntil - 80) {
@@ -856,6 +895,7 @@
 
     lootChest(x, y) {
       const depth = Math.max(0, y - (this.sim.surface[x] || 24));
+      const secret = this.sim.secretAt(x, y);
       const loot = { coal: 2 + Math.floor(Math.random() * 3), coin: 4 + Math.floor(Math.random() * 7) };
       const extras = [
         () => { loot.torch = (loot.torch || 0) + 2 + Math.floor(Math.random() * 2); },
@@ -867,8 +907,19 @@
         () => { if (depth > 100) loot.gold = (loot.gold || 0) + 1 + Math.floor(Math.random() * 2); },
         () => { if (depth > 140 && Math.random() < 0.5) loot.crystal = (loot.crystal || 0) + 1; }
       ];
-      for (let i = 0; i < 3; i += 1) {
+      for (let i = 0; i < (secret ? 5 : 3); i += 1) {
         extras[Math.floor(Math.random() * extras.length)]();
+      }
+      if (secret) {
+        this.sim.markSecretOpened(secret);
+        loot.coin = (loot.coin || 0) + 10 + secret.tier * 6;
+        loot.relic = (loot.relic || 0) + secret.tier;
+        loot.silk = (loot.silk || 0) + 1 + secret.tier;
+        if (secret.tier >= 2) loot.gold = (loot.gold || 0) + 2;
+        if (secret.tier >= 3) {
+          loot.crystal = (loot.crystal || 0) + 2;
+          loot.obsidian = (loot.obsidian || 0) + 2;
+        }
       }
       const parts = [];
       for (const [item, n] of Object.entries(loot)) {
@@ -877,9 +928,9 @@
         parts.push(`${ITEM_META[item].name} +${n}`);
         this.spawnPickupFx(x, y, item);
       }
-      ML.audio.play("chest");
-      this.floatText(x * TILE, y * TILE - 6, "Supplies!", "#ffe49a");
-      ML.showToast(`Chest: ${parts.join(", ")}.`, 3200);
+      ML.audio.play(secret ? "secret" : "chest");
+      this.floatText(x * TILE, y * TILE - 6, secret ? "Secret cache!" : "Supplies!", secret ? "#d8b6ff" : "#ffe49a");
+      ML.showToast(`${secret ? "Secret cache" : "Chest"}: ${parts.join(", ")}.`, 3600);
     }
 
     // ---- Placing & using items -------------------------------------------------
@@ -923,7 +974,7 @@
         this.setAction("Charge", 900);
         this.sim.removeItem("charge", 1);
         this.floatText(target.x * TILE, target.y * TILE, "Charge set", "#f5d77a");
-        this.time.delayedCall(420, () => this.explode(target.x, target.y, 2.45));
+        this.time.delayedCall(420, () => this.explode(target.x, target.y, 2.45 + (this.sim.blastRadius || 0)));
         ML.renderAll(this.sim);
         return;
       }
@@ -1034,7 +1085,7 @@
       this.swingPickaxe(360);
 
       const targets = this.findAttackTargets(pointer);
-      this.sim.energy = clamp(this.sim.energy - (targets.length ? 6 : 3), 0, 100);
+      this.sim.energy = clamp(this.sim.energy - (targets.length ? 6 : 3), 0, this.sim.maxEnergy);
       if (!targets.length) {
         this.floatText(this.player.x - 12, this.player.y - 28, "Miss", "#bcae93");
         ML.audio.play("dig");
@@ -1097,6 +1148,12 @@
         this.spawnPickupFx(Math.floor(enemy.x / TILE), Math.floor(enemy.y / TILE), item);
       }
       this.sim.stats.enemies += 1;
+      if (ENEMIES[enemy.kind]?.boss) {
+        this.sim.stats.bosses += 1;
+        this.cameras.main.shake(260, 0.012);
+        this.floatText(enemy.x - 30, enemy.y - 38, "BOSS DOWN", "#ffcf6a");
+        ML.showToast(`${this.enemyName(enemy.kind)} defeated. New boss materials unlocked.`, 4200);
+      }
       this.emitBlockBurst(Math.floor(enemy.x / TILE), Math.floor(enemy.y / TILE), 0x7c5a91, 6);
       ML.audio.play("enemyDie");
       // Dead for good — remove the world entry, no respawn at this home.
@@ -1110,6 +1167,10 @@
     dropsFor(kind) {
       const r = Math.random();
       switch (kind) {
+        case "broodmother":
+          return { silk: 7, fang: 3, relic: 1, gel: 6, coin: 24 + Math.floor(Math.random() * 12) };
+        case "warden":
+          return { core: 1, relic: 2, fang: 2, obsidian: 4, crystal: 3, coin: 38 + Math.floor(Math.random() * 20) };
         case "bat": return r < 0.3 ? { crystal: 1, coin: 2 } : { coal: 1, coin: 1 };
         case "slime": return r < 0.72 ? { gel: 2 + Math.floor(Math.random() * 2), coin: 1 } : { mushroom: 1, gel: 1, coin: 1 };
         case "golem": {
@@ -1126,7 +1187,8 @@
       const now = this.time.now;
       if (now < this.playerIframesUntil) return;
       this.playerIframesUntil = now + 700;
-      this.applyDamage(enemy.touch || 8, enemy.kind);
+      const touch = (enemy.touch || 8) * (this.sim.ward && ENEMIES[enemy.kind]?.boss ? 0.72 : 1);
+      this.applyDamage(touch, enemy.kind);
       this.player.setVelocityY(-190);
       this.player.setVelocityX((this.player.x < enemy.x ? -1 : 1) * 230);
       this.player.setTint(0xff9c8a);
@@ -1173,6 +1235,34 @@
             }
             break;
           }
+          case "broodmother": {
+            enemy.setFlipX(dir < 0);
+            if (enemy.body.blocked.down) {
+              enemy.setVelocityX(enemy.body.velocity.x * 0.72);
+              if (now > enemy.nextHopAt) {
+                enemy.nextHopAt = now + 760 + Math.random() * 520;
+                enemy.setVelocityX(dir * 265);
+                enemy.setVelocityY(-430);
+              }
+            }
+            if (now > enemy.nextSpecialAt) {
+              enemy.nextSpecialAt = now + 5200 + Math.random() * 2600;
+              this.summonMinion(enemy, Math.random() < 0.55 ? "crawler" : "slime");
+            }
+            break;
+          }
+          case "warden": {
+            enemy.setVelocityX(dir * enemy.speed);
+            enemy.setFlipX(dir < 0);
+            if (enemy.body.blocked.down && (enemy.body.blocked.left || enemy.body.blocked.right) && Math.random() < 0.04) {
+              enemy.setVelocityY(-315);
+            }
+            if (now > enemy.nextSpecialAt) {
+              enemy.nextSpecialAt = now + 2600 + Math.random() * 1600;
+              this.bossShockwave(enemy);
+            }
+            break;
+          }
           case "golem": {
             enemy.setVelocityX(dir * enemy.speed);
             enemy.setFlipX(dir < 0);
@@ -1189,6 +1279,33 @@
             }
           }
         }
+      }
+    }
+
+    summonMinion(enemy, kind) {
+      if (this.enemies.countActive(true) >= 12) return;
+      const dir = this.player.x < enemy.x ? -1 : 1;
+      const tx = clamp(Math.floor(enemy.x / TILE) + dir * 2, 2, WORLD_W - 3);
+      const ty = clamp(Math.floor(enemy.y / TILE), 2, WORLD_H - 3);
+      if (this.sim.tileAt(tx, ty) !== AIR || this.sim.tileAt(tx, ty + 1) === AIR || !BLOCKS[this.sim.tileAt(tx, ty + 1)]?.solid) return;
+      const mob = this.sim.addMob(tx, ty, kind, { summoned: true });
+      this.materializeMob(mob);
+      this.floatText(enemy.x - 20, enemy.y - 34, "Summon", "#d8b6ff");
+      ML.audio.play("roar");
+    }
+
+    bossShockwave(enemy) {
+      this.cameras.main.shake(120, 0.006);
+      this.emitDust(enemy.x, enemy.y + 20, 8);
+      ML.audio.play("roar");
+      this.floatText(enemy.x - 14, enemy.y - 38, "STOMP", "#ffb36a");
+      const distance = Phaser.Math.Distance.Between(enemy.x, enemy.y, this.player.x, this.player.y);
+      if (distance < 145) {
+        const damage = this.sim.ward ? 5 : 8;
+        this.applyDamage(damage, enemy.kind);
+        this.player.setVelocityY(-260);
+        this.player.setVelocityX((this.player.x < enemy.x ? -1 : 1) * 280);
+        this.floatText(this.player.x - 10, this.player.y - 32, `-${damage}`, "#f08561");
       }
     }
 
@@ -1267,13 +1384,21 @@
       enemy.mobId = mob.id;
       enemy.body.setSize(cfg.bodyW, cfg.bodyH).setOffset(cfg.offX, cfg.offY);
       enemy.hp = mob.hp ?? (deep ? cfg.deepHp : cfg.hp);
+      enemy.maxHp = deep ? cfg.deepHp : cfg.hp;
       enemy.speed = deep ? cfg.deepSpeed : cfg.speed;
       enemy.touch = cfg.touch;
+      enemy.boss = Boolean(cfg.boss || mob.boss);
       enemy.stunUntil = 0;
       enemy.nextHopAt = 0;
+      enemy.nextSpecialAt = this.time.now + 1600 + Math.random() * 1400;
       enemy.bobSeed = Math.random() * 10;
-      enemy.setDepth(9);
+      enemy.setDepth(enemy.boss ? 11 : 9);
       if (cfg.fly) enemy.body.setAllowGravity(false);
+      if (enemy.boss) {
+        this.cameras.main.shake(160, 0.005);
+        ML.audio.play("roar");
+        ML.showToast(`${this.enemyName(enemy.kind)} has awakened in the hidden vault.`, 3200);
+      }
       this.activeMobIds.add(mob.id);
     }
 
@@ -1378,7 +1503,7 @@
 
       const light = this.playerLight();
       if (depth > 140 && light < 0.22) {
-        this.applyDamage(2.6 * dt, "dark");
+        this.applyDamage((this.sim.ward ? 1.15 : 2.6) * dt, "dark");
         if (now - this.lastDarkWarnAt > 12000) {
           this.lastDarkWarnAt = now;
           ML.showToast("The darkness gnaws at you. Light a torch or craft a lamp.", 2600);
@@ -1529,8 +1654,8 @@
       ML.hideDeath();
       ML.ui.pauseMenu?.classList.add("hidden");
       this.physics.world.resume();
-      this.sim.health = 100;
-      this.sim.energy = 100;
+      this.sim.health = this.sim.maxHealth;
+      this.sim.energy = this.sim.maxEnergy;
       const safe = this.sim.safeSpawnPixels();
       this.player.setPosition(safe.x, safe.y);
       this.sim.player = safe;

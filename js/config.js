@@ -114,6 +114,10 @@ window.ML = window.ML || {};
     obsidian: { name: "Obsidian", cls: "icon-obsidian", tint: 0x6a4ba3 },
     gel: { name: "Gel", cls: "icon-gel", tint: 0x72d8ff },
     coin: { name: "Coins", cls: "icon-coin", tint: 0xf0c75e },
+    silk: { name: "Silk", cls: "icon-silk", tint: 0xd8d3f0 },
+    fang: { name: "Fang", cls: "icon-fang", tint: 0xe9ddc7 },
+    relic: { name: "Ancient relic", cls: "icon-relic", tint: 0xa985ff },
+    core: { name: "Abyss core", cls: "icon-core", tint: 0xff7a2e },
     torch: { name: "Torch", cls: "icon-torch", tile: Tile.TORCH, tint: 0xf2c35f },
     ladder: { name: "Ladder", cls: "icon-ladder", tile: Tile.LADDER, tint: 0xb37236 },
     platform: { name: "Platform", cls: "icon-platform", tile: Tile.PLATFORM, tint: 0x9d6734 },
@@ -139,7 +143,8 @@ window.ML = window.ML || {};
     { name: "Bare grip", bonus: 0 },
     { name: "Copper edge", bonus: 1 },
     { name: "Iron edge", bonus: 2 },
-    { name: "Crystal edge", bonus: 4 }
+    { name: "Crystal edge", bonus: 4 },
+    { name: "Abyss edge", bonus: 7 }
   ];
 
   // Personal light radius in pixels for the lightmap, plus a "self glow"
@@ -154,9 +159,11 @@ window.ML = window.ML || {};
     { id: "torch", cat: "blocks", name: "Torch bundle", cost: { wood: 1, coal: 1 }, out: { torch: 4 }, note: "Local light for deeper tunnels" },
     { id: "gelTorch", cat: "blocks", name: "Gel torches", cost: { wood: 1, gel: 2 }, out: { torch: 5 }, note: "Classic slime-gel torch recipe" },
     { id: "ladder", cat: "blocks", name: "Ladder stack", cost: { wood: 2 }, out: { ladder: 6 }, note: "Vertical movement in shafts" },
+    { id: "silkLadder", cat: "blocks", name: "Silk ladder roll", cost: { wood: 1, silk: 2 }, out: { ladder: 12 }, note: "Boss-silk rope for long drops" },
     { id: "platform", cat: "blocks", name: "Platform pack", cost: { wood: 1 }, out: { platform: 4 }, note: "One-way bridges. Hold S to drop through" },
     { id: "charge", cat: "blocks", name: "Blast charges", cost: { coal: 3, copper: 2, stone: 2 }, out: { charge: 2 }, note: "Clears a pocket of rock" },
     { id: "stickyCharge", cat: "blocks", name: "Sticky charges", cost: { coal: 2, copper: 1, gel: 2 }, out: { charge: 2 }, note: "Cheaper bombs after fighting slimes" },
+    { id: "coreCharge", cat: "blocks", name: "Core charges", cost: { coal: 4, obsidian: 2, core: 1 }, out: { charge: 5 }, note: "Boss-core charges for serious excavation" },
 
     { id: "stonePick", cat: "tools", name: "Stone pick", cost: { wood: 2, stone: 10 }, upgrade: 2, note: "Copper seams become reachable" },
     { id: "copperPick", cat: "tools", name: "Copper pick", cost: { wood: 2, stone: 15, copper: 8 }, upgrade: 3, note: "Cuts deepstone and iron" },
@@ -166,12 +173,18 @@ window.ML = window.ML || {};
     { id: "copperEdge", cat: "tools", name: "Copper edge", cost: { wood: 1, copper: 6 }, blade: 1, note: "+1 attack damage" },
     { id: "ironEdge", cat: "tools", name: "Iron edge", cost: { coal: 2, iron: 8 }, blade: 2, note: "+2 attack damage" },
     { id: "crystalEdge", cat: "tools", name: "Crystal edge", cost: { gold: 4, crystal: 6 }, blade: 3, note: "+4 attack damage" },
+    { id: "abyssEdge", cat: "tools", name: "Abyss edge", cost: { fang: 3, relic: 1, crystal: 5 }, blade: 4, note: "+7 attack damage from boss fangs" },
     { id: "caveBoots", cat: "tools", name: "Cave boots", cost: { wood: 3, iron: 4 }, boots: true, note: "Double jump, softer landings" },
     { id: "minerLamp", cat: "tools", name: "Miner lamp", cost: { copper: 4, coal: 6 }, lamp: 1, note: "Wider personal light" },
     { id: "beaconLamp", cat: "tools", name: "Beacon lamp", cost: { gold: 6, crystal: 4 }, lamp: 2, note: "The deep dark cannot touch you" },
+    { id: "blastSatchel", cat: "tools", name: "Blast satchel", cost: { silk: 3, copper: 4, charge: 2 }, blastRadius: 0.65, note: "Charges carve a wider pocket" },
+    { id: "heartCharm", cat: "tools", name: "Heart charm", cost: { relic: 2, mushroom: 3, gold: 3 }, maxHealth: 125, note: "Raises maximum health to 125" },
+    { id: "enduranceCharm", cat: "tools", name: "Endurance charm", cost: { relic: 1, silk: 4, iron: 6 }, maxEnergy: 130, note: "Raises maximum energy to 130" },
+    { id: "shadowWard", cat: "tools", name: "Shadow ward", cost: { core: 1, obsidian: 4, crystal: 4 }, ward: true, note: "Softens deep darkness and boss hits" },
 
     { id: "fieldKit", cat: "survival", name: "Field kit", cost: { wood: 2, coal: 2, mushroom: 1 }, out: { kit: 1 }, note: "Use from the hotbar: +45 health, +45 energy" },
-    { id: "merchantKit", cat: "survival", name: "Merchant kit", cost: { coin: 12, mushroom: 1 }, out: { kit: 1 }, note: "Spend coins for a quick recovery kit" }
+    { id: "merchantKit", cat: "survival", name: "Merchant kit", cost: { coin: 12, mushroom: 1 }, out: { kit: 1 }, note: "Spend coins for a quick recovery kit" },
+    { id: "vaultKit", cat: "survival", name: "Vault kit", cost: { coin: 18, silk: 2, mushroom: 2 }, out: { kit: 2 }, note: "Secret-room supplies packed into two field kits" }
   ];
 
   const CRAFT_CATS = [
@@ -185,7 +198,9 @@ window.ML = window.ML || {};
     crawler: { texture: "crawler", bodyW: 24, bodyH: 14, offX: 3, offY: 4, hp: 2, deepHp: 4, speed: 84, deepSpeed: 118, touch: 8, fly: false },
     bat: { texture: "bat", bodyW: 20, bodyH: 12, offX: 3, offY: 4, hp: 2, deepHp: 3, speed: 120, deepSpeed: 145, touch: 6, fly: true },
     slime: { texture: "slime", bodyW: 22, bodyH: 13, offX: 3, offY: 6, hp: 3, deepHp: 5, speed: 0, deepSpeed: 0, touch: 9, fly: false },
-    golem: { texture: "golem", bodyW: 26, bodyH: 30, offX: 3, offY: 4, hp: 10, deepHp: 13, speed: 44, deepSpeed: 52, touch: 17, fly: false, heavy: true }
+    golem: { texture: "golem", bodyW: 26, bodyH: 30, offX: 3, offY: 4, hp: 10, deepHp: 13, speed: 44, deepSpeed: 52, touch: 17, fly: false, heavy: true },
+    broodmother: { texture: "broodmother", bodyW: 44, bodyH: 28, offX: 6, offY: 10, hp: 30, deepHp: 38, speed: 76, deepSpeed: 92, touch: 20, fly: false, heavy: true, boss: true },
+    warden: { texture: "warden", bodyW: 42, bodyH: 48, offX: 7, offY: 8, hp: 52, deepHp: 64, speed: 50, deepSpeed: 66, touch: 28, fly: false, heavy: true, boss: true }
   };
 
   Object.assign(window.ML, {

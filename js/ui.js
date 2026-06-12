@@ -85,10 +85,12 @@
   }
 
   function renderStatus(sim, player, light = 1) {
-    ui.healthText.textContent = String(Math.round(sim.health));
-    ui.healthBar.style.width = `${clamp(sim.health, 0, 100)}%`;
-    ui.energyText.textContent = String(Math.round(sim.energy));
-    ui.energyBar.style.width = `${clamp(sim.energy, 0, 100)}%`;
+    const maxHealth = sim.maxHealth || 100;
+    const maxEnergy = sim.maxEnergy || 100;
+    ui.healthText.textContent = maxHealth > 100 ? `${Math.round(sim.health)}/${maxHealth}` : String(Math.round(sim.health));
+    ui.healthBar.style.width = `${clamp(sim.health / maxHealth * 100, 0, 100)}%`;
+    ui.energyText.textContent = maxEnergy > 100 ? `${Math.round(sim.energy)}/${maxEnergy}` : String(Math.round(sim.energy));
+    ui.energyBar.style.width = `${clamp(sim.energy / maxEnergy * 100, 0, 100)}%`;
     const px = player ? player.x : sim.player.x;
     const py = player ? player.y : sim.player.y;
     const tileX = clamp(Math.floor(px / TILE), 0, WORLD_W - 1);
@@ -176,6 +178,10 @@
     if (recipe.blade) return sim.blade < recipe.blade;
     if (recipe.lamp) return sim.lamp < recipe.lamp;
     if (recipe.boots) return !sim.boots;
+    if (recipe.ward) return !sim.ward;
+    if (recipe.maxHealth) return (sim.maxHealth || 100) < recipe.maxHealth;
+    if (recipe.maxEnergy) return (sim.maxEnergy || 100) < recipe.maxEnergy;
+    if (recipe.blastRadius) return (sim.blastRadius || 0) < recipe.blastRadius;
     return true;
   }
 

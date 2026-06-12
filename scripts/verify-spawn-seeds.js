@@ -34,9 +34,11 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       const footY = Math.floor((safe.y + 18) / TILE);
       const stable = sim.hasStableSpawnFloor();
       const support = sim.hasPlayerSupport(safe);
+      const secretCount = sim.secrets?.length || 0;
+      const bossCount = sim.mobs.filter((mob) => window.ML.ENEMIES[mob.kind]?.boss).length;
 
-      if (!stable || !support || floor === AIR || floor === Tile.PLATFORM || !BLOCKS[floor]?.solid || footY !== floorY) {
-        failures.push({ seed: actualSeed, spawn: sim.spawn, shaft: sim.shaft, floorY, floor, safe, footY, stable, support });
+      if (!stable || !support || floor === AIR || floor === Tile.PLATFORM || !BLOCKS[floor]?.solid || footY !== floorY || secretCount < 5 || bossCount < 2) {
+        failures.push({ seed: actualSeed, spawn: sim.spawn, shaft: sim.shaft, floorY, floor, safe, footY, stable, support, secretCount, bossCount });
       }
     }
 

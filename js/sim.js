@@ -22,11 +22,18 @@
       this.blade = this.blade || 0;
       this.boots = Boolean(this.boots);
       this.lamp = this.lamp || 0;
-      this.stats = Object.assign({ mined: 0, deepest: 0, enemies: 0 }, this.stats || {});
+      this.maxHealth = this.maxHealth || 100;
+      this.maxEnergy = this.maxEnergy || 100;
+      this.ward = Boolean(this.ward);
+      this.blastRadius = this.blastRadius || 0;
+      this.health = clamp(this.health ?? this.maxHealth, 0, this.maxHealth);
+      this.energy = clamp(this.energy ?? this.maxEnergy, 0, this.maxEnergy);
+      this.stats = Object.assign({ mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0 }, this.stats || {});
       this.inventory = Object.assign(
-        { dirt: 0, stone: 0, wood: 0, coal: 0, copper: 0, iron: 0, gold: 0, crystal: 0, obsidian: 0, gel: 0, coin: 0, torch: 0, ladder: 0, platform: 0, charge: 0, mushroom: 0, kit: 0 },
+        { dirt: 0, stone: 0, wood: 0, coal: 0, copper: 0, iron: 0, gold: 0, crystal: 0, obsidian: 0, gel: 0, coin: 0, silk: 0, fang: 0, relic: 0, core: 0, torch: 0, ladder: 0, platform: 0, charge: 0, mushroom: 0, kit: 0 },
         this.inventory || {}
       );
+      if (!Array.isArray(this.secrets)) this.secrets = [];
       if (!Array.isArray(this.lights)) this.rebuildLights();
       if (!Array.isArray(this.mobs)) {
         this.mobs = this.generateMobs();
@@ -42,21 +49,27 @@
       this.time = 0;
       this.health = 100;
       this.energy = 100;
+      this.maxHealth = 100;
+      this.maxEnergy = 100;
       this.pickLevel = 1;
       this.blade = 0;
       this.boots = false;
       this.lamp = 0;
+      this.ward = false;
+      this.blastRadius = 0;
       this.selected = 3;
       this.inventory = {
         dirt: 0, stone: 0, wood: 8, coal: 2, copper: 0, iron: 0, gold: 0, crystal: 0,
-        obsidian: 0, gel: 0, coin: 0, torch: 6, ladder: 8, platform: 0, charge: 0, mushroom: 0, kit: 1
+        obsidian: 0, gel: 0, coin: 0, silk: 0, fang: 0, relic: 0, core: 0,
+        torch: 6, ladder: 8, platform: 0, charge: 0, mushroom: 0, kit: 1
       };
       const generated = this.generateWorld(seed);
       this.world = generated.world;
       this.surface = generated.surface;
       this.spawn = generated.spawn;
       this.shaft = generated.shaft;
-      this.stats = { mined: 0, deepest: 0, enemies: 0 };
+      this.secrets = generated.secrets || [];
+      this.stats = { mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0 };
       this.repairSpawnShaft();
       this.player = this.safeSpawnPixels();
       this.rebuildLights();
@@ -121,10 +134,80 @@
         }
       }
 
+      const sx = Math.floor(WORLD_W / 2);
       const solidAt = (x, y) => {
         if (x < 0 || y < 0 || x >= WORLD_W || y >= WORLD_H) return true;
         const t = world[y][x];
         return t !== AIR && BLOCKS[t] && BLOCKS[t].solid;
+      };
+      const secrets = [];
+      const canCarveSecret = (roomX, roomY, w, h) => {
+        if (roomX < 4 || roomY < 38 || roomX + w >= WORLD_W - 4 || roomY + h >= WORLD_H - 8) return false;
+        if (Math.abs(roomX + w / 2 - sx) < 14) return false;
+        let solid = 0;
+        let total = 0;
+        for (let yy = roomY; yy < roomY + h; yy += 1) {
+          for (let xx = roomX; xx < roomX + w; xx += 1) {
+            const t = world[yy][xx];
+            if (t === Tile.LAVA || t === Tile.BEDROCK || t === Tile.CHEST) return false;
+            if (t !== AIR) solid += 1;
+            total += 1;
+          }
+        }
+        return solid / total > 0.68;
+      };
+      const carveSecret = (id, tier, minDepth, maxDepth, bossKind = null) => {
+        for (let tries = 0; tries < 180; tries += 1) {
+          const cx = 8 + Math.floor(rand() * (WORLD_W - 16));
+          const base = surface[cx] || 24;
+          const depth = minDepth + Math.floor(rand() * Math.max(1, maxDepth - minDepth));
+          const w = 8 + Math.floor(rand() * 5);
+          const h = 5 + Math.floor(rand() * 3);
+          const roomX = clamp(cx - Math.floor(w / 2), 4, WORLD_W - w - 5);
+          const roomY = clamp(base + depth, 38, WORLD_H - h - 8);
+          if (!canCarveSecret(roomX, roomY, w, h)) continue;
+
+          const wallTile = tier >= 3 ? Tile.DEEP : Tile.STONE;
+          for (let yy = roomY; yy < roomY + h; yy += 1) {
+            for (let xx = roomX; xx < roomX + w; xx += 1) {
+              const border = xx === roomX || xx === roomX + w - 1 || yy === roomY || yy === roomY + h - 1;
+              world[yy][xx] = border ? wallTile : AIR;
+            }
+          }
+
+          const floorY = roomY + h - 2;
+          const chestX = roomX + Math.floor(w / 2);
+          let lampX = roomX + 1 + Math.floor(rand() * Math.max(1, w - 2));
+          if (lampX === chestX) lampX = chestX > roomX + 2 ? chestX - 2 : chestX + 2;
+          world[floorY][chestX] = Tile.CHEST;
+          world[floorY][lampX] = tier >= 2 ? Tile.MUSHROOM : Tile.TORCH;
+
+          const ore = tier >= 3 ? Tile.CRYSTAL : tier >= 2 ? Tile.GOLD : Tile.IRON;
+          world[roomY + 1][roomX + 1] = ore;
+          world[roomY + 1][roomX + w - 2] = ore;
+          if (tier >= 3) world[floorY - 1][roomX + 2] = Tile.OBSIDIAN;
+
+          const secret = {
+            id,
+            tier,
+            x: roomX,
+            y: roomY,
+            w,
+            h,
+            opened: false,
+            chest: { x: chestX, y: floorY }
+          };
+          if (bossKind) {
+            secret.boss = {
+              kind: bossKind,
+              x: roomX + (bossKind === "warden" ? w - 3 : 2),
+              y: floorY
+            };
+          }
+          secrets.push(secret);
+          return true;
+        }
+        return false;
       };
 
       // Lava pools on deep cave floors.
@@ -147,8 +230,17 @@
         }
       }
 
+      [
+        { tier: 1, min: 38, max: 78 },
+        { tier: 1, min: 58, max: 108 },
+        { tier: 2, min: 92, max: 145 },
+        { tier: 2, min: 118, max: 168, boss: "broodmother" },
+        { tier: 2, min: 138, max: 188 },
+        { tier: 3, min: 178, max: 238 },
+        { tier: 3, min: 198, max: 258, boss: "warden" }
+      ].forEach((spec, index) => carveSecret(index + 1, spec.tier, spec.min, spec.max, spec.boss));
+
       // Supply chests tucked into caves.
-      const sx = Math.floor(WORLD_W / 2);
       let chests = 0;
       for (let tries = 0; tries < 600 && chests < 14; tries += 1) {
         const x = 4 + Math.floor(rand() * (WORLD_W - 8));
@@ -190,7 +282,7 @@
         if (y >= sy + 2) world[y][sx] = Tile.LADDER;
         if (y === sy + 7 || y === sy + 15) world[y][sx + 1] = Tile.TORCH;
       }
-      return { world, surface, spawn: { x: sx - 3, y: sy }, shaft: { x: sx, y: sy } };
+      return { world, surface, spawn: { x: sx - 3, y: sy }, shaft: { x: sx, y: sy }, secrets };
     }
 
     // Mobs are part of the world, decided at generation time like ores: they
@@ -224,6 +316,17 @@
           y += 5; // keep packs from clumping in one column
         }
       }
+      for (const secret of this.secrets || []) {
+        if (!secret.boss) continue;
+        mobs.push({
+          id: this.mobSeq++,
+          x: secret.boss.x,
+          y: secret.boss.y,
+          kind: secret.boss.kind,
+          boss: true,
+          secretId: secret.id
+        });
+      }
       return mobs;
     }
 
@@ -250,6 +353,17 @@
 
     removeLightAt(x, y) {
       this.lights = this.lights.filter((l) => l.x !== x || l.y !== y);
+    }
+
+    secretAt(x, y) {
+      return (this.secrets || []).find((secret) => secret.chest?.x === x && secret.chest?.y === y) || null;
+    }
+
+    markSecretOpened(secret) {
+      if (!secret || secret.opened) return false;
+      secret.opened = true;
+      this.stats.secrets += 1;
+      return true;
     }
 
     repairSpawnShaft() {
@@ -407,18 +521,21 @@
       }
     }
 
-    // Migrate a v1 save: same tile ids 0-13, tile 14 was never placed in v1 worlds.
+    // Migrate pre-rename saves. Old MinerLand v2 saves live under the legacy
+    // key; older v1 saves need a small equipment reset.
     loadLegacy() {
       try {
         const raw = localStorage.getItem(ML.LEGACY_SAVE_KEY);
         if (!raw) return null;
         const data = JSON.parse(raw);
-        if (!data || data.version !== 1 || !data.state || !Array.isArray(data.state.world)) return null;
+        if (!data || !data.state || !Array.isArray(data.state.world)) return null;
         const state = data.state;
-        delete state.torches;
-        state.blade = 0;
-        state.boots = false;
-        state.lamp = 0;
+        if (data.version === 1) {
+          delete state.torches;
+          state.blade = 0;
+          state.boots = false;
+          state.lamp = 0;
+        }
         // The legacy key is removed only after a v2 save succeeds (see save()).
         return state;
       } catch {
@@ -435,16 +552,21 @@
         time: this.time,
         health: this.health,
         energy: this.energy,
+        maxHealth: this.maxHealth,
+        maxEnergy: this.maxEnergy,
         pickLevel: this.pickLevel,
         blade: this.blade,
         boots: this.boots,
         lamp: this.lamp,
+        ward: this.ward,
+        blastRadius: this.blastRadius,
         selected: this.selected,
         inventory: this.inventory,
         world: this.world,
         surface: this.surface,
         spawn: this.spawn,
         shaft: this.shaft,
+        secrets: this.secrets,
         player: this.player,
         lights: this.lights,
         mobs: this.mobs,
@@ -490,6 +612,10 @@
       if (recipe.blade && this.blade >= recipe.blade) return { ok: false, message: "Already built." };
       if (recipe.lamp && this.lamp >= recipe.lamp) return { ok: false, message: "Already built." };
       if (recipe.boots && this.boots) return { ok: false, message: "Already built." };
+      if (recipe.ward && this.ward) return { ok: false, message: "Already built." };
+      if (recipe.maxHealth && this.maxHealth >= recipe.maxHealth) return { ok: false, message: "Already built." };
+      if (recipe.maxEnergy && this.maxEnergy >= recipe.maxEnergy) return { ok: false, message: "Already built." };
+      if (recipe.blastRadius && this.blastRadius >= recipe.blastRadius) return { ok: false, message: "Already built." };
       if (!ML.canAfford(this.inventory, recipe.cost)) {
         return { ok: false, message: "Need " + ML.formatCost(recipe.cost) + "." };
       }
@@ -501,6 +627,18 @@
       if (recipe.blade) this.blade = recipe.blade;
       if (recipe.lamp) this.lamp = recipe.lamp;
       if (recipe.boots) this.boots = true;
+      if (recipe.ward) this.ward = true;
+      if (recipe.maxHealth) {
+        const oldMax = this.maxHealth;
+        this.maxHealth = recipe.maxHealth;
+        this.health = clamp(this.health + Math.max(0, this.maxHealth - oldMax), 0, this.maxHealth);
+      }
+      if (recipe.maxEnergy) {
+        const oldMax = this.maxEnergy;
+        this.maxEnergy = recipe.maxEnergy;
+        this.energy = clamp(this.energy + Math.max(0, this.maxEnergy - oldMax), 0, this.maxEnergy);
+      }
+      if (recipe.blastRadius) this.blastRadius = recipe.blastRadius;
       return { ok: true, message: `${recipe.name} crafted.` };
     }
 
@@ -508,8 +646,8 @@
       const meta = ML.ITEM_META[item];
       if (!meta || !meta.consumable) return { ok: false, message: "Not edible." };
       if (!this.removeItem(item, 1)) return { ok: false, message: `No ${meta.name}.` };
-      this.health = clamp(this.health + meta.consumable.heal, 0, 100);
-      this.energy = clamp(this.energy + meta.consumable.energy, 0, 100);
+      this.health = clamp(this.health + meta.consumable.heal, 0, this.maxHealth);
+      this.energy = clamp(this.energy + meta.consumable.energy, 0, this.maxEnergy);
       return { ok: true, message: `${meta.name}: +${meta.consumable.heal} health, +${meta.consumable.energy} energy.` };
     }
   }

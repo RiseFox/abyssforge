@@ -284,6 +284,55 @@
     gc.fillRect(18, 30, 8, 4);
     golem.refresh();
 
+    const brood = freshCanvasTexture("broodmother", 56, 42);
+    const br = brood.getContext();
+    br.clearRect(0, 0, 56, 42);
+    br.fillStyle = "#33223d";
+    br.fillRect(5, 24, 9, 5);
+    br.fillRect(15, 27, 8, 5);
+    br.fillRect(33, 27, 8, 5);
+    br.fillRect(43, 24, 9, 5);
+    br.fillStyle = "#5e3f78";
+    br.fillRect(8, 14, 40, 18);
+    br.fillRect(14, 9, 28, 10);
+    br.fillStyle = "#7f5aa0";
+    br.fillRect(18, 6, 20, 8);
+    br.fillStyle = "#e9ddc7";
+    br.fillRect(19, 12, 4, 4);
+    br.fillRect(32, 12, 4, 4);
+    br.fillStyle = "#f0c75e";
+    br.fillRect(25, 19, 6, 5);
+    br.fillStyle = "#1f1627";
+    br.fillRect(7, 31, 8, 4);
+    br.fillRect(20, 33, 7, 4);
+    br.fillRect(30, 33, 7, 4);
+    br.fillRect(42, 31, 8, 4);
+    brood.refresh();
+
+    const warden = freshCanvasTexture("warden", 56, 64);
+    const wc = warden.getContext();
+    wc.clearRect(0, 0, 56, 64);
+    wc.fillStyle = "#24152d";
+    wc.fillRect(13, 16, 30, 38);
+    wc.fillStyle = "#3c2850";
+    wc.fillRect(9, 24, 9, 24);
+    wc.fillRect(38, 24, 9, 24);
+    wc.fillStyle = "#5c4278";
+    wc.fillRect(16, 7, 24, 16);
+    wc.fillStyle = "#1b1024";
+    wc.fillRect(18, 3, 20, 7);
+    wc.fillStyle = "#ff7a2e";
+    wc.fillRect(20, 13, 5, 4);
+    wc.fillRect(31, 13, 5, 4);
+    wc.fillStyle = "#ffd56a";
+    wc.fillRect(23, 30, 10, 9);
+    wc.fillStyle = "#6a4ba3";
+    wc.fillRect(18, 42, 20, 6);
+    wc.fillStyle = "#17101d";
+    wc.fillRect(14, 54, 10, 5);
+    wc.fillRect(32, 54, 10, 5);
+    warden.refresh();
+
     // ---- Particles + light mask -------------------------------------------
     const spark = freshCanvasTexture("spark", 7, 7);
     const sc = spark.getContext();

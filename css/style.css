@@ -771,6 +771,10 @@ canvas:focus { outline: none; }
 .icon-obsidian { background: linear-gradient(135deg, #3a2752, #120b1e 75%); }
 .icon-gel { background: radial-gradient(circle at 35% 35%, #b6f5ff, #41a9d8 68%); }
 .icon-coin { background: radial-gradient(circle at 38% 35%, #fff2a8, #d29a2d 58%, #6f4617 62%); }
+.icon-silk { background: repeating-linear-gradient(135deg, #efeaff 0 4px, #b8aad8 4px 8px); }
+.icon-fang { background: linear-gradient(135deg, #f4ead2 0 52%, #6b5a42 53% 58%, #33261b 59% 100%); }
+.icon-relic { background: radial-gradient(circle at 45% 38%, #f1d48a 0 18%, #9b77ff 19% 58%, #35224e 59%); }
+.icon-core { background: radial-gradient(circle at 50% 50%, #fff0a6 0 16%, #ff7a2e 17% 48%, #321019 49%); }
 .icon-torch { background: linear-gradient(#f2c35f 0 38%, #684323 38% 100%); }
 .icon-ladder { background: repeating-linear-gradient(90deg, #53351d 0 8px, #b37236 8px 13px); }
 .icon-platform { background: repeating-linear-gradient(0deg, #5b3b22 0 7px, #9d6734 7px 12px); }

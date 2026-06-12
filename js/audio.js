@@ -81,6 +81,8 @@
     eat() { noise({ dur: 0.09, vol: 0.04, freq: 600 }); tone({ freq: 320, end: 190, dur: 0.1, vol: 0.03 }); },
     explode() { noise({ dur: 0.4, vol: 0.13, freq: 380 }); tone({ freq: 95, end: 38, type: "sine", dur: 0.4, vol: 0.09 }); },
     chest() { tone({ freq: 420, dur: 0.07, vol: 0.04 }); tone({ freq: 530, dur: 0.07, vol: 0.04, delay: 0.07 }); tone({ freq: 660, dur: 0.12, vol: 0.045, delay: 0.14 }); },
+    secret() { tone({ freq: 392, type: "sine", dur: 0.14, vol: 0.035 }); tone({ freq: 587, type: "sine", dur: 0.2, vol: 0.035, delay: 0.12 }); tone({ freq: 784, type: "triangle", dur: 0.28, vol: 0.03, delay: 0.24 }); },
+    roar() { tone({ freq: 118, end: 52, type: "sawtooth", dur: 0.42, vol: 0.075 }); noise({ dur: 0.22, vol: 0.06, freq: 420 }); },
     save() { tone({ freq: 500, type: "sine", dur: 0.1, vol: 0.03 }); },
     sizzle() { noise({ dur: 0.15, vol: 0.05, freq: 2400 }); },
     click() { tone({ freq: 240, dur: 0.03, vol: 0.03 }); }
@@ -110,6 +112,38 @@
       type: "sine",
       leadVol: 0.018,
       bassVol: 0.018
+    },
+    deep: {
+      tempo: 680,
+      bass: [73, 0, 82, 0, 98, 0, 82, 0],
+      lead: [147, 0, 0, 165, 0, 0, 196, 0, 185, 0, 0, 165, 0, 147, 0, 0],
+      type: "triangle",
+      leadVol: 0.016,
+      bassVol: 0.023
+    },
+    danger: {
+      tempo: 330,
+      bass: [110, 110, 98, 110, 123, 110, 98, 0],
+      lead: [220, 0, 247, 220, 294, 0, 247, 220, 196, 0, 247, 196, 220, 0, 196, 0],
+      type: "square",
+      leadVol: 0.019,
+      bassVol: 0.02
+    },
+    treasure: {
+      tempo: 390,
+      bass: [165, 0, 196, 0, 220, 0, 196, 0],
+      lead: [330, 392, 494, 0, 440, 392, 330, 0, 370, 440, 554, 0, 494, 440, 370, 0],
+      type: "triangle",
+      leadVol: 0.022,
+      bassVol: 0.014
+    },
+    boss: {
+      tempo: 285,
+      bass: [73, 73, 82, 73, 98, 73, 82, 65],
+      lead: [147, 0, 196, 185, 165, 0, 196, 220, 147, 0, 123, 147, 165, 0, 185, 0],
+      type: "sawtooth",
+      leadVol: 0.022,
+      bassVol: 0.027
     }
   };
 
