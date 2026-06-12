@@ -195,9 +195,14 @@ window.ML = window.ML || {};
     { id: "vaultCompass", cat: "relics", name: "Vault compass", cost: { relic: 2, copper: 6, gold: 3 }, treasureSense: true, note: "Marks unopened secret caches on the map" },
     { id: "luckyPouch", cat: "relics", name: "Lucky pouch", cost: { silk: 3, coin: 30, gold: 2 }, lootBonus: true, note: "Chests and bosses spill more coins" },
     { id: "shadowWard", cat: "relics", name: "Shadow ward", cost: { core: 1, obsidian: 4, crystal: 4 }, ward: true, note: "Softens deep darkness and boss hits" },
+    { id: "recallCharm", cat: "relics", name: "Recall charm", cost: { relic: 1, crystal: 2, coin: 24 }, recallCharm: true, note: "Recall to camp costs less energy and recharges faster" },
 
     { id: "fieldKit", cat: "survival", name: "Field kit", cost: { wood: 2, coal: 2, mushroom: 1 }, out: { kit: 1 }, note: "Use from the hotbar: +45 health, +45 energy" },
     { id: "merchantKit", cat: "survival", name: "Merchant kit", cost: { coin: 12, mushroom: 1 }, out: { kit: 1 }, note: "Spend coins for a quick recovery kit" },
+    { id: "merchantTorchCrate", cat: "survival", name: "Merchant torch crate", cost: { coin: 10, coal: 1 }, out: { torch: 8 }, note: "Spend coin to restock light before a deep run" },
+    { id: "surveyorLadderPack", cat: "survival", name: "Surveyor ladder pack", cost: { coin: 12, wood: 1 }, out: { ladder: 12 }, note: "A paid shaft kit for longer descents" },
+    { id: "blackPowderOrder", cat: "survival", name: "Black powder order", cost: { coin: 18, coal: 2, copper: 1 }, out: { charge: 3 }, note: "Emergency charge restock for sealed routes" },
+    { id: "guildSupplyDrop", cat: "survival", name: "Guild supply drop", cost: { coin: 35, relic: 1 }, out: { kit: 2, torch: 6, ladder: 8 }, note: "Late-run resupply from the expedition guild" },
     { id: "mushroomStew", cat: "survival", name: "Mushroom stew", cost: { mushroom: 2, gel: 1 }, out: { kit: 1 }, note: "Turns cave food into a real recovery kit" },
     { id: "ironRationBox", cat: "survival", name: "Iron ration box", cost: { coin: 20, iron: 2, coal: 1 }, out: { kit: 2 }, note: "Heavy but reliable expedition supplies" },
     { id: "vaultKit", cat: "survival", name: "Vault kit", cost: { coin: 18, silk: 2, mushroom: 2 }, out: { kit: 2 }, note: "Secret-room supplies packed into two field kits" },
@@ -239,7 +244,9 @@ window.ML = window.ML || {};
     { id: "contractOne", name: "Ledger Signed", note: "Complete an expedition contract.", stat: "contracts", at: 1 },
     { id: "contractFive", name: "Guild Regular", note: "Complete five expedition contracts.", stat: "contracts", at: 5 },
     { id: "eventOne", name: "Living Mine", note: "Encounter your first cave event.", stat: "events", at: 1 },
-    { id: "eventFive", name: "Faultline Veteran", note: "Encounter five cave events.", stat: "events", at: 5 }
+    { id: "eventFive", name: "Faultline Veteran", note: "Encounter five cave events.", stat: "events", at: 5 },
+    { id: "recallOne", name: "Back to Camp", note: "Recall safely to the surface camp.", stat: "recalls", at: 1 },
+    { id: "recallCharm", name: "Anchor Spark", note: "Craft the Recall charm.", flag: "recallCharm" }
   ];
 
   const CONTRACTS = [

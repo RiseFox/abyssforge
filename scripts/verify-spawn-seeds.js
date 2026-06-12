@@ -51,6 +51,11 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const craftable = window.ML.craftableRecipes(sim);
     const platformRecipe = window.ML.RECIPES.find((recipe) => recipe.id === "platform");
     const craftResult = sim.craft(platformRecipe);
+    const recallRecipe = window.ML.RECIPES.find((recipe) => recipe.id === "recallCharm");
+    sim.addItem("relic", 1);
+    sim.addItem("crystal", 2);
+    sim.addItem("coin", 24);
+    const recallCraft = sim.craft(recallRecipe);
     const contractBefore = sim.contractProgress();
     if (contractBefore?.contract.absolute) {
       sim.stats[contractBefore.contract.type] = contractBefore.target;
@@ -65,6 +70,8 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       caveEvents: Object.keys(window.ML.CAVE_EVENTS || {}).length,
       craftable: craftable.length,
       craftResult,
+      recallCraft,
+      recallCharm: sim.recallCharm,
       contractBefore,
       contractClaim,
       crafted: sim.stats.crafted,
@@ -87,7 +94,8 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       y: scene.player.y,
       support: scene.sim.hasPlayerSupport({ x: scene.player.x, y: scene.player.y }),
       stable: scene.sim.hasStableSpawnFloor(),
-      floorTile: scene.sim.tileAt(scene.sim.spawn.x, scene.sim.spawnFloorY())
+      floorTile: scene.sim.tileAt(scene.sim.spawn.x, scene.sim.spawnFloorY()),
+      recallApi: typeof scene.recallToCamp === "function" && typeof scene.recallCost === "function"
     };
   });
   await page.keyboard.down("s");
@@ -107,12 +115,14 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.caveEvents < 4
     || progressionCheck.craftable < 3
     || !progressionCheck.craftResult.ok
+    || !progressionCheck.recallCraft.ok
+    || !progressionCheck.recallCharm
     || !progressionCheck.contractBefore
     || !progressionCheck.contractClaim
     || progressionCheck.crafted < 1
     || progressionCheck.completedContracts < 1
     || progressionCheck.platforms < 4;
-  const failed = errors.length > 0 || seedCheck.failures.length > 0 || progressionFailed || !start.support || !start.stable || fallDelta > 1;
+  const failed = errors.length > 0 || seedCheck.failures.length > 0 || progressionFailed || !start.support || !start.stable || !start.recallApi || fallDelta > 1;
   const report = { seedCheck, progressionCheck, start, afterDown, fallDelta, errors };
   console.log(JSON.stringify(report, null, 2));
 

@@ -275,7 +275,7 @@ canvas:focus { outline: none; }
 .action-strip {
   width: min(330px, calc(100vw - 24px));
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -305,6 +305,14 @@ canvas:focus { outline: none; }
   font-size: 10px;
   line-height: 1;
   text-transform: uppercase;
+}
+
+.action-chip.disabled {
+  opacity: 0.72;
+}
+
+.action-chip.disabled span {
+  color: var(--muted);
 }
 
 .objective-panel {

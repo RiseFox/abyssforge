@@ -77,6 +77,7 @@
     enemyDie() { tone({ freq: 330, end: 60, type: "sawtooth", dur: 0.24, vol: 0.05 }); },
     craft() { tone({ freq: 520, dur: 0.08, vol: 0.04 }); tone({ freq: 740, dur: 0.1, vol: 0.04, delay: 0.08 }); },
     contract() { tone({ freq: 349, type: "triangle", dur: 0.08, vol: 0.035 }); tone({ freq: 523, type: "triangle", dur: 0.09, vol: 0.04, delay: 0.07 }); tone({ freq: 698, type: "sine", dur: 0.13, vol: 0.03, delay: 0.16 }); },
+    recall() { tone({ freq: 262, type: "sine", dur: 0.12, vol: 0.034 }); tone({ freq: 392, type: "triangle", dur: 0.18, vol: 0.032, delay: 0.08 }); tone({ freq: 784, type: "sine", dur: 0.22, vol: 0.026, delay: 0.2 }); },
     achievement() { tone({ freq: 392, type: "triangle", dur: 0.09, vol: 0.035 }); tone({ freq: 587, type: "triangle", dur: 0.1, vol: 0.04, delay: 0.08 }); tone({ freq: 784, type: "sine", dur: 0.18, vol: 0.035, delay: 0.18 }); },
     denied() { tone({ freq: 150, end: 95, dur: 0.12, vol: 0.045 }); },
     pickup() { tone({ freq: 680, end: 920, type: "sine", dur: 0.07, vol: 0.03 }); },

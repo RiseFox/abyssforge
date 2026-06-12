@@ -66,6 +66,7 @@
       this.caveEvent = null;
       this.nextCaveEventAt = 0;
       this.eventPulseAt = 0;
+      this.nextRecallAt = 0;
       this.physics.world.resume();
       this.sim.ensureContract();
 
@@ -158,6 +159,7 @@
       this.input.keyboard.on("keydown-M", () => ML.toggleMinimap());
       this.input.keyboard.on("keydown-ESC", () => this.setPaused(!this.pausedByUI));
       this.input.keyboard.on("keydown-F", () => this.attack());
+      this.input.keyboard.on("keydown-R", () => this.recallToCamp());
       const digitNames = ["ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE"];
       for (let i = 0; i < HOTBAR.length && i < digitNames.length; i += 1) {
         this.input.keyboard.on(`keydown-${digitNames[i]}`, () => {
@@ -425,6 +427,7 @@
         ML.renderContract(this.sim);
         ML.renderEvent(this);
         ML.renderBossBar(this);
+        ML.renderRecall(this);
       }
       this.lastMapUpdate += delta;
       if (this.lastMapUpdate > 400) {
@@ -795,6 +798,81 @@
       ML.showToast(`${result.completed.name} complete: ${reward}. New contract: ${result.next?.name || "none"}.`, 4200);
       ML.renderAll(this.sim);
       this.checkAchievements();
+      return true;
+    }
+
+    recallCost() {
+      return this.sim.recallCharm ? 18 : 34;
+    }
+
+    recallCooldownMs() {
+      return this.sim.recallCharm ? 30000 : 54000;
+    }
+
+    recallCooldownRemaining() {
+      return Math.max(0, Math.ceil(((this.nextRecallAt || 0) - this.time.now) / 1000));
+    }
+
+    recallToCamp() {
+      if (this.pausedByUI || this.dead) return false;
+      if (this.depthMeters() <= 7) {
+        this.setAction("At camp", 900);
+        ML.showToast("You are already near the surface camp.", 1200);
+        return false;
+      }
+      if (this.hasActiveBoss()) {
+        this.setAction("Boss lock", 1100);
+        ML.audio.play("denied");
+        ML.showToast("A boss aura blocks recall. Finish the fight or retreat first.", 2200);
+        return false;
+      }
+      if (this.time.now - this.lastDamageAt < 1400) {
+        this.setAction("Interrupted", 900);
+        ML.audio.play("denied");
+        ML.showToast("Recall needs a clean second after damage.", 1600);
+        return false;
+      }
+      const remaining = this.recallCooldownRemaining();
+      if (remaining > 0) {
+        this.setAction("Recharging", 900);
+        ML.audio.play("denied");
+        ML.showToast(`Recall is recharging: ${remaining}s.`, 1300);
+        return false;
+      }
+      const cost = this.recallCost();
+      if (this.sim.energy < cost) {
+        this.setAction("Low energy", 900);
+        ML.audio.play("denied");
+        ML.showToast(`Recall needs ${cost} energy.`, 1500);
+        return false;
+      }
+
+      this.sim.energy = clamp(this.sim.energy - cost, 0, this.sim.maxEnergy);
+      this.nextRecallAt = this.time.now + this.recallCooldownMs();
+      this.sim.stats.recalls += 1;
+      this.setAction("Recall", 1400);
+      this.resetInputState();
+      this.emitDust(this.player.x, this.player.y + 14, 10);
+      this.floatText(this.player.x - 24, this.player.y - 42, "RECALL", "#9edbe2");
+      ML.audio.play("recall");
+      this.cameras.main.fadeOut(110, 12, 18, 28);
+      this.time.delayedCall(130, () => {
+        const safe = this.sim.safeSpawnPixels();
+        this.player.setPosition(safe.x, safe.y);
+        this.player.setVelocity(0, 0);
+        this.sim.player = safe;
+        this.wasAirborne = false;
+        this.peakFallVy = 0;
+        this.jumpsUsed = 0;
+        this.playerIframesUntil = this.time.now + 900;
+        this.cameras.main.fadeIn(190, 12, 18, 28);
+        this.emitDust(this.player.x, this.player.y + 14, 8);
+        ML.showToast("Recalled to surface camp.", 1600);
+        this.checkAchievements();
+        ML.renderAll(this.sim);
+        this.saveGame();
+      });
+      ML.renderAll(this.sim);
       return true;
     }
 

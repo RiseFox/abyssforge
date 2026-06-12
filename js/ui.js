@@ -21,6 +21,7 @@
     gearText: document.getElementById("gearText"),
     actionText: document.getElementById("actionText"),
     targetText: document.getElementById("targetText"),
+    recallText: document.getElementById("recallText"),
     contractTitle: document.getElementById("contractTitle"),
     contractText: document.getElementById("contractText"),
     contractBar: document.getElementById("contractBar"),
@@ -140,6 +141,7 @@
     if (sim.speedBoost) gear.push("Greaves");
     if (sim.fallGuard) gear.push("Soles");
     if (sim.ward) gear.push("Ward");
+    if (sim.recallCharm) gear.push("Recall");
     ui.gearText.textContent = gear.join(" · ");
     ui.actionText.textContent = scene?.currentAction || "Explore";
     ui.targetText.textContent = scene?.targetLabel || "None";
@@ -213,6 +215,7 @@
     if (recipe.regenBoost) return !sim.regenBoost;
     if (recipe.treasureSense) return !sim.treasureSense;
     if (recipe.lootBonus) return !sim.lootBonus;
+    if (recipe.recallCharm) return !sim.recallCharm;
     if (recipe.maxHealth) return (sim.maxHealth || 100) < recipe.maxHealth;
     if (recipe.maxEnergy) return (sim.maxEnergy || 100) < recipe.maxEnergy;
     if (recipe.blastRadius) return (sim.blastRadius || 0) < recipe.blastRadius;
@@ -311,6 +314,15 @@
     ui.bossBar.classList.remove("hidden");
   }
 
+  function renderRecall(scene = ML.sceneRef) {
+    if (!ui.recallText) return;
+    const remaining = scene?.recallCooldownRemaining ? scene.recallCooldownRemaining() : 0;
+    const cost = scene?.recallCost ? scene.recallCost() : 0;
+    ui.recallText.textContent = remaining > 0 ? `${remaining}s` : "R";
+    ui.recallText.title = remaining > 0 ? `Recall recharging: ${remaining}s` : `Recall to camp: ${cost} energy`;
+    ui.recallText.closest(".action-chip")?.classList.toggle("disabled", remaining > 0);
+  }
+
   function renderCraft(sim) {
     if (!ML.sceneRef || !ML.sceneRef.craftOpen) return;
 
@@ -389,6 +401,7 @@
     renderContract(sim);
     renderEvent(scene);
     renderBossBar(scene);
+    renderRecall(scene);
     updateCraftReady(sim);
     renderAchievements(sim);
     renderCraft(sim);
@@ -559,6 +572,7 @@
       ["Secrets", sim.stats.secrets || 0],
       ["Contracts", sim.stats.contracts || 0],
       ["Events", sim.stats.events || 0],
+      ["Recalls", sim.stats.recalls || 0],
       ["Achievements", Object.keys(sim.achievements || {}).length],
       ["Days", day]
     ];
@@ -687,6 +701,7 @@
     renderContract,
     renderEvent,
     renderBossBar,
+    renderRecall,
     renderAll,
     minimap,
     toggleMinimap,
