@@ -1,0 +1,32 @@
+{
+  "name": "minerland",
+  "version": "0.1.0",
+  "description": "A browser-based 2D mining, crafting, and survival game inspired by Terraria-style exploration.",
+  "main": "index.html",
+  "scripts": {
+    "test": "npm run test:spawn",
+    "test:spawn": "node scripts/verify-spawn-seeds.js"
+  },
+  "keywords": [
+    "phaser",
+    "browser-game",
+    "mining",
+    "crafting",
+    "survival",
+    "pixel-art"
+  ],
+  "author": "RiseFox",
+  "license": "MIT",
+  "type": "commonjs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RiseFox/minerland.git"
+  },
+  "bugs": {
+    "url": "https://github.com/RiseFox/minerland/issues"
+  },
+  "homepage": "https://github.com/RiseFox/minerland#readme",
+  "devDependencies": {
+    "playwright": "^1.60.0"
+  }
+}
