@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>MinerLand</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js" integrity="sha384-AvQiDMZAVLda3VtAoU5MCfBz8pzXhteb2CiUJeKBmPlWzpXj1uJ96Km11+YuFNu/" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <main id="shell">
+    <div id="game"></div>
+    <section id="hud" aria-label="MinerLand HUD">
+      <div class="top-left">
+        <div class="brand">
+          <i class="brand-mark" aria-hidden="true"></i>
+          <div>
+            <strong>MinerLand</strong>
+            <span id="worldLabel">New descent</span>
+          </div>
+        </div>
+        <div class="status-panel">
+          <div class="stat">
+            <label><span>Health</span><span id="healthText">100</span></label>
+            <div class="bar health"><i id="healthBar"></i></div>
+          </div>
+          <div class="stat">
+            <label><span>Energy</span><span id="energyText">100</span></label>
+            <div class="bar energy"><i id="energyBar"></i></div>
+          </div>
+          <div class="stat">
+            <label><span>Depth</span><span id="depthText">0 m</span></label>
+            <div class="bar depth"><i id="depthBar"></i></div>
+          </div>
+          <div class="stat">
+            <label><span>Light</span><span id="lightText">Surface</span></label>
+            <div class="bar light"><i id="lightBar"></i></div>
+          </div>
+        </div>
+        <div class="tool-panel">
+          <i class="pick-icon" aria-hidden="true"></i>
+          <div class="tool-copy">
+            <label><span>Pickaxe</span><span id="pickTierText">Tier 1</span></label>
+            <strong id="pickHudText">Rust pick</strong>
+            <label><span>Damage</span><span id="damageText">1</span></label>
+            <label><span>Gear</span><span id="gearText">Headlamp</span></label>
+            <label><span>Action</span><span id="actionText">Explore</span></label>
+            <label><span>Target</span><span id="targetText">None</span></label>
+          </div>
+        </div>
+        <div class="action-strip" aria-label="Quick actions">
+          <div class="action-chip"><b>Mine/Hit</b><span>LMB</span></div>
+          <div class="action-chip"><b>Place/Use</b><span>RMB</span></div>
+          <div class="action-chip"><b>Attack</b><span>F</span></div>
+          <div class="action-chip"><b>Craft</b><span>E</span></div>
+        </div>
+      </div>
+
+      <div class="top-right">
+        <button id="menuToggle" class="icon-button" type="button" title="Menu">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg>
+        </button>
+        <button id="helpToggle" class="icon-button" type="button" title="Controls">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.2 8a3 3 0 1 1 5.4 1.8c-.9.8-1.8 1.4-1.8 3.2"/><path d="M12 17h.01"/><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z"/></svg>
+        </button>
+        <button id="craftToggle" class="icon-button" type="button" title="Crafting (E)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3 17.5 3.5l3 3-2.8 2.8"/><path d="m3.7 20.3 8.8-8.8"/><path d="m13.5 5.5 5 5"/><path d="M5 5h4v4H5z"/><path d="M15 15h4v4h-4z"/></svg>
+        </button>
+        <button id="mapToggle" class="icon-button" type="button" title="Map (M)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14"/><path d="M15 6v14"/></svg>
+        </button>
+        <button id="muteToggle" class="icon-button" type="button" title="Sound">
+          <svg id="muteIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18 6a8.5 8.5 0 0 1 0 12"/></svg>
+        </button>
+        <button id="saveBtn" class="icon-button" type="button" title="Save">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h14l2 2v14H4z"/><path d="M8 4v6h8V4"/><path d="M8 20v-6h8v6"/></svg>
+        </button>
+        <button id="pauseBtn" class="icon-button" type="button" title="Pause (Esc)">
+          <svg id="pauseIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14"/><path d="M16 5v14"/></svg>
+        </button>
+      </div>
+
+      <div id="toast" class="toast" role="status"></div>
+
+      <aside id="pauseMenu" class="pause-menu hidden">
+        <div class="drawer-head">
+          <div>
+            <strong>MinerLand</strong>
+            <span>Paused</span>
+          </div>
+          <button id="closeMenu" class="icon-button" type="button" title="Resume">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg>
+          </button>
+        </div>
+        <div class="menu-actions">
+          <button id="resumeBtn" type="button">Resume</button>
+          <button id="menuSaveBtn" type="button">Save</button>
+          <button id="menuRespawnBtn" type="button">Restart at spawn</button>
+          <button id="menuNewWorldBtn" type="button">New world</button>
+        </div>
+      </aside>
+
+      <aside id="helpDrawer" class="help-drawer hidden">
+        <div class="drawer-head">
+          <div>
+            <strong>Controls</strong>
+            <span>Mining, building, survival</span>
+          </div>
+          <button id="closeHelp" class="icon-button" type="button" title="Close">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg>
+          </button>
+        </div>
+        <div class="help-list">
+          <div class="help-row"><span><kbd>A</kbd><kbd>D</kbd></span><span>Move left and right</span></div>
+          <div class="help-row"><span><kbd>W</kbd><kbd>S</kbd></span><span>Climb ladders. Hold S on a platform to drop through</span></div>
+          <div class="help-row"><span><kbd>Shift</kbd></span><span>Sprint (drains energy)</span></div>
+          <div class="help-row"><span><kbd>Space</kbd></span><span>Jump. Double jump with Cave boots</span></div>
+          <div class="help-row"><span><kbd>LMB</kbd></span><span>Mine blocks or hit an enemy under the cursor</span></div>
+          <div class="help-row"><span><kbd>RMB</kbd></span><span>Place the selected item. Field kits are used; glow caps plant onto open air, otherwise eaten</span></div>
+          <div class="help-row"><span><kbd>1</kbd>-<kbd>9</kbd></span><span>Select hotbar slot (mouse wheel works too)</span></div>
+          <div class="help-row"><span><kbd>F</kbd></span><span>Swing at enemies in front of you</span></div>
+          <div class="help-row"><span><kbd>E</kbd></span><span>Open crafting: picks, blades, lamps, boots</span></div>
+          <div class="help-row"><span><kbd>M</kbd></span><span>Toggle the minimap</span></div>
+          <div class="help-row"><span><kbd>Gel</kbd></span><span>Slimes and crawlers drop gel for torches and charges</span></div>
+          <div class="help-row"><span><kbd>Coins</kbd></span><span>Mobs and chests drop coins for merchant recovery kits</span></div>
+          <div class="help-row"><span><kbd>Rest</kbd></span><span>Health slowly regenerates when safe, lit, and out of combat</span></div>
+          <div class="help-row"><span><kbd>Esc</kbd></span><span>Pause or resume</span></div>
+        </div>
+      </aside>
+
+      <aside id="craftDrawer" class="craft-drawer hidden">
+        <div class="drawer-head">
+          <div>
+            <strong>Workshop</strong>
+            <span id="pickText">Rust pick</span>
+          </div>
+          <button id="closeCraft" class="icon-button" type="button" title="Close">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg>
+          </button>
+        </div>
+        <div id="craftTabs" class="craft-tabs"></div>
+        <div class="drawer-body">
+          <div id="inventoryGrid" class="inventory-grid"></div>
+          <div id="recipes" class="recipes"></div>
+        </div>
+      </aside>
+
+      <aside id="minimapPanel" class="minimap-panel hidden">
+        <div class="drawer-head">
+          <div>
+            <strong>Map</strong>
+          </div>
+          <button id="closeMap" class="icon-button" type="button" title="Close">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg>
+          </button>
+        </div>
+        <canvas id="minimapCanvas" width="180" height="300"></canvas>
+      </aside>
+
+      <div id="hotbar" class="hotbar" aria-label="Hotbar"></div>
+
+      <div id="deathPanel" class="death-panel hidden">
+        <h1>Descent failed</h1>
+        <p id="deathCause">The lift pulled you back to the surface with part of the haul lost.</p>
+        <div id="deathStats" class="death-stats"></div>
+        <div class="death-actions">
+          <button id="respawnBtn" type="button">Respawn</button>
+          <button id="newWorldBtn" type="button">New world</button>
+        </div>
+      </div>
+
+      <div id="damageFlash" class="damage-flash" aria-hidden="true"></div>
+
+      <div class="mobile-controls" aria-label="Touch controls">
+        <div class="mobile-cluster">
+          <button data-hold="left" type="button">L</button>
+          <button data-hold="right" type="button">R</button>
+        </div>
+        <div class="mobile-cluster">
+          <button data-tap="attack" class="tall" type="button">A</button>
+          <button data-tap="mine" class="tall" type="button">M</button>
+          <button data-tap="place" class="tall" type="button">P</button>
+          <button data-tap="jump" class="tall" type="button">J</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/textures.js"></script>
+  <script src="js/sim.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/scene.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
