@@ -158,11 +158,17 @@ window.ML = window.ML || {};
   const RECIPES = [
     { id: "torch", cat: "blocks", name: "Torch bundle", cost: { wood: 1, coal: 1 }, out: { torch: 4 }, note: "Local light for deeper tunnels" },
     { id: "gelTorch", cat: "blocks", name: "Gel torches", cost: { wood: 1, gel: 2 }, out: { torch: 5 }, note: "Classic slime-gel torch recipe" },
+    { id: "mushroomFlare", cat: "blocks", name: "Mushroom flares", cost: { mushroom: 1, gel: 1 }, out: { torch: 4 }, note: "Soft cyan light from cave growth" },
     { id: "ladder", cat: "blocks", name: "Ladder stack", cost: { wood: 2 }, out: { ladder: 6 }, note: "Vertical movement in shafts" },
+    { id: "ironLadder", cat: "blocks", name: "Iron ladder frame", cost: { wood: 1, iron: 1 }, out: { ladder: 10 }, note: "Efficient deep-shaft ladder work" },
     { id: "silkLadder", cat: "blocks", name: "Silk ladder roll", cost: { wood: 1, silk: 2 }, out: { ladder: 12 }, note: "Boss-silk rope for long drops" },
     { id: "platform", cat: "blocks", name: "Platform pack", cost: { wood: 1 }, out: { platform: 4 }, note: "One-way bridges. Hold S to drop through" },
+    { id: "stoneBridge", cat: "blocks", name: "Stone bridge pack", cost: { stone: 4 }, out: { platform: 6 }, note: "Build crossings when trees are scarce" },
+    { id: "obsidianBridge", cat: "blocks", name: "Obsidian bridge kit", cost: { obsidian: 1, stone: 4 }, out: { platform: 10 }, note: "Fire-dark bridge material for deep vaults" },
     { id: "charge", cat: "blocks", name: "Blast charges", cost: { coal: 3, copper: 2, stone: 2 }, out: { charge: 2 }, note: "Clears a pocket of rock" },
     { id: "stickyCharge", cat: "blocks", name: "Sticky charges", cost: { coal: 2, copper: 1, gel: 2 }, out: { charge: 2 }, note: "Cheaper bombs after fighting slimes" },
+    { id: "bombCrate", cat: "blocks", name: "Bomb crate", cost: { coal: 6, copper: 4, iron: 2 }, out: { charge: 5 }, note: "Bulk explosives for branch mining" },
+    { id: "crystalBeacon", cat: "blocks", name: "Crystal beacon bundle", cost: { crystal: 1, coal: 2, wood: 1 }, out: { torch: 8 }, note: "Bright, long-running cave markers" },
     { id: "coreCharge", cat: "blocks", name: "Core charges", cost: { coal: 4, obsidian: 2, core: 1 }, out: { charge: 5 }, note: "Boss-core charges for serious excavation" },
 
     { id: "stonePick", cat: "tools", name: "Stone pick", cost: { wood: 2, stone: 10 }, upgrade: 2, note: "Copper seams become reachable" },
@@ -177,20 +183,59 @@ window.ML = window.ML || {};
     { id: "caveBoots", cat: "tools", name: "Cave boots", cost: { wood: 3, iron: 4 }, boots: true, note: "Double jump, softer landings" },
     { id: "minerLamp", cat: "tools", name: "Miner lamp", cost: { copper: 4, coal: 6 }, lamp: 1, note: "Wider personal light" },
     { id: "beaconLamp", cat: "tools", name: "Beacon lamp", cost: { gold: 6, crystal: 4 }, lamp: 2, note: "The deep dark cannot touch you" },
-    { id: "blastSatchel", cat: "tools", name: "Blast satchel", cost: { silk: 3, copper: 4, charge: 2 }, blastRadius: 0.65, note: "Charges carve a wider pocket" },
-    { id: "heartCharm", cat: "tools", name: "Heart charm", cost: { relic: 2, mushroom: 3, gold: 3 }, maxHealth: 125, note: "Raises maximum health to 125" },
-    { id: "enduranceCharm", cat: "tools", name: "Endurance charm", cost: { relic: 1, silk: 4, iron: 6 }, maxEnergy: 130, note: "Raises maximum energy to 130" },
-    { id: "shadowWard", cat: "tools", name: "Shadow ward", cost: { core: 1, obsidian: 4, crystal: 4 }, ward: true, note: "Softens deep darkness and boss hits" },
+    { id: "reinforcedSoles", cat: "tools", name: "Reinforced soles", cost: { iron: 4, silk: 2, gel: 2 }, fallGuard: true, note: "Cuts fall damage and hard landing shock" },
+    { id: "sprintGreaves", cat: "tools", name: "Sprint greaves", cost: { fang: 1, iron: 5, silk: 2 }, speedBoost: true, note: "Higher walk and sprint speed" },
+
+    { id: "blastSatchel", cat: "relics", name: "Blast satchel", cost: { silk: 3, copper: 4, charge: 2 }, blastRadius: 0.65, note: "Charges carve a wider pocket" },
+    { id: "heartCharm", cat: "relics", name: "Heart charm", cost: { relic: 2, mushroom: 3, gold: 3 }, maxHealth: 125, note: "Raises maximum health to 125" },
+    { id: "titanHeart", cat: "relics", name: "Titan heart", cost: { core: 1, relic: 4, obsidian: 4 }, maxHealth: 150, note: "Raises maximum health to 150" },
+    { id: "enduranceCharm", cat: "relics", name: "Endurance charm", cost: { relic: 1, silk: 4, iron: 6 }, maxEnergy: 130, note: "Raises maximum energy to 130" },
+    { id: "forgeHarness", cat: "relics", name: "Forge harness", cost: { core: 1, fang: 2, gold: 8 }, maxEnergy: 160, note: "Raises maximum energy to 160" },
+    { id: "recoveryCharm", cat: "relics", name: "Recovery charm", cost: { relic: 1, gel: 4, mushroom: 4 }, regenBoost: true, note: "Faster resting recovery when safe" },
+    { id: "vaultCompass", cat: "relics", name: "Vault compass", cost: { relic: 2, copper: 6, gold: 3 }, treasureSense: true, note: "Marks unopened secret caches on the map" },
+    { id: "luckyPouch", cat: "relics", name: "Lucky pouch", cost: { silk: 3, coin: 30, gold: 2 }, lootBonus: true, note: "Chests and bosses spill more coins" },
+    { id: "shadowWard", cat: "relics", name: "Shadow ward", cost: { core: 1, obsidian: 4, crystal: 4 }, ward: true, note: "Softens deep darkness and boss hits" },
 
     { id: "fieldKit", cat: "survival", name: "Field kit", cost: { wood: 2, coal: 2, mushroom: 1 }, out: { kit: 1 }, note: "Use from the hotbar: +45 health, +45 energy" },
     { id: "merchantKit", cat: "survival", name: "Merchant kit", cost: { coin: 12, mushroom: 1 }, out: { kit: 1 }, note: "Spend coins for a quick recovery kit" },
-    { id: "vaultKit", cat: "survival", name: "Vault kit", cost: { coin: 18, silk: 2, mushroom: 2 }, out: { kit: 2 }, note: "Secret-room supplies packed into two field kits" }
+    { id: "mushroomStew", cat: "survival", name: "Mushroom stew", cost: { mushroom: 2, gel: 1 }, out: { kit: 1 }, note: "Turns cave food into a real recovery kit" },
+    { id: "ironRationBox", cat: "survival", name: "Iron ration box", cost: { coin: 20, iron: 2, coal: 1 }, out: { kit: 2 }, note: "Heavy but reliable expedition supplies" },
+    { id: "vaultKit", cat: "survival", name: "Vault kit", cost: { coin: 18, silk: 2, mushroom: 2 }, out: { kit: 2 }, note: "Secret-room supplies packed into two field kits" },
+    { id: "bossTonic", cat: "survival", name: "Boss tonic", cost: { core: 1, fang: 1, mushroom: 2 }, out: { kit: 3 }, note: "A dangerous brew for late-game fights" },
+    { id: "coinPress", cat: "survival", name: "Coin press", cost: { gold: 1 }, out: { coin: 14 }, note: "Press spare gold into merchant coins" },
+    { id: "crystalTrade", cat: "survival", name: "Crystal trade", cost: { crystal: 1 }, out: { coin: 20 }, note: "Convert rare crystal into quick money" }
   ];
 
   const CRAFT_CATS = [
     { id: "tools", label: "Tools" },
     { id: "blocks", label: "Blocks" },
-    { id: "survival", label: "Survival" }
+    { id: "survival", label: "Survival" },
+    { id: "relics", label: "Relics" }
+  ];
+
+  const ACHIEVEMENTS = [
+    { id: "firstBreak", name: "First Spark", note: "Mine your first block.", stat: "mined", at: 1 },
+    { id: "stoneCache", name: "Stone Stockpile", note: "Carry 40 stone.", item: "stone", at: 40 },
+    { id: "firstCraft", name: "Workbench Hands", note: "Craft your first recipe.", stat: "crafted", at: 1 },
+    { id: "craftsman", name: "Tunnel Smith", note: "Craft 8 recipes.", stat: "crafted", at: 8 },
+    { id: "firstChest", name: "Cache Finder", note: "Open a chest.", stat: "chests", at: 1 },
+    { id: "secretOne", name: "Hidden Door", note: "Open a secret cache.", stat: "secrets", at: 1 },
+    { id: "secretFive", name: "Vault Runner", note: "Open five secret caches.", stat: "secrets", at: 5 },
+    { id: "deep40", name: "Below the Roots", note: "Reach 40 m depth.", stat: "deepest", at: 40 },
+    { id: "deep120", name: "Blackstone Air", note: "Reach 120 m depth.", stat: "deepest", at: 120 },
+    { id: "deep220", name: "Abyss Floor", note: "Reach 220 m depth.", stat: "deepest", at: 220 },
+    { id: "firstKill", name: "Cave Clearer", note: "Defeat your first mob.", stat: "enemies", at: 1 },
+    { id: "hunter", name: "Depth Hunter", note: "Defeat 20 mobs.", stat: "enemies", at: 20 },
+    { id: "bossOne", name: "Boss Breaker", note: "Defeat a hidden boss.", stat: "bosses", at: 1 },
+    { id: "bossTwo", name: "Abyss Authority", note: "Defeat both hidden bosses.", stat: "bosses", at: 2 },
+    { id: "stonePick", name: "Stone Age", note: "Craft the Stone pick.", prop: "pickLevel", at: 2 },
+    { id: "starDrill", name: "Starforged", note: "Craft the Starforged drill.", prop: "pickLevel", at: 6 },
+    { id: "beaconLamp", name: "Beacon Bearer", note: "Craft the Beacon lamp.", prop: "lamp", at: 2 },
+    { id: "abyssEdge", name: "Abyss Edge", note: "Craft the Abyss edge.", prop: "blade", at: 4 },
+    { id: "boots", name: "Second Step", note: "Craft Cave boots.", flag: "boots" },
+    { id: "ward", name: "Darkness Warden", note: "Craft the Shadow ward.", flag: "ward" },
+    { id: "titanHeart", name: "Titan Heart", note: "Raise max health to 150.", prop: "maxHealth", at: 150 },
+    { id: "forgeHarness", name: "Overcharged", note: "Raise max energy to 160.", prop: "maxEnergy", at: 160 }
   ];
 
   // Enemy archetypes. "deep" variants kick in below 150 m.
@@ -225,6 +270,7 @@ window.ML = window.ML || {};
     LAMPS,
     RECIPES,
     CRAFT_CATS,
+    ACHIEVEMENTS,
     ENEMIES
   });
 })();

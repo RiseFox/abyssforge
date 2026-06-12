@@ -45,6 +45,22 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     return { checked: seedCount, failures };
   }, SEED_COUNT);
 
+  const progressionCheck = await page.evaluate(() => {
+    const sim = new window.ML.MinerSim();
+    sim.newWorld(7919);
+    const craftable = window.ML.craftableRecipes(sim);
+    const platformRecipe = window.ML.RECIPES.find((recipe) => recipe.id === "platform");
+    const craftResult = sim.craft(platformRecipe);
+    return {
+      recipes: window.ML.RECIPES.length,
+      achievements: window.ML.ACHIEVEMENTS.length,
+      craftable: craftable.length,
+      craftResult,
+      crafted: sim.stats.crafted,
+      platforms: sim.inventory.platform
+    };
+  });
+
   await page.evaluate(() => {
     localStorage.removeItem(window.ML.SAVE_KEY);
     window.ML.sceneRef.sim.newWorld(123456789);
@@ -73,8 +89,14 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
 
   await browser.close();
 
-  const failed = errors.length > 0 || seedCheck.failures.length > 0 || !start.support || !start.stable || fallDelta > 1;
-  const report = { seedCheck, start, afterDown, fallDelta, errors };
+  const progressionFailed = progressionCheck.recipes < 34
+    || progressionCheck.achievements < 20
+    || progressionCheck.craftable < 3
+    || !progressionCheck.craftResult.ok
+    || progressionCheck.crafted < 1
+    || progressionCheck.platforms < 4;
+  const failed = errors.length > 0 || seedCheck.failures.length > 0 || progressionFailed || !start.support || !start.stable || fallDelta > 1;
+  const report = { seedCheck, progressionCheck, start, afterDown, fallDelta, errors };
   console.log(JSON.stringify(report, null, 2));
 
   if (failed) process.exit(1);

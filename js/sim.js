@@ -25,10 +25,17 @@
       this.maxHealth = this.maxHealth || 100;
       this.maxEnergy = this.maxEnergy || 100;
       this.ward = Boolean(this.ward);
+      this.fallGuard = Boolean(this.fallGuard);
+      this.speedBoost = Boolean(this.speedBoost);
+      this.regenBoost = Boolean(this.regenBoost);
+      this.treasureSense = Boolean(this.treasureSense);
+      this.lootBonus = Boolean(this.lootBonus);
       this.blastRadius = this.blastRadius || 0;
       this.health = clamp(this.health ?? this.maxHealth, 0, this.maxHealth);
       this.energy = clamp(this.energy ?? this.maxEnergy, 0, this.maxEnergy);
-      this.stats = Object.assign({ mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0 }, this.stats || {});
+      this.stats = Object.assign({ mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0 }, this.stats || {});
+      this.achievements = Object.assign({}, this.achievements || {});
+      this.craftedRecipes = Object.assign({}, this.craftedRecipes || {});
       this.inventory = Object.assign(
         { dirt: 0, stone: 0, wood: 0, coal: 0, copper: 0, iron: 0, gold: 0, crystal: 0, obsidian: 0, gel: 0, coin: 0, silk: 0, fang: 0, relic: 0, core: 0, torch: 0, ladder: 0, platform: 0, charge: 0, mushroom: 0, kit: 0 },
         this.inventory || {}
@@ -56,6 +63,11 @@
       this.boots = false;
       this.lamp = 0;
       this.ward = false;
+      this.fallGuard = false;
+      this.speedBoost = false;
+      this.regenBoost = false;
+      this.treasureSense = false;
+      this.lootBonus = false;
       this.blastRadius = 0;
       this.selected = 3;
       this.inventory = {
@@ -69,7 +81,9 @@
       this.spawn = generated.spawn;
       this.shaft = generated.shaft;
       this.secrets = generated.secrets || [];
-      this.stats = { mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0 };
+      this.stats = { mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0 };
+      this.achievements = {};
+      this.craftedRecipes = {};
       this.repairSpawnShaft();
       this.player = this.safeSpawnPixels();
       this.rebuildLights();
@@ -559,6 +573,11 @@
         boots: this.boots,
         lamp: this.lamp,
         ward: this.ward,
+        fallGuard: this.fallGuard,
+        speedBoost: this.speedBoost,
+        regenBoost: this.regenBoost,
+        treasureSense: this.treasureSense,
+        lootBonus: this.lootBonus,
         blastRadius: this.blastRadius,
         selected: this.selected,
         inventory: this.inventory,
@@ -572,7 +591,9 @@
         mobs: this.mobs,
         mobSeq: this.mobSeq,
         mobBaseline: this.mobBaseline,
-        stats: this.stats
+        stats: this.stats,
+        achievements: this.achievements,
+        craftedRecipes: this.craftedRecipes
       };
       try {
         localStorage.setItem(ML.SAVE_KEY, JSON.stringify({ version: 2, state }));
@@ -613,6 +634,11 @@
       if (recipe.lamp && this.lamp >= recipe.lamp) return { ok: false, message: "Already built." };
       if (recipe.boots && this.boots) return { ok: false, message: "Already built." };
       if (recipe.ward && this.ward) return { ok: false, message: "Already built." };
+      if (recipe.fallGuard && this.fallGuard) return { ok: false, message: "Already built." };
+      if (recipe.speedBoost && this.speedBoost) return { ok: false, message: "Already built." };
+      if (recipe.regenBoost && this.regenBoost) return { ok: false, message: "Already built." };
+      if (recipe.treasureSense && this.treasureSense) return { ok: false, message: "Already built." };
+      if (recipe.lootBonus && this.lootBonus) return { ok: false, message: "Already built." };
       if (recipe.maxHealth && this.maxHealth >= recipe.maxHealth) return { ok: false, message: "Already built." };
       if (recipe.maxEnergy && this.maxEnergy >= recipe.maxEnergy) return { ok: false, message: "Already built." };
       if (recipe.blastRadius && this.blastRadius >= recipe.blastRadius) return { ok: false, message: "Already built." };
@@ -628,6 +654,11 @@
       if (recipe.lamp) this.lamp = recipe.lamp;
       if (recipe.boots) this.boots = true;
       if (recipe.ward) this.ward = true;
+      if (recipe.fallGuard) this.fallGuard = true;
+      if (recipe.speedBoost) this.speedBoost = true;
+      if (recipe.regenBoost) this.regenBoost = true;
+      if (recipe.treasureSense) this.treasureSense = true;
+      if (recipe.lootBonus) this.lootBonus = true;
       if (recipe.maxHealth) {
         const oldMax = this.maxHealth;
         this.maxHealth = recipe.maxHealth;
@@ -639,6 +670,8 @@
         this.energy = clamp(this.energy + Math.max(0, this.maxEnergy - oldMax), 0, this.maxEnergy);
       }
       if (recipe.blastRadius) this.blastRadius = recipe.blastRadius;
+      this.stats.crafted += 1;
+      this.craftedRecipes[recipe.id] = true;
       return { ok: true, message: `${recipe.name} crafted.` };
     }
 

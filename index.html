@@ -65,6 +65,7 @@
         </button>
         <button id="craftToggle" class="icon-button" type="button" title="Crafting (E)">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3 17.5 3.5l3 3-2.8 2.8"/><path d="m3.7 20.3 8.8-8.8"/><path d="m13.5 5.5 5 5"/><path d="M5 5h4v4H5z"/><path d="M15 15h4v4h-4z"/></svg>
+          <span id="craftBadge" class="craft-badge hidden">0</span>
         </button>
         <button id="mapToggle" class="icon-button" type="button" title="Map (M)">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14"/><path d="M15 6v14"/></svg>
@@ -81,6 +82,15 @@
       </div>
 
       <div id="toast" class="toast" role="status"></div>
+      <button id="craftReady" class="craft-ready hidden" type="button">
+        <span>Craft ready</span>
+        <strong id="craftReadyText">Open workshop</strong>
+      </button>
+      <div id="achievementToast" class="achievement-toast hidden" role="status">
+        <span>Achievement unlocked</span>
+        <strong id="achievementToastName">First Spark</strong>
+        <small id="achievementToastNote">Mine your first block.</small>
+      </div>
 
       <aside id="pauseMenu" class="pause-menu hidden">
         <div class="drawer-head">
@@ -97,6 +107,13 @@
           <button id="menuSaveBtn" type="button">Save</button>
           <button id="menuRespawnBtn" type="button">Restart at spawn</button>
           <button id="menuNewWorldBtn" type="button">New world</button>
+        </div>
+        <div class="achievement-panel">
+          <div class="achievement-head">
+            <strong>Achievements</strong>
+            <span id="achievementProgress">0/0</span>
+          </div>
+          <div id="achievementList" class="achievement-list"></div>
         </div>
       </aside>
 
@@ -119,10 +136,11 @@
           <div class="help-row"><span><kbd>RMB</kbd></span><span>Place the selected item. Field kits are used; glow caps plant onto open air, otherwise eaten</span></div>
           <div class="help-row"><span><kbd>1</kbd>-<kbd>9</kbd></span><span>Select hotbar slot (mouse wheel works too)</span></div>
           <div class="help-row"><span><kbd>F</kbd></span><span>Swing at enemies in front of you</span></div>
-          <div class="help-row"><span><kbd>E</kbd></span><span>Open crafting: picks, blades, lamps, boots</span></div>
+          <div class="help-row"><span><kbd>E</kbd></span><span>Open crafting. A gold badge means something new is buildable</span></div>
           <div class="help-row"><span><kbd>M</kbd></span><span>Toggle the minimap</span></div>
           <div class="help-row"><span><kbd>Gel</kbd></span><span>Slimes and crawlers drop gel for torches and charges</span></div>
           <div class="help-row"><span><kbd>Coins</kbd></span><span>Mobs and chests drop coins for merchant recovery kits</span></div>
+          <div class="help-row"><span><kbd>Relics</kbd></span><span>Secret caches and bosses unlock late-game charms and gear</span></div>
           <div class="help-row"><span><kbd>Rest</kbd></span><span>Health slowly regenerates when safe, lit, and out of combat</span></div>
           <div class="help-row"><span><kbd>Esc</kbd></span><span>Pause or resume</span></div>
         </div>

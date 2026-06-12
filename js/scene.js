@@ -45,6 +45,7 @@
       this.lastHudUpdate = 0;
       this.lastMapUpdate = 0;
       this.lastMusicCheck = 0;
+      this.achievementClock = 0;
       this.currentAction = "Explore";
       this.targetLabel = "None";
       this.actionHoldUntil = 0;
@@ -197,6 +198,7 @@
       ML.ui.helpDrawer.classList.add("hidden");
       this.refreshMobActivation();
       ML.renderAll(this.sim);
+      this.checkAchievements();
       ML.showToast("Pickaxe ready. LMB mines, RMB places or uses, F attacks, E crafts, M map.", 4600);
     }
 
@@ -312,6 +314,7 @@
 
       const sprinting = this.keys.sprint.isDown && this.sim.energy > 6 && onFloor && !onLadder;
       let speed = sprinting ? 305 : 220;
+      if (this.sim.speedBoost) speed *= sprinting ? 1.18 : 1.12;
       if (inLava) speed *= 0.5;
       let vx = 0;
       if (left) vx -= speed;
@@ -414,6 +417,11 @@
       if (this.lastMapUpdate > 400) {
         this.lastMapUpdate = 0;
         ML.minimap.render(this);
+      }
+      this.achievementClock += delta;
+      if (this.achievementClock > 800) {
+        this.achievementClock = 0;
+        this.checkAchievements();
       }
     }
 
@@ -612,6 +620,7 @@
       if (peak > threshold) {
         let dmg = Math.round((peak - threshold) / 16);
         if (this.sim.boots) dmg = Math.round(dmg * 0.55);
+        if (this.sim.fallGuard) dmg = Math.round(dmg * 0.55);
         if (dmg > 0) {
           ML.audio.play("land");
           this.cameras.main.shake(110, 0.005);
@@ -653,7 +662,8 @@
       const surfaceRest = this.depthMeters() <= 3;
       const litRest = light > 0.5;
       if (!surfaceRest && !litRest) return;
-      const rate = surfaceRest ? 1.15 : 0.55;
+      let rate = surfaceRest ? 1.15 : 0.55;
+      if (this.sim.regenBoost) rate *= 1.55;
       const before = this.sim.health;
       this.sim.health = clamp(this.sim.health + dt * rate, 0, this.sim.maxHealth);
       if (Math.floor(before) !== Math.floor(this.sim.health) && (!this.actionHoldUntil || this.time.now > this.actionHoldUntil)) {
@@ -884,6 +894,7 @@
       }
 
       this.sim.stats.mined += 1;
+      this.checkAchievements();
       this.emitBlockBurst(x, y, BLOCK_TINTS[tile] || 0xffffff, opts.batch ? 3 : 6);
       ML.minimap.paintTile(this.sim, x, y);
       if (!opts.batch) {
@@ -921,6 +932,7 @@
           loot.obsidian = (loot.obsidian || 0) + 2;
         }
       }
+      if (this.sim.lootBonus) loot.coin = (loot.coin || 0) + 6 + Math.floor(Math.random() * 8);
       const parts = [];
       for (const [item, n] of Object.entries(loot)) {
         if (!n) continue;
@@ -931,6 +943,8 @@
       ML.audio.play(secret ? "secret" : "chest");
       this.floatText(x * TILE, y * TILE - 6, secret ? "Secret cache!" : "Supplies!", secret ? "#d8b6ff" : "#ffe49a");
       ML.showToast(`${secret ? "Secret cache" : "Chest"}: ${parts.join(", ")}.`, 3600);
+      this.sim.stats.chests += 1;
+      this.checkAchievements();
     }
 
     // ---- Placing & using items -------------------------------------------------
@@ -1143,6 +1157,7 @@
 
     killEnemy(enemy) {
       const drops = this.dropsFor(enemy.kind);
+      if (this.sim.lootBonus) drops.coin = (drops.coin || 0) + (ENEMIES[enemy.kind]?.boss ? 18 : 3);
       for (const [item, n] of Object.entries(drops)) {
         this.sim.addItem(item, n);
         this.spawnPickupFx(Math.floor(enemy.x / TILE), Math.floor(enemy.y / TILE), item);
@@ -1154,6 +1169,7 @@
         this.floatText(enemy.x - 30, enemy.y - 38, "BOSS DOWN", "#ffcf6a");
         ML.showToast(`${this.enemyName(enemy.kind)} defeated. New boss materials unlocked.`, 4200);
       }
+      this.checkAchievements();
       this.emitBlockBurst(Math.floor(enemy.x / TILE), Math.floor(enemy.y / TILE), 0x7c5a91, 6);
       ML.audio.play("enemyDie");
       // Dead for good — remove the world entry, no respawn at this home.
@@ -1583,6 +1599,19 @@
         ease: "Sine.easeOut",
         onComplete: () => label.destroy()
       });
+    }
+
+    checkAchievements() {
+      let unlockedAny = false;
+      for (const achievement of ML.ACHIEVEMENTS || []) {
+        if (this.sim.achievements?.[achievement.id]) continue;
+        if (!ML.achievementMet(this.sim, achievement)) continue;
+        this.sim.achievements[achievement.id] = true;
+        unlockedAny = true;
+        ML.showAchievement(achievement);
+        ML.audio.play("achievement");
+      }
+      if (unlockedAny) ML.renderAll(this.sim);
     }
 
     // ---- UI plumbing ------------------------------------------------------------------

@@ -2,7 +2,7 @@
 (() => {
   "use strict";
   const ML = window.ML;
-  const { WORLD_W, WORLD_H, AIR, TILE, ITEM_META, HOTBAR, PICKS, BLADES, LAMPS, RECIPES, CRAFT_CATS, MAP_COLORS, clamp } = ML;
+  const { WORLD_W, WORLD_H, AIR, TILE, ITEM_META, HOTBAR, PICKS, BLADES, LAMPS, RECIPES, CRAFT_CATS, ACHIEVEMENTS, MAP_COLORS, clamp } = ML;
 
   const ui = {
     healthText: document.getElementById("healthText"),
@@ -30,6 +30,9 @@
     helpToggle: document.getElementById("helpToggle"),
     closeHelp: document.getElementById("closeHelp"),
     craftToggle: document.getElementById("craftToggle"),
+    craftBadge: document.getElementById("craftBadge"),
+    craftReady: document.getElementById("craftReady"),
+    craftReadyText: document.getElementById("craftReadyText"),
     closeCraft: document.getElementById("closeCraft"),
     mapToggle: document.getElementById("mapToggle"),
     muteToggle: document.getElementById("muteToggle"),
@@ -53,7 +56,12 @@
     deathStats: document.getElementById("deathStats"),
     respawnBtn: document.getElementById("respawnBtn"),
     newWorldBtn: document.getElementById("newWorldBtn"),
-    damageFlash: document.getElementById("damageFlash")
+    damageFlash: document.getElementById("damageFlash"),
+    achievementToast: document.getElementById("achievementToast"),
+    achievementToastName: document.getElementById("achievementToastName"),
+    achievementToastNote: document.getElementById("achievementToastNote"),
+    achievementProgress: document.getElementById("achievementProgress"),
+    achievementList: document.getElementById("achievementList")
   };
 
   const mobile = { left: false, right: false, jumpTap: false, mineTap: false, placeTap: false, attackTap: false };
@@ -63,6 +71,11 @@
   let minimapOpen = window.matchMedia("(min-width: 761px)").matches;
   let lastFlashAt = 0;
   let hotbarEls = null;
+  let lastCraftableIds = null;
+  let craftReadyTimer = 0;
+  let achievementTimer = 0;
+  let achievementQueue = [];
+  let achievementShowing = false;
 
   function showToast(message, ms = 2000) {
     if (!ui.toast) return;
@@ -111,6 +124,9 @@
     ui.damageText.textContent = `${sim.attackDamage()} · ${BLADES[sim.blade].name}`;
     const gear = [LAMPS[sim.lamp].name];
     if (sim.boots) gear.push("Cave boots");
+    if (sim.speedBoost) gear.push("Greaves");
+    if (sim.fallGuard) gear.push("Soles");
+    if (sim.ward) gear.push("Ward");
     ui.gearText.textContent = gear.join(" · ");
     ui.actionText.textContent = scene?.currentAction || "Explore";
     ui.targetText.textContent = scene?.targetLabel || "None";
@@ -179,10 +195,51 @@
     if (recipe.lamp) return sim.lamp < recipe.lamp;
     if (recipe.boots) return !sim.boots;
     if (recipe.ward) return !sim.ward;
+    if (recipe.fallGuard) return !sim.fallGuard;
+    if (recipe.speedBoost) return !sim.speedBoost;
+    if (recipe.regenBoost) return !sim.regenBoost;
+    if (recipe.treasureSense) return !sim.treasureSense;
+    if (recipe.lootBonus) return !sim.lootBonus;
     if (recipe.maxHealth) return (sim.maxHealth || 100) < recipe.maxHealth;
     if (recipe.maxEnergy) return (sim.maxEnergy || 100) < recipe.maxEnergy;
     if (recipe.blastRadius) return (sim.blastRadius || 0) < recipe.blastRadius;
     return true;
+  }
+
+  function craftableRecipes(sim) {
+    return RECIPES.filter((recipe) => recipeVisible(sim, recipe) && ML.canAfford(sim.inventory, recipe.cost));
+  }
+
+  function updateCraftReady(sim) {
+    const ready = craftableRecipes(sim);
+    const ids = new Set(ready.map((recipe) => recipe.id));
+    const count = ready.length;
+    ui.craftToggle?.classList.toggle("has-ready", count > 0);
+    if (ui.craftBadge) {
+      ui.craftBadge.textContent = String(Math.min(count, 99));
+      ui.craftBadge.classList.toggle("hidden", count === 0);
+    }
+
+    if (lastCraftableIds) {
+      const newlyReady = ready.filter((recipe) => !lastCraftableIds.has(recipe.id));
+      if (newlyReady.length && !ML.sceneRef?.craftOpen) {
+        const first = newlyReady[0];
+        showCraftReady(newlyReady.length === 1 ? first.name : `${newlyReady.length} new recipes ready`);
+      }
+    }
+    lastCraftableIds = ids;
+  }
+
+  function showCraftReady(label) {
+    if (!ui.craftReady || !ui.craftReadyText) return;
+    ui.craftReadyText.textContent = label;
+    ui.craftReady.classList.remove("hidden");
+    requestAnimationFrame(() => ui.craftReady.classList.add("visible"));
+    clearTimeout(craftReadyTimer);
+    craftReadyTimer = setTimeout(() => {
+      ui.craftReady.classList.remove("visible");
+      setTimeout(() => ui.craftReady.classList.add("hidden"), 180);
+    }, 3400);
   }
 
   function renderCraft(sim) {
@@ -228,6 +285,7 @@
         const result = sim.craft(recipe);
         showToast(result.message);
         ML.audio.play(result.ok ? "craft" : "denied");
+        if (result.ok) ML.sceneRef?.checkAchievements?.();
         ML.renderAll(sim); // renderAll already re-renders the open drawer
       });
 
@@ -256,7 +314,65 @@
     const scene = ML.sceneRef;
     renderStatus(sim, scene?.player, scene?.playerLight ? scene.playerLight() : 1);
     renderHotbar(sim);
+    updateCraftReady(sim);
+    renderAchievements(sim);
     renderCraft(sim);
+  }
+
+  function achievementMet(sim, achievement) {
+    if (achievement.stat) return (sim.stats?.[achievement.stat] || 0) >= achievement.at;
+    if (achievement.item) return (sim.inventory?.[achievement.item] || 0) >= achievement.at;
+    if (achievement.prop) return (sim[achievement.prop] || 0) >= achievement.at;
+    if (achievement.flag) return Boolean(sim[achievement.flag]);
+    return false;
+  }
+
+  function renderAchievements(sim) {
+    if (!ui.achievementList || !ui.achievementProgress) return;
+    const unlocked = ACHIEVEMENTS.filter((achievement) => sim.achievements?.[achievement.id]).length;
+    ui.achievementProgress.textContent = `${unlocked}/${ACHIEVEMENTS.length}`;
+    ui.achievementList.textContent = "";
+    ACHIEVEMENTS.forEach((achievement) => {
+      const done = Boolean(sim.achievements?.[achievement.id]);
+      const row = document.createElement("div");
+      row.className = "achievement-row " + (done ? "unlocked" : "locked");
+      const copy = document.createElement("div");
+      const name = document.createElement("b");
+      name.textContent = achievement.name;
+      const note = document.createElement("small");
+      note.textContent = done ? achievement.note : "Locked";
+      copy.append(name, note);
+      row.appendChild(copy);
+      ui.achievementList.appendChild(row);
+    });
+  }
+
+  function showAchievement(achievement) {
+    achievementQueue.push(achievement);
+    if (achievementShowing) return;
+    showNextAchievement();
+  }
+
+  function showNextAchievement() {
+    const achievement = achievementQueue.shift();
+    if (!achievement) {
+      achievementShowing = false;
+      return;
+    }
+    achievementShowing = true;
+    if (!ui.achievementToast) return;
+    ui.achievementToastName.textContent = achievement.name;
+    ui.achievementToastNote.textContent = achievement.note;
+    ui.achievementToast.classList.remove("hidden");
+    requestAnimationFrame(() => ui.achievementToast.classList.add("visible"));
+    clearTimeout(achievementTimer);
+    achievementTimer = setTimeout(() => {
+      ui.achievementToast.classList.remove("visible");
+      setTimeout(() => {
+        ui.achievementToast.classList.add("hidden");
+        showNextAchievement();
+      }, 220);
+    }, 3900);
   }
 
   // ---- Minimap ---------------------------------------------------------------
@@ -328,6 +444,13 @@
         ctx.fillStyle = "#e25555";
         ctx.fillRect(Math.floor(enemy.x / TILE) - 1, Math.floor(enemy.y / TILE) - 1, 2, 2);
       }
+      if (scene.sim?.treasureSense) {
+        ctx.fillStyle = "#d8b6ff";
+        for (const secret of scene.sim.secrets || []) {
+          if (secret.opened || !secret.chest) continue;
+          ctx.fillRect(secret.chest.x - 1, secret.chest.y - 1, 3, 3);
+        }
+      }
       ctx.fillStyle = "#ffd76a";
       ctx.fillRect(Math.floor(scene.player.x / TILE) - 1, Math.floor(scene.player.y / TILE) - 1, 3, 3);
     }
@@ -357,6 +480,9 @@
       ["Blocks mined", sim.stats.mined],
       ["Deepest", `${sim.stats.deepest} m`],
       ["Kills", sim.stats.enemies],
+      ["Bosses", sim.stats.bosses || 0],
+      ["Secrets", sim.stats.secrets || 0],
+      ["Achievements", Object.keys(sim.achievements || {}).length],
       ["Days", day]
     ];
     for (const [label, value] of stats) {
@@ -394,6 +520,7 @@
     ui.helpToggle.addEventListener("click", () => activeScene().toggleHelp());
     ui.closeHelp.addEventListener("click", () => activeScene().toggleHelp(false));
     ui.craftToggle.addEventListener("click", () => activeScene().toggleCraft());
+    ui.craftReady?.addEventListener("click", () => activeScene().toggleCraft(true));
     ui.closeCraft.addEventListener("click", () => activeScene().toggleCraft(false));
     ui.mapToggle.addEventListener("click", () => toggleMinimap());
     ui.closeMap.addEventListener("click", () => toggleMinimap(false));
@@ -476,11 +603,16 @@
     renderStatus,
     renderHotbar,
     bumpItem,
+    recipeVisible,
+    craftableRecipes,
+    achievementMet,
     renderCraft,
     renderAll,
     minimap,
     toggleMinimap,
     showDeath,
+    renderAchievements,
+    showAchievement,
     hideDeath,
     bindUi
   });
