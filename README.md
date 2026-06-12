@@ -7,6 +7,10 @@ AbyssForge is a browser-based 2D mining, crafting, and survival prototype inspir
 - Procedural mine world with seed-based terrain and a quality-gated spawn area.
 - Mining, block placement, ladders, torches, crafting, mobs, loot, health, energy, and depth progression.
 - Secret vault rooms with cache chests, rare relic materials, and hidden depth bosses.
+- Expedition contracts with rotating objectives, persistent progress, and item rewards.
+- Dynamic cave events: ore surges, lantern drafts, depth swarms, and tremors.
+- Rare elite mobs with stronger stats and better loot.
+- Boss health bar, depth-zone labeling, and clearer active objective tracking.
 - Torch and headlamp lighting, day/night mood, situational background music, and compact pixel-art UI.
 - Craft-ready HUD badge and notifications when new recipes become buildable.
 - Expanded crafting with block kits, survival kits, relic charms, movement upgrades, loot upgrades, and boss-material progression.
@@ -39,4 +43,4 @@ npm install
 npm test
 ```
 
-The test launches the game with Playwright and checks that generated starts have stable floor support instead of spawning the player in air or between blocks.
+The test launches the game with Playwright and checks that generated starts have stable floor support instead of spawning the player in air or between blocks. It also verifies that progression data for crafting, contracts, cave events, achievements, secrets, and bosses is available in the runtime.

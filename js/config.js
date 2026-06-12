@@ -235,8 +235,109 @@ window.ML = window.ML || {};
     { id: "boots", name: "Second Step", note: "Craft Cave boots.", flag: "boots" },
     { id: "ward", name: "Darkness Warden", note: "Craft the Shadow ward.", flag: "ward" },
     { id: "titanHeart", name: "Titan Heart", note: "Raise max health to 150.", prop: "maxHealth", at: 150 },
-    { id: "forgeHarness", name: "Overcharged", note: "Raise max energy to 160.", prop: "maxEnergy", at: 160 }
+    { id: "forgeHarness", name: "Overcharged", note: "Raise max energy to 160.", prop: "maxEnergy", at: 160 },
+    { id: "contractOne", name: "Ledger Signed", note: "Complete an expedition contract.", stat: "contracts", at: 1 },
+    { id: "contractFive", name: "Guild Regular", note: "Complete five expedition contracts.", stat: "contracts", at: 5 },
+    { id: "eventOne", name: "Living Mine", note: "Encounter your first cave event.", stat: "events", at: 1 },
+    { id: "eventFive", name: "Faultline Veteran", note: "Encounter five cave events.", stat: "events", at: 5 }
   ];
+
+  const CONTRACTS = [
+    {
+      id: "shaftOrder",
+      name: "Shaft order",
+      type: "mined",
+      label: "Mine blocks",
+      unit: "blocks",
+      base: 18,
+      growth: 5,
+      reward: { wood: 2, torch: 2, coin: 6 },
+      rewardEvery: { coin: 2, ladder: 1 }
+    },
+    {
+      id: "depthSurvey",
+      name: "Depth survey",
+      type: "deepest",
+      label: "Reach depth",
+      unit: "m",
+      absolute: true,
+      base: 34,
+      growth: 20,
+      reward: { ladder: 4, torch: 3, coin: 8 },
+      rewardEvery: { coin: 3 }
+    },
+    {
+      id: "caveClearance",
+      name: "Cave clearance",
+      type: "enemies",
+      label: "Defeat mobs",
+      unit: "mobs",
+      base: 2,
+      growth: 1,
+      minContracts: 1,
+      reward: { gel: 3, coal: 2, coin: 10 },
+      rewardEvery: { coin: 3 }
+    },
+    {
+      id: "cacheRun",
+      name: "Cache run",
+      type: "chests",
+      label: "Open chests",
+      unit: "caches",
+      base: 1,
+      growth: 1,
+      minContracts: 1,
+      reward: { kit: 1, torch: 2, coin: 12 },
+      rewardEvery: { coin: 4 }
+    },
+    {
+      id: "forgeOrder",
+      name: "Forge order",
+      type: "crafted",
+      label: "Craft recipes",
+      unit: "recipes",
+      base: 1,
+      growth: 1,
+      minContracts: 2,
+      reward: { coal: 3, copper: 1, coin: 10 },
+      rewardEvery: { coin: 4 }
+    },
+    {
+      id: "vaultRumor",
+      name: "Vault rumor",
+      type: "secrets",
+      label: "Open secret caches",
+      unit: "vaults",
+      base: 1,
+      growth: 1,
+      minContracts: 3,
+      reward: { relic: 1, silk: 2, coin: 18 },
+      rewardEvery: { coin: 6 }
+    }
+  ];
+
+  const CAVE_EVENTS = {
+    oreSurge: {
+      name: "Ore surge",
+      note: "Fresh seams loosen and mined blocks can spill extra material.",
+      duration: 18000
+    },
+    lanternDraft: {
+      name: "Lantern draft",
+      note: "Warm air feeds lamps and recovery for a short push.",
+      duration: 16000
+    },
+    swarm: {
+      name: "Depth swarm",
+      note: "Noise in the rock wakes a pack near your tunnel.",
+      duration: 22000
+    },
+    tremor: {
+      name: "Cave tremor",
+      note: "The ceiling shakes loose stones into the tunnel.",
+      duration: 14000
+    }
+  };
 
   // Enemy archetypes. "deep" variants kick in below 150 m.
   const ENEMIES = {
@@ -271,6 +372,8 @@ window.ML = window.ML || {};
     RECIPES,
     CRAFT_CATS,
     ACHIEVEMENTS,
+    CONTRACTS,
+    CAVE_EVENTS,
     ENEMIES
   });
 })();

@@ -20,6 +20,7 @@
     lava: "You fell into lava.",
     dark: "The deep darkness drained you.",
     fall: "You hit the ground too hard.",
+    tremor: "A cave tremor dropped the ceiling on you.",
     blast: "Caught in your own blast.",
     void: "The depths claimed you."
   };
@@ -62,7 +63,11 @@
       this.autoPausedByVisibility = false;
       this.lastSizzleAt = 0;
       this.lastDarkWarnAt = 0;
+      this.caveEvent = null;
+      this.nextCaveEventAt = 0;
+      this.eventPulseAt = 0;
       this.physics.world.resume();
+      this.sim.ensureContract();
 
       ML.makeTextures(this);
 
@@ -196,6 +201,7 @@
       ML.hideDeath();
       ML.ui.craftDrawer.classList.add("hidden");
       ML.ui.helpDrawer.classList.add("hidden");
+      this.scheduleNextCaveEvent(true);
       this.refreshMobActivation();
       ML.renderAll(this.sim);
       this.checkAchievements();
@@ -378,6 +384,9 @@
         this.sim.energy = clamp(this.sim.energy + dt * 5.5, 0, this.sim.maxEnergy);
       }
       this.updateSurvivalRegen(dt, onFloor, inLava);
+      if (this.caveEvent?.id === "lanternDraft") {
+        this.sim.energy = clamp(this.sim.energy + dt * 4.5, 0, this.sim.maxEnergy);
+      }
 
       const pointer = this.input.activePointer;
       if (pointer.isDown && pointer.leftButtonDown() && !this.findEnemyAtPointer(pointer)) {
@@ -402,6 +411,7 @@
       }
 
       this.updateEnemies(dt);
+      this.updateCaveEvents(dt);
       this.updateHazards(dt, inLava);
       this.updateSky();
       this.drawDarkness();
@@ -412,6 +422,9 @@
         this.lastHudUpdate = 0;
         this.targetLabel = this.describePointerTarget();
         ML.renderStatus(this.sim, this.player, this.playerLight());
+        ML.renderContract(this.sim);
+        ML.renderEvent(this);
+        ML.renderBossBar(this);
       }
       this.lastMapUpdate += delta;
       if (this.lastMapUpdate > 400) {
@@ -453,6 +466,8 @@
     currentMusicMode() {
       const depth = this.depthMeters();
       if (this.hasActiveBoss()) return "boss";
+      if (this.caveEvent?.id === "swarm" || this.caveEvent?.id === "tremor") return "danger";
+      if (this.caveEvent?.id === "oreSurge") return "treasure";
       if (this.hasNearbyDanger()) return "danger";
       if (this.nearUnopenedSecretChest()) return "treasure";
       if (depth > 130) return "deep";
@@ -460,8 +475,23 @@
       return this.phaseName() === "Night" ? "night" : "surface";
     }
 
+    activeBoss() {
+      if (!this.enemies) return null;
+      let best = null;
+      let bestDistance = Infinity;
+      for (const enemy of this.enemies.getChildren()) {
+        if (!enemy.active || !ENEMIES[enemy.kind]?.boss) continue;
+        const distance = Phaser.Math.Distance.Between(enemy.x, enemy.y, this.player.x, this.player.y);
+        if (distance < bestDistance) {
+          best = enemy;
+          bestDistance = distance;
+        }
+      }
+      return best;
+    }
+
     hasActiveBoss() {
-      return this.enemies?.getChildren().some((enemy) => enemy.active && ENEMIES[enemy.kind]?.boss) || false;
+      return Boolean(this.activeBoss());
     }
 
     hasNearbyDanger() {
@@ -495,6 +525,15 @@
       return Math.max(0, Math.floor(this.player.y / TILE - surfaceY));
     }
 
+    biomeName() {
+      const depth = this.depthMeters();
+      if (depth > 210) return "Abyss";
+      if (depth > 140) return "Deepstone";
+      if (depth > 60) return "Lower caves";
+      if (depth > 10) return "Upper caves";
+      return "Surface";
+    }
+
     ambientLight() {
       const depth = this.depthMeters();
       const df = clamp(1 - depth / 46, 0, 1);
@@ -504,6 +543,7 @@
     playerLight() {
       let best = Math.max(this.ambientLight(), LAMPS[this.sim.lamp].glow);
       if (this.sim.ward) best = Math.max(best, 0.28);
+      if (this.caveEvent?.id === "lanternDraft") best = Math.max(best, 0.46);
       const px = this.player.x / TILE;
       const py = this.player.y / TILE;
       for (const light of this.sim.lights) {
@@ -664,6 +704,7 @@
       if (!surfaceRest && !litRest) return;
       let rate = surfaceRest ? 1.15 : 0.55;
       if (this.sim.regenBoost) rate *= 1.55;
+      if (this.caveEvent?.id === "lanternDraft") rate *= 1.8;
       const before = this.sim.health;
       this.sim.health = clamp(this.sim.health + dt * rate, 0, this.sim.maxHealth);
       if (Math.floor(before) !== Math.floor(this.sim.health) && (!this.actionHoldUntil || this.time.now > this.actionHoldUntil)) {
@@ -702,7 +743,7 @@
       return BLOCKS[target.tile]?.name || "Unknown";
     }
 
-    enemyName(kind) {
+    enemyName(kind, enemy = null) {
       const names = {
         crawler: "Crawler",
         bat: "Bat",
@@ -711,7 +752,8 @@
         broodmother: "Broodmother",
         warden: "Abyss Warden"
       };
-      return names[kind] || "Enemy";
+      const base = names[kind] || "Enemy";
+      return enemy?.elite ? `Elite ${base}` : base;
     }
 
     findEnemyAtPointer(pointer) {
@@ -732,6 +774,28 @@
     setAction(label, holdMs = 0) {
       this.currentAction = label;
       this.actionHoldUntil = holdMs ? this.time.now + holdMs : 0;
+    }
+
+    rewardSummary(reward) {
+      const parts = [];
+      for (const [item, count] of Object.entries(reward || {})) {
+        if (!count) continue;
+        parts.push(`${ITEM_META[item]?.name || item} +${count}`);
+      }
+      return parts.join(", ");
+    }
+
+    checkContract() {
+      const result = this.sim.claimContract?.();
+      if (!result) return false;
+      const reward = this.rewardSummary(result.completed.reward);
+      this.setAction("Contract", 1500);
+      this.floatText(this.player.x - 32, this.player.y - 42, "CONTRACT", "#9edbe2");
+      ML.audio.play("contract");
+      ML.showToast(`${result.completed.name} complete: ${reward}. New contract: ${result.next?.name || "none"}.`, 4200);
+      ML.renderAll(this.sim);
+      this.checkAchievements();
+      return true;
     }
 
     // ---- Pickaxe visuals -----------------------------------------------------
@@ -891,9 +955,15 @@
       } else if (awardDrop && block.drop && (tile !== Tile.LEAVES || Math.random() < 0.45)) {
         this.sim.addItem(block.drop, 1);
         this.spawnPickupFx(x, y, block.drop);
+        if (this.caveEvent?.id === "oreSurge" && tile !== Tile.LEAVES && Math.random() < 0.34) {
+          this.sim.addItem(block.drop, 1);
+          this.spawnPickupFx(x, y, block.drop);
+          this.floatText(x * TILE + 4, y * TILE - 12, "+surge", "#9edbe2");
+        }
       }
 
       this.sim.stats.mined += 1;
+      this.checkContract();
       this.checkAchievements();
       this.emitBlockBurst(x, y, BLOCK_TINTS[tile] || 0xffffff, opts.batch ? 3 : 6);
       ML.minimap.paintTile(this.sim, x, y);
@@ -944,6 +1014,7 @@
       this.floatText(x * TILE, y * TILE - 6, secret ? "Secret cache!" : "Supplies!", secret ? "#d8b6ff" : "#ffe49a");
       ML.showToast(`${secret ? "Secret cache" : "Chest"}: ${parts.join(", ")}.`, 3600);
       this.sim.stats.chests += 1;
+      this.checkContract();
       this.checkAchievements();
     }
 
@@ -1145,7 +1216,10 @@
       }
       enemy.setTint(0xffc8b0);
       this.time.delayedCall(120, () => {
-        if (enemy.active) enemy.clearTint();
+        if (enemy.active) {
+          if (enemy.elite) enemy.setTint(0xf0c75e);
+          else enemy.clearTint();
+        }
       });
       this.floatText(enemy.x - 10, enemy.y - 18, crit ? `CRIT -${damage}` : `-${damage}`, crit ? "#ffb347" : "#f5d77a");
       ML.audio.play("enemyHit");
@@ -1157,6 +1231,11 @@
 
     killEnemy(enemy) {
       const drops = this.dropsFor(enemy.kind);
+      if (enemy.elite) {
+        drops.coin = (drops.coin || 0) + 8 + Math.floor(Math.random() * 8);
+        drops.gel = (drops.gel || 0) + 2;
+        if (Math.random() < 0.35) drops.mushroom = (drops.mushroom || 0) + 1;
+      }
       if (this.sim.lootBonus) drops.coin = (drops.coin || 0) + (ENEMIES[enemy.kind]?.boss ? 18 : 3);
       for (const [item, n] of Object.entries(drops)) {
         this.sim.addItem(item, n);
@@ -1169,6 +1248,7 @@
         this.floatText(enemy.x - 30, enemy.y - 38, "BOSS DOWN", "#ffcf6a");
         ML.showToast(`${this.enemyName(enemy.kind)} defeated. New boss materials unlocked.`, 4200);
       }
+      this.checkContract();
       this.checkAchievements();
       this.emitBlockBurst(Math.floor(enemy.x / TILE), Math.floor(enemy.y / TILE), 0x7c5a91, 6);
       ML.audio.play("enemyDie");
@@ -1404,6 +1484,14 @@
       enemy.speed = deep ? cfg.deepSpeed : cfg.speed;
       enemy.touch = cfg.touch;
       enemy.boss = Boolean(cfg.boss || mob.boss);
+      enemy.elite = Boolean(mob.elite && !enemy.boss);
+      if (enemy.elite) {
+        enemy.hp = Math.ceil(enemy.hp * 1.85);
+        enemy.maxHp = enemy.hp;
+        enemy.speed *= 1.12;
+        enemy.touch = Math.ceil(enemy.touch * 1.28);
+        enemy.setTint(0xf0c75e);
+      }
       enemy.stunUntil = 0;
       enemy.nextHopAt = 0;
       enemy.nextSpecialAt = this.time.now + 1600 + Math.random() * 1400;
@@ -1487,6 +1575,157 @@
       }
     }
 
+    // ---- Cave events ---------------------------------------------------------------
+
+    scheduleNextCaveEvent(initial = false) {
+      const depth = this.player ? this.depthMeters() : 0;
+      const base = initial ? 26000 : 52000;
+      const depthDiscount = Math.min(17000, depth * 115);
+      this.nextCaveEventAt = this.time.now + Math.max(16000, base + Math.random() * 24000 - depthDiscount);
+    }
+
+    chooseCaveEvent() {
+      const depth = this.depthMeters();
+      const pool = ["oreSurge", "lanternDraft"];
+      if (depth > 24) pool.push("swarm", "swarm");
+      if (depth > 58) pool.push("tremor");
+      if (depth > 135) pool.push("tremor", "swarm");
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    startCaveEvent(kind = null) {
+      const id = kind || this.chooseCaveEvent();
+      const cfg = ML.CAVE_EVENTS?.[id];
+      if (!cfg) return false;
+      this.caveEvent = {
+        id,
+        name: cfg.name,
+        note: cfg.note,
+        started: this.time.now,
+        until: this.time.now + cfg.duration
+      };
+      this.eventPulseAt = this.time.now + 700;
+      this.sim.stats.events += 1;
+
+      if (id === "swarm") this.spawnEventSwarm();
+      if (id === "tremor") {
+        this.cameras.main.shake(160, 0.005);
+        ML.audio.play("rumble");
+      }
+      if (id === "oreSurge") this.emitDust(this.player.x, this.player.y + 16, 8);
+      if (id === "lanternDraft") this.floatText(this.player.x - 22, this.player.y - 40, "DRAFT", "#9edbe2");
+
+      ML.audio.play("event");
+      ML.showToast(`${cfg.name}: ${cfg.note}`, 3600);
+      ML.renderEvent(this);
+      this.checkAchievements();
+      return true;
+    }
+
+    endCaveEvent() {
+      const ended = this.caveEvent;
+      this.caveEvent = null;
+      this.scheduleNextCaveEvent();
+      if (ended) {
+        ML.renderEvent(this);
+        ML.showToast(`${ended.name} settled.`, 1200);
+      }
+    }
+
+    updateCaveEvents() {
+      const now = this.time.now;
+      if (this.caveEvent) {
+        if (now >= this.caveEvent.until) {
+          this.endCaveEvent();
+          return;
+        }
+        if (this.caveEvent.id === "tremor" && now >= this.eventPulseAt) {
+          this.eventPulseAt = now + 1150 + Math.random() * 750;
+          this.dropTremorRock();
+        }
+        return;
+      }
+
+      if (!this.nextCaveEventAt) this.scheduleNextCaveEvent(true);
+      if (now < this.nextCaveEventAt) return;
+      if (this.depthMeters() < 10 || this.hasActiveBoss()) {
+        this.scheduleNextCaveEvent(true);
+        return;
+      }
+      this.startCaveEvent();
+    }
+
+    spawnEventSwarm() {
+      const depth = this.depthMeters();
+      const count = depth > 135 ? 4 : depth > 70 ? 3 : 2;
+      let spawned = 0;
+      for (let i = 0; i < count; i += 1) {
+        const kind = depth > 150 && Math.random() < 0.35 ? "golem" : this.sim.pickMobKind(depth, Math.random());
+        const elite = depth > 100 && i === 0 && Math.random() < 0.45;
+        if (this.spawnEventMob(kind, elite)) spawned += 1;
+      }
+      if (spawned > 0) {
+        this.floatText(this.player.x - 28, this.player.y - 44, "SWARM", "#d8b6ff");
+        ML.audio.play("roar");
+      }
+    }
+
+    spawnEventMob(kind, elite = false) {
+      if (this.enemies.countActive(true) >= 14) return false;
+      const fly = ENEMIES[kind]?.fly;
+      const px = Math.floor(this.player.x / TILE);
+      const py = Math.floor(this.player.y / TILE);
+      for (let tries = 0; tries < 32; tries += 1) {
+        const dir = Math.random() < 0.5 ? -1 : 1;
+        const x = clamp(px + dir * Phaser.Math.Between(5, 11), 3, WORLD_W - 4);
+        const y = clamp(py + Phaser.Math.Between(-4, 5), 5, WORLD_H - 6);
+        if (Math.abs(x - px) < 4 && Math.abs(y - py) < 3) continue;
+        if (this.sim.tileAt(x, y) !== AIR) continue;
+        if (!fly) {
+          const below = this.sim.tileAt(x, y + 1);
+          if (below === AIR || !BLOCKS[below]?.solid) continue;
+        }
+        const mob = this.sim.addMob(x, y, kind, { event: true, elite });
+        this.materializeMob(mob);
+        return true;
+      }
+      return false;
+    }
+
+    dropTremorRock() {
+      const x = this.player.x + Phaser.Math.Between(-130, 130);
+      const startY = this.player.y - Phaser.Math.Between(170, 240);
+      const targetY = this.player.y + 48;
+      const rock = this.add.image(x, startY, "spark")
+        .setTint(0x8f8a7d)
+        .setScale(2.4)
+        .setDepth(31);
+      this.emitDust(x, startY, 4);
+      ML.audio.play("rumble");
+      this.tweens.add({
+        targets: rock,
+        y: targetY,
+        x: x + Phaser.Math.Between(-18, 18),
+        duration: 620,
+        ease: "Quad.easeIn",
+        onComplete: () => {
+          const rx = rock.x;
+          const ry = rock.y;
+          const tx = clamp(Math.floor(rx / TILE), 0, WORLD_W - 1);
+          const ty = clamp(Math.floor(ry / TILE), 0, WORLD_H - 1);
+          this.emitBlockBurst(tx, ty, 0x8f8a7d, 8);
+          this.emitDust(rx, ry, 7);
+          if (Phaser.Math.Distance.Between(rx, ry, this.player.x, this.player.y) < 48) {
+            const damage = this.sim.ward ? 4 : 7;
+            this.applyDamage(damage, "tremor");
+            this.floatText(this.player.x - 10, this.player.y - 32, `-${damage}`, "#f08561");
+            this.player.setVelocityY(-190);
+          }
+          rock.destroy();
+        }
+      });
+    }
+
     saveGame() {
       for (const enemy of this.enemies.getChildren()) {
         if (enemy.active && enemy.mobId) this.syncMobEntry(enemy);
@@ -1505,7 +1744,9 @@
 
     updateHazards(dt, inLava) {
       const depth = this.depthMeters();
-      this.sim.stats.deepest = Math.max(this.sim.stats.deepest, depth);
+      const previousDeepest = this.sim.stats.deepest || 0;
+      this.sim.stats.deepest = Math.max(previousDeepest, depth);
+      if (this.sim.stats.deepest !== previousDeepest) this.checkContract();
       const now = this.time.now;
 
       if (inLava) {

@@ -51,12 +51,24 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const craftable = window.ML.craftableRecipes(sim);
     const platformRecipe = window.ML.RECIPES.find((recipe) => recipe.id === "platform");
     const craftResult = sim.craft(platformRecipe);
+    const contractBefore = sim.contractProgress();
+    if (contractBefore?.contract.absolute) {
+      sim.stats[contractBefore.contract.type] = contractBefore.target;
+    } else if (contractBefore) {
+      sim.stats[contractBefore.contract.type] = contractBefore.contract.start + contractBefore.target;
+    }
+    const contractClaim = sim.claimContract();
     return {
       recipes: window.ML.RECIPES.length,
       achievements: window.ML.ACHIEVEMENTS.length,
+      contracts: window.ML.CONTRACTS.length,
+      caveEvents: Object.keys(window.ML.CAVE_EVENTS || {}).length,
       craftable: craftable.length,
       craftResult,
+      contractBefore,
+      contractClaim,
       crafted: sim.stats.crafted,
+      completedContracts: sim.stats.contracts,
       platforms: sim.inventory.platform
     };
   });
@@ -90,10 +102,15 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
   await browser.close();
 
   const progressionFailed = progressionCheck.recipes < 34
-    || progressionCheck.achievements < 20
+    || progressionCheck.achievements < 24
+    || progressionCheck.contracts < 5
+    || progressionCheck.caveEvents < 4
     || progressionCheck.craftable < 3
     || !progressionCheck.craftResult.ok
+    || !progressionCheck.contractBefore
+    || !progressionCheck.contractClaim
     || progressionCheck.crafted < 1
+    || progressionCheck.completedContracts < 1
     || progressionCheck.platforms < 4;
   const failed = errors.length > 0 || seedCheck.failures.length > 0 || progressionFailed || !start.support || !start.stable || fallDelta > 1;
   const report = { seedCheck, progressionCheck, start, afterDown, fallDelta, errors };

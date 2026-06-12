@@ -307,6 +307,81 @@ canvas:focus { outline: none; }
   text-transform: uppercase;
 }
 
+.objective-panel {
+  width: min(330px, calc(100vw - 24px));
+  padding: 9px 10px;
+  border: 1px solid rgba(236, 205, 135, 0.24);
+  border-radius: var(--radius);
+  background: rgba(20, 18, 15, 0.91);
+  box-shadow: 0 12px 32px var(--shadow);
+}
+
+.objective-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.objective-head span {
+  flex: 0 0 auto;
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.objective-head strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.15;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.objective-progress {
+  height: 6px;
+  margin-top: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.objective-progress > i {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #69aeb0, #e1a84d);
+  transition: width 140ms linear;
+}
+
+.objective-panel small,
+.objective-panel em {
+  display: block;
+  overflow: hidden;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.objective-panel.complete {
+  border-color: rgba(225, 168, 77, 0.68);
+  box-shadow: 0 0 0 2px rgba(225, 168, 77, 0.15), 0 12px 32px var(--shadow);
+}
+
+.objective-panel.complete em {
+  color: var(--gold);
+  font-weight: 800;
+}
+
 .top-right {
   position: absolute;
   right: max(12px, env(safe-area-inset-right));
@@ -457,6 +532,104 @@ canvas:focus { outline: none; }
 .toast.visible {
   opacity: 1;
   transform: translateX(-50%) translateY(8px);
+}
+
+.event-chip {
+  position: absolute;
+  z-index: 37;
+  left: 50%;
+  top: calc(max(16px, env(safe-area-inset-top)) + 88px);
+  transform: translateX(-50%);
+  width: min(360px, calc(100vw - 24px));
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 10px;
+  align-items: center;
+  padding: 9px 12px;
+  border: 1px solid rgba(103, 181, 191, 0.42);
+  border-radius: var(--radius);
+  background: rgba(14, 18, 20, 0.91);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
+}
+
+.event-chip span {
+  overflow: hidden;
+  color: #9edbe2;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-chip strong {
+  color: var(--gold);
+  font: 800 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.event-chip small {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.boss-bar {
+  position: absolute;
+  z-index: 36;
+  left: 50%;
+  top: calc(max(16px, env(safe-area-inset-top)) + 142px);
+  transform: translateX(-50%);
+  width: min(410px, calc(100vw - 24px));
+  padding: 8px 10px 10px;
+  border: 1px solid rgba(220, 111, 86, 0.58);
+  border-radius: var(--radius);
+  background: rgba(23, 14, 13, 0.92);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.46);
+}
+
+.boss-bar > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.boss-bar span {
+  overflow: hidden;
+  color: #ffd2bb;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.boss-bar b {
+  color: var(--gold);
+  font-weight: 900;
+}
+
+.boss-bar > i {
+  display: block;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.boss-bar > i > b {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #842b36, #dc6f56, #f0c75e);
+  transition: width 120ms linear;
 }
 
 .craft-ready {
@@ -1006,6 +1179,22 @@ canvas:focus { outline: none; }
   .tool-copy label { font-size: 9px; }
   .tool-copy strong { font-size: 12px; }
   .action-strip { display: none; }
+  .objective-panel {
+    width: min(190px, calc(100vw - 24px));
+    padding: 7px;
+  }
+  .objective-head {
+    display: grid;
+    gap: 3px;
+  }
+  .objective-head strong {
+    font-size: 12px;
+    text-align: left;
+  }
+  .objective-panel small,
+  .objective-panel em {
+    font-size: 10px;
+  }
   .hotbar { grid-auto-columns: 50px; }
   .slot { width: 50px; height: 50px; }
   .craft-drawer {
@@ -1046,6 +1235,20 @@ canvas:focus { outline: none; }
   .toast.visible {
     transform: none;
   }
+  .event-chip,
+  .boss-bar {
+    left: 12px;
+    right: 12px;
+    top: auto;
+    width: auto;
+    transform: none;
+  }
+  .event-chip {
+    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 252px);
+  }
+  .boss-bar {
+    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 306px);
+  }
   .craft-ready {
     left: 12px;
     right: 12px;
@@ -1069,6 +1272,8 @@ canvas:focus { outline: none; }
   .toast,
   .craft-ready,
   .achievement-toast,
+  .objective-progress > i,
+  .boss-bar > i > b,
   .bar > i { transition: none; }
   .slot-count.bump,
   .damage-flash.active { animation: none; }

@@ -54,6 +54,15 @@
           <div class="action-chip"><b>Attack</b><span>F</span></div>
           <div class="action-chip"><b>Craft</b><span>E</span></div>
         </div>
+        <div class="objective-panel" aria-label="Expedition contract">
+          <div class="objective-head">
+            <span>Contract</span>
+            <strong id="contractTitle">Shaft order</strong>
+          </div>
+          <div class="objective-progress"><i id="contractBar"></i></div>
+          <small id="contractText">0/0</small>
+          <em id="contractReward">Reward ready</em>
+        </div>
       </div>
 
       <div class="top-right">
@@ -82,6 +91,18 @@
       </div>
 
       <div id="toast" class="toast" role="status"></div>
+      <div id="eventChip" class="event-chip hidden" role="status">
+        <span id="eventName">Ore surge</span>
+        <strong id="eventTimer">0s</strong>
+        <small id="eventNote">Fresh seams loosen.</small>
+      </div>
+      <div id="bossBar" class="boss-bar hidden" aria-label="Boss health">
+        <div>
+          <span id="bossName">Abyss Warden</span>
+          <b id="bossHp">100%</b>
+        </div>
+        <i><b id="bossFill"></b></i>
+      </div>
       <button id="craftReady" class="craft-ready hidden" type="button">
         <span>Craft ready</span>
         <strong id="craftReadyText">Open workshop</strong>

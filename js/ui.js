@@ -21,6 +21,10 @@
     gearText: document.getElementById("gearText"),
     actionText: document.getElementById("actionText"),
     targetText: document.getElementById("targetText"),
+    contractTitle: document.getElementById("contractTitle"),
+    contractText: document.getElementById("contractText"),
+    contractBar: document.getElementById("contractBar"),
+    contractReward: document.getElementById("contractReward"),
     hotbar: document.getElementById("hotbar"),
     helpDrawer: document.getElementById("helpDrawer"),
     craftDrawer: document.getElementById("craftDrawer"),
@@ -48,6 +52,14 @@
     menuRespawnBtn: document.getElementById("menuRespawnBtn"),
     menuNewWorldBtn: document.getElementById("menuNewWorldBtn"),
     toast: document.getElementById("toast"),
+    eventChip: document.getElementById("eventChip"),
+    eventName: document.getElementById("eventName"),
+    eventTimer: document.getElementById("eventTimer"),
+    eventNote: document.getElementById("eventNote"),
+    bossBar: document.getElementById("bossBar"),
+    bossName: document.getElementById("bossName"),
+    bossHp: document.getElementById("bossHp"),
+    bossFill: document.getElementById("bossFill"),
     minimapPanel: document.getElementById("minimapPanel"),
     minimapCanvas: document.getElementById("minimapCanvas"),
     closeMap: document.getElementById("closeMap"),
@@ -116,7 +128,8 @@
     const scene = ML.sceneRef;
     const day = scene ? scene.dayNumber() : 1;
     const phase = scene ? scene.phaseName() : "Day";
-    ui.worldLabel.textContent = `Seed ${sim.seed} · Day ${day} · ${phase}`;
+    const biome = scene?.biomeName ? scene.biomeName() : "";
+    ui.worldLabel.textContent = `Seed ${sim.seed} · Day ${day} · ${phase}${biome ? ` · ${biome}` : ""}`;
     const pickName = PICKS[sim.pickLevel]?.name || "Pickaxe";
     ui.pickText.textContent = pickName;
     ui.pickHudText.textContent = pickName;
@@ -242,6 +255,62 @@
     }, 3400);
   }
 
+  function rewardText(reward) {
+    const parts = [];
+    for (const [item, count] of Object.entries(reward || {})) {
+      if (!count) continue;
+      parts.push(`${ITEM_META[item]?.name || item} +${count}`);
+    }
+    return parts.length ? parts.join(", ") : "No reward";
+  }
+
+  function renderContract(sim) {
+    if (!ui.contractTitle || !sim?.contractProgress) return;
+    const state = sim.contractProgress();
+    if (!state) {
+      ui.contractTitle.textContent = "No contract";
+      ui.contractText.textContent = "Explore";
+      ui.contractReward.textContent = "";
+      ui.contractBar.style.width = "0%";
+      return;
+    }
+    const { contract, progress, target, done } = state;
+    const unit = contract.unit || "done";
+    ui.contractTitle.textContent = contract.name;
+    ui.contractText.textContent = `${contract.label}: ${progress}/${target} ${unit}`;
+    ui.contractReward.textContent = done ? "Ready to claim" : rewardText(contract.reward);
+    ui.contractBar.style.width = `${clamp(progress / target * 100, 0, 100)}%`;
+    ui.contractTitle.closest(".objective-panel")?.classList.toggle("complete", done);
+  }
+
+  function renderEvent(scene = ML.sceneRef) {
+    if (!ui.eventChip) return;
+    const event = scene?.caveEvent;
+    if (!event) {
+      ui.eventChip.classList.add("hidden");
+      return;
+    }
+    const seconds = Math.max(0, Math.ceil((event.until - scene.time.now) / 1000));
+    ui.eventName.textContent = event.name;
+    ui.eventTimer.textContent = `${seconds}s`;
+    ui.eventNote.textContent = event.note;
+    ui.eventChip.classList.remove("hidden");
+  }
+
+  function renderBossBar(scene = ML.sceneRef) {
+    if (!ui.bossBar) return;
+    const boss = scene?.activeBoss ? scene.activeBoss() : null;
+    if (!boss) {
+      ui.bossBar.classList.add("hidden");
+      return;
+    }
+    const hp = clamp((boss.hp || 0) / Math.max(1, boss.maxHp || 1), 0, 1);
+    ui.bossName.textContent = scene.enemyName ? scene.enemyName(boss.kind, boss) : "Boss";
+    ui.bossHp.textContent = `${Math.ceil(hp * 100)}%`;
+    ui.bossFill.style.width = `${hp * 100}%`;
+    ui.bossBar.classList.remove("hidden");
+  }
+
   function renderCraft(sim) {
     if (!ML.sceneRef || !ML.sceneRef.craftOpen) return;
 
@@ -285,7 +354,10 @@
         const result = sim.craft(recipe);
         showToast(result.message);
         ML.audio.play(result.ok ? "craft" : "denied");
-        if (result.ok) ML.sceneRef?.checkAchievements?.();
+        if (result.ok) {
+          ML.sceneRef?.checkContract?.();
+          ML.sceneRef?.checkAchievements?.();
+        }
         ML.renderAll(sim); // renderAll already re-renders the open drawer
       });
 
@@ -314,6 +386,9 @@
     const scene = ML.sceneRef;
     renderStatus(sim, scene?.player, scene?.playerLight ? scene.playerLight() : 1);
     renderHotbar(sim);
+    renderContract(sim);
+    renderEvent(scene);
+    renderBossBar(scene);
     updateCraftReady(sim);
     renderAchievements(sim);
     renderCraft(sim);
@@ -482,6 +557,8 @@
       ["Kills", sim.stats.enemies],
       ["Bosses", sim.stats.bosses || 0],
       ["Secrets", sim.stats.secrets || 0],
+      ["Contracts", sim.stats.contracts || 0],
+      ["Events", sim.stats.events || 0],
       ["Achievements", Object.keys(sim.achievements || {}).length],
       ["Days", day]
     ];
@@ -607,6 +684,9 @@
     craftableRecipes,
     achievementMet,
     renderCraft,
+    renderContract,
+    renderEvent,
+    renderBossBar,
     renderAll,
     minimap,
     toggleMinimap,

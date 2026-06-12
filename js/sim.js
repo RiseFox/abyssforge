@@ -33,7 +33,7 @@
       this.blastRadius = this.blastRadius || 0;
       this.health = clamp(this.health ?? this.maxHealth, 0, this.maxHealth);
       this.energy = clamp(this.energy ?? this.maxEnergy, 0, this.maxEnergy);
-      this.stats = Object.assign({ mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0 }, this.stats || {});
+      this.stats = Object.assign({ mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0 }, this.stats || {});
       this.achievements = Object.assign({}, this.achievements || {});
       this.craftedRecipes = Object.assign({}, this.craftedRecipes || {});
       this.inventory = Object.assign(
@@ -48,6 +48,8 @@
       }
       if (!this.mobSeq) this.mobSeq = this.mobs.reduce((max, m) => Math.max(max, m.id), 0) + 1;
       if (!this.mobBaseline) this.mobBaseline = Math.max(this.mobs.length, 1);
+      this.contractSeq = this.contractSeq || 0;
+      this.ensureContract();
       this.selected = clamp(this.selected || 0, 0, ML.HOTBAR.length - 1);
     }
 
@@ -81,15 +83,18 @@
       this.spawn = generated.spawn;
       this.shaft = generated.shaft;
       this.secrets = generated.secrets || [];
-      this.stats = { mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0 };
+      this.stats = { mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0 };
       this.achievements = {};
       this.craftedRecipes = {};
+      this.contractSeq = 0;
+      this.contract = null;
       this.repairSpawnShaft();
       this.player = this.safeSpawnPixels();
       this.rebuildLights();
       this.mobs = this.generateMobs(mulberry32(seed ^ 0x9e3779b9));
       this.mobBaseline = this.mobs.length;
       this.repairPlayerPosition(true);
+      this.ensureContract();
     }
 
     generateWorld(seed) {
@@ -326,7 +331,8 @@
           const density = depth > 150 ? 0.06 : depth > 60 ? 0.045 : 0.03;
           if (rand() >= density) continue;
           const kind = this.pickMobKind(depth, rand());
-          mobs.push({ id: this.mobSeq++, x, y: kind === "bat" ? y - 1 : y, kind });
+          const elite = depth > 75 && rand() < (depth > 150 ? 0.08 : 0.045);
+          mobs.push({ id: this.mobSeq++, x, y: kind === "bat" ? y - 1 : y, kind, elite });
           y += 5; // keep packs from clumping in one column
         }
       }
@@ -523,6 +529,88 @@
       }
     }
 
+    ensureContract() {
+      const exists = this.contract && (ML.CONTRACTS || []).some((contract) => contract.id === this.contract.id);
+      if (!exists) this.rollContract();
+      return this.contract;
+    }
+
+    statValueForContract(type) {
+      return Number(this.stats?.[type] || 0);
+    }
+
+    availableContracts() {
+      const completed = this.stats?.contracts || 0;
+      const deepest = this.stats?.deepest || 0;
+      return (ML.CONTRACTS || []).filter((contract) =>
+        completed >= (contract.minContracts || 0) && deepest >= (contract.minDepth || 0)
+      );
+    }
+
+    contractTarget(template, rank) {
+      return Math.max(1, Math.floor((template.base || 1) + rank * (template.growth || 0)));
+    }
+
+    contractReward(template, rank) {
+      const reward = Object.assign({}, template.reward || {});
+      for (const [item, amount] of Object.entries(template.rewardEvery || {})) {
+        reward[item] = (reward[item] || 0) + amount * Math.floor(rank / 2);
+      }
+      return reward;
+    }
+
+    rollContract() {
+      const options = this.availableContracts();
+      if (!options.length) {
+        this.contract = null;
+        return null;
+      }
+      const completed = this.stats?.contracts || 0;
+      const index = Math.abs((this.seed || 0) + completed * 17 + (this.contractSeq || 0) * 31) % options.length;
+      const template = options[index];
+      const rank = completed + 1;
+      const target = this.contractTarget(template, rank);
+      const start = template.absolute ? 0 : this.statValueForContract(template.type);
+      this.contractSeq = (this.contractSeq || 0) + 1;
+      this.contract = {
+        id: template.id,
+        name: template.name,
+        type: template.type,
+        label: template.label,
+        unit: template.unit,
+        absolute: Boolean(template.absolute),
+        target,
+        start,
+        reward: this.contractReward(template, rank)
+      };
+      return this.contract;
+    }
+
+    contractProgress() {
+      const contract = this.ensureContract();
+      if (!contract) return null;
+      const value = this.statValueForContract(contract.type);
+      const progress = contract.absolute ? value : Math.max(0, value - contract.start);
+      return {
+        contract,
+        progress: clamp(Math.floor(progress), 0, contract.target),
+        target: contract.target,
+        done: progress >= contract.target
+      };
+    }
+
+    claimContract() {
+      const progress = this.contractProgress();
+      if (!progress || !progress.done) return null;
+      const completed = Object.assign({}, progress.contract, { reward: Object.assign({}, progress.contract.reward || {}) });
+      for (const [item, count] of Object.entries(completed.reward || {})) {
+        if (count > 0) this.addItem(item, count);
+      }
+      this.stats.contracts += 1;
+      const next = this.rollContract();
+      return { completed, next };
+    }
+
     load() {
       try {
         const raw = localStorage.getItem(ML.SAVE_KEY);
@@ -593,7 +681,9 @@
         mobBaseline: this.mobBaseline,
         stats: this.stats,
         achievements: this.achievements,
-        craftedRecipes: this.craftedRecipes
+        craftedRecipes: this.craftedRecipes,
+        contract: this.contract,
+        contractSeq: this.contractSeq
       };
       try {
         localStorage.setItem(ML.SAVE_KEY, JSON.stringify({ version: 2, state }));
