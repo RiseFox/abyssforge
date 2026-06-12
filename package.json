@@ -1,5 +1,5 @@
 {
-  "name": "minerland",
+  "name": "abyssforge",
   "version": "0.1.0",
   "description": "A browser-based 2D mining, crafting, and survival game inspired by Terraria-style exploration.",
   "main": "index.html",
@@ -20,12 +20,12 @@
   "type": "commonjs",
   "repository": {
     "type": "git",
-    "url": "https://github.com/RiseFox/minerland.git"
+    "url": "https://github.com/RiseFox/abyssforge.git"
   },
   "bugs": {
-    "url": "https://github.com/RiseFox/minerland/issues"
+    "url": "https://github.com/RiseFox/abyssforge/issues"
   },
-  "homepage": "https://github.com/RiseFox/minerland#readme",
+  "homepage": "https://github.com/RiseFox/abyssforge#readme",
   "devDependencies": {
     "playwright": "^1.60.0"
   }

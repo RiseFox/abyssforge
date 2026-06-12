@@ -1,4 +1,4 @@
-// MinerLand v2 — shared constants and game data.
+// AbyssForge v2 - shared constants and game data.
 window.ML = window.ML || {};
 (() => {
   "use strict";
@@ -195,9 +195,9 @@ window.ML = window.ML || {};
     AIR,
     DAY_LENGTH,
     INTERACT_RANGE_TILES: 3.05,
-    SAVE_KEY: "minerland.save.v2",
-    LEGACY_SAVE_KEY: "minerland.save.v1",
-    MUTE_KEY: "minerland.muted",
+    SAVE_KEY: "abyssforge.save.v1",
+    LEGACY_SAVE_KEY: "minerland.save.v2",
+    MUTE_KEY: "abyssforge.muted",
     Tile,
     BLOCKS,
     SOLID_TILES,

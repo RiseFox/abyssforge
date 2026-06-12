@@ -1,4 +1,4 @@
-// MinerLand v2 — DOM HUD: status bars, hotbar, crafting drawer, minimap, toasts.
+// AbyssForge v2 - DOM HUD: status bars, hotbar, crafting drawer, minimap, toasts.
 (() => {
   "use strict";
   const ML = window.ML;

@@ -1,4 +1,4 @@
-// MinerLand v2 — the Phaser scene: movement, mining, combat, lighting, hazards.
+// AbyssForge v2 - the Phaser scene: movement, mining, combat, lighting, hazards.
 (() => {
   "use strict";
   const ML = window.ML;
@@ -229,7 +229,7 @@
       const canvas = this.game?.canvas;
       if (!canvas) return;
       canvas.setAttribute("tabindex", "0");
-      canvas.setAttribute("aria-label", "MinerLand game");
+      canvas.setAttribute("aria-label", "AbyssForge game");
       this._canvasFocusHandler = () => this.focusGameInput();
       canvas.addEventListener("pointerdown", this._canvasFocusHandler);
       this.events.once("shutdown", () => {

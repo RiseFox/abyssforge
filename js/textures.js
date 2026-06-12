@@ -1,4 +1,4 @@
-// MinerLand v2 — every texture is generated on canvas at boot. No image assets.
+// AbyssForge v2 - every texture is generated on canvas at boot. No image assets.
 (() => {
   "use strict";
   const ML = window.ML;

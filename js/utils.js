@@ -1,4 +1,4 @@
-// MinerLand v2 — small shared helpers.
+// AbyssForge v2 - small shared helpers.
 (() => {
   "use strict";
   const ML = window.ML;

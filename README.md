@@ -1,6 +1,6 @@
-# MinerLand
+# AbyssForge
 
-MinerLand is a browser-based 2D mining, crafting, and survival prototype inspired by Terraria-style cave exploration and Minecraft-like resource loops.
+AbyssForge is a browser-based 2D mining, crafting, and survival prototype inspired by Terraria-style cave exploration and Minecraft-like resource loops.
 
 ## Features
 

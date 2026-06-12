@@ -1,4 +1,4 @@
-// MinerLand v2 — boot.
+// AbyssForge v2 - boot.
 (() => {
   "use strict";
   const ML = window.ML;

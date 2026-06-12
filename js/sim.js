@@ -1,4 +1,4 @@
-// MinerLand v2 — world simulation: generation, save/load, inventory, crafting.
+// AbyssForge v2 - world simulation: generation, save/load, inventory, crafting.
 // Pure data layer: no Phaser objects in here.
 (() => {
   "use strict";

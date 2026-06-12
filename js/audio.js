@@ -1,4 +1,4 @@
-// MinerLand v2 — tiny WebAudio synth for SFX. No assets, everything generated.
+// AbyssForge v2 - tiny WebAudio synth for SFX. No assets, everything generated.
 (() => {
   "use strict";
   const ML = window.ML;
