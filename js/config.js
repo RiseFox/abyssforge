@@ -123,6 +123,7 @@ window.ML = window.ML || {};
     relic: { name: "Ancient relic", cls: "icon-relic", tint: 0xa985ff },
     core: { name: "Abyss core", cls: "icon-core", tint: 0xff7a2e },
     torch: { name: "Torch", cls: "icon-torch", tile: Tile.TORCH, tint: 0xf2c35f },
+    battery: { name: "Lamp cell", cls: "icon-battery", tint: 0x7ee6c9 },
     ladder: { name: "Ladder", cls: "icon-ladder", tile: Tile.LADDER, tint: 0xb37236 },
     platform: { name: "Platform", cls: "icon-platform", tile: Tile.PLATFORM, tint: 0x9d6734 },
     charge: { name: "Charge", cls: "icon-charge", tint: 0xc24c3e },
@@ -151,12 +152,12 @@ window.ML = window.ML || {};
     { name: "Abyss edge", bonus: 7 }
   ];
 
-  // Personal light radius in pixels for the lightmap, plus a "self glow"
-  // value that counts toward the darkness-hazard check.
+  // Personal light radius in pixels, self glow for darkness checks, and
+  // battery economy. Higher lamps are stronger but hungrier.
   const LAMPS = [
-    { name: "Headlamp", radius: 120, glow: 0.18 },
-    { name: "Miner lamp", radius: 190, glow: 0.42 },
-    { name: "Beacon lamp", radius: 265, glow: 0.62 }
+    { name: "Headlamp", radius: 120, glow: 0.18, capacity: 135, drain: 1 },
+    { name: "Miner lamp", radius: 190, glow: 0.42, capacity: 165, drain: 1.32 },
+    { name: "Beacon lamp", radius: 265, glow: 0.62, capacity: 210, drain: 1.85 }
   ];
 
   const RECIPES = [
@@ -185,8 +186,8 @@ window.ML = window.ML || {};
     { id: "crystalEdge", cat: "tools", name: "Crystal edge", cost: { gold: 4, crystal: 6 }, blade: 3, note: "+4 attack damage" },
     { id: "abyssEdge", cat: "tools", name: "Abyss edge", cost: { fang: 3, relic: 1, crystal: 5 }, blade: 4, note: "+7 attack damage from boss fangs" },
     { id: "caveBoots", cat: "tools", name: "Cave boots", cost: { wood: 3, iron: 4 }, boots: true, note: "Double jump, softer landings" },
-    { id: "minerLamp", cat: "tools", name: "Miner lamp", cost: { copper: 4, coal: 6 }, lamp: 1, note: "Wider personal light" },
-    { id: "beaconLamp", cat: "tools", name: "Beacon lamp", cost: { gold: 6, crystal: 4 }, lamp: 2, note: "The deep dark cannot touch you" },
+    { id: "minerLamp", cat: "tools", name: "Miner lamp", cost: { copper: 4, coal: 6 }, lamp: 1, note: "Wider personal light, but it drains lamp cells" },
+    { id: "beaconLamp", cat: "tools", name: "Beacon lamp", cost: { gold: 6, crystal: 4 }, lamp: 2, note: "Huge light cone with a hungry battery draw" },
     { id: "reinforcedSoles", cat: "tools", name: "Reinforced soles", cost: { iron: 4, silk: 2, gel: 2 }, fallGuard: true, note: "Cuts fall damage and hard landing shock" },
     { id: "sprintGreaves", cat: "tools", name: "Sprint greaves", cost: { fang: 1, iron: 5, silk: 2 }, speedBoost: true, note: "Higher walk and sprint speed" },
 
@@ -204,6 +205,8 @@ window.ML = window.ML || {};
     { id: "fieldKit", cat: "survival", name: "Field kit", cost: { wood: 2, coal: 2, mushroom: 1 }, out: { kit: 1 }, note: "Use from the hotbar: +45 health, +45 energy" },
     { id: "merchantKit", cat: "survival", name: "Merchant kit", cost: { coin: 12, mushroom: 1 }, out: { kit: 1 }, note: "Spend coins for a quick recovery kit" },
     { id: "merchantTorchCrate", cat: "survival", name: "Merchant torch crate", cost: { coin: 10, coal: 1 }, out: { torch: 8 }, note: "Spend coin to restock light before a deep run" },
+    { id: "lampCells", cat: "survival", name: "Lamp cells", cost: { coal: 2, copper: 1 }, out: { battery: 2 }, note: "Spare batteries for personal lamps" },
+    { id: "crystalCells", cat: "survival", name: "Crystal lamp cells", cost: { crystal: 1, copper: 2 }, out: { battery: 4 }, note: "High-output cells for abyss expeditions" },
     { id: "surveyorLadderPack", cat: "survival", name: "Surveyor ladder pack", cost: { coin: 12, wood: 1 }, out: { ladder: 12 }, note: "A paid shaft kit for longer descents" },
     { id: "blackPowderOrder", cat: "survival", name: "Black powder order", cost: { coin: 18, coal: 2, copper: 1 }, out: { charge: 3 }, note: "Emergency charge restock for sealed routes" },
     { id: "guildSupplyDrop", cat: "survival", name: "Guild supply drop", cost: { coin: 35, relic: 1 }, out: { kit: 2, torch: 6, ladder: 8 }, note: "Late-run resupply from the expedition guild" },
@@ -223,8 +226,9 @@ window.ML = window.ML || {};
   ];
 
   const CAMP_SERVICES = [
-    { id: "rest", name: "Rest at camp", action: "Rest", kind: "rest", cost: {}, note: "Restore health, energy, recall cooldown, and respawn anchor." },
+    { id: "rest", name: "Rest at camp", action: "Rest", kind: "rest", cost: {}, note: "Restore health, energy, lamp charge, recall cooldown, and respawn anchor." },
     { id: "torchCache", name: "Torch cache", action: "Buy", cost: { coin: 8 }, out: { torch: 6 }, note: "Cheap light for another descent." },
+    { id: "cellCache", name: "Lamp cells", action: "Buy", cost: { coin: 10, coal: 1 }, out: { battery: 2 }, note: "Battery stock for long dark routes." },
     { id: "ladderCache", name: "Ladder cache", action: "Buy", cost: { coin: 10 }, out: { ladder: 10 }, note: "Fast vertical route restock." },
     { id: "medicPack", name: "Medic pack", action: "Buy", cost: { coin: 14 }, out: { kit: 1 }, note: "One field kit from the camp medic." },
     { id: "powderCache", name: "Powder cache", action: "Buy", cost: { coin: 18, coal: 1 }, out: { charge: 2 }, note: "Emergency explosives for sealed caves." },
@@ -249,6 +253,7 @@ window.ML = window.ML || {};
     { id: "stonePick", name: "Stone Age", note: "Craft the Stone pick.", prop: "pickLevel", at: 2 },
     { id: "starDrill", name: "Starforged", note: "Craft the Starforged drill.", prop: "pickLevel", at: 6 },
     { id: "beaconLamp", name: "Beacon Bearer", note: "Craft the Beacon lamp.", prop: "lamp", at: 2 },
+    { id: "batteryStock", name: "Cells Packed", note: "Carry three spare lamp cells.", item: "battery", at: 3 },
     { id: "abyssEdge", name: "Abyss Edge", note: "Craft the Abyss edge.", prop: "blade", at: 4 },
     { id: "boots", name: "Second Step", note: "Craft Cave boots.", flag: "boots" },
     { id: "ward", name: "Darkness Warden", note: "Craft the Shadow ward.", flag: "ward" },

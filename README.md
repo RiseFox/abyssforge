@@ -29,13 +29,13 @@ The Watcher does not attack. It follows from outside safe light, retreats from c
 ## Core Loop
 
 - Mine blocks, ores, mushrooms, and hidden caches.
-- Craft picks, lamps, weapons, movement gear, charms, bridges, charges, and survival kits.
+- Craft picks, battery-fed lamps, weapons, movement gear, charms, bridges, charges, and survival kits.
 - Build ladders, platforms, torches, and safer descent routes.
 - Rest at campfires to heal, recover energy, set respawn anchors, and resupply.
 - Complete expedition contracts for supplies and coin.
 - Discover secret rooms with chests, camp points, relics, and bosses.
 - Push through deeper biomes where darkness, recovery, and music change with the terrain.
-- Manage Shadow pressure when light runs low and learn why something follows beyond the lamp.
+- Manage lamp cells, torches, and Shadow pressure when light runs low, then learn why something follows beyond the lamp.
 - Decode hidden field notes that reveal the Warden, the wayfires, and the true purpose of the abyss forge.
 
 ## Biomes With Properties
@@ -67,7 +67,7 @@ Biomes are runtime systems, not only labels. The current biome affects ambient l
 - Dynamic cave events: ore surge, lantern draft, depth swarm, and cave tremor.
 - Situational music modes for surface, night, caves, danger, treasure, camp, deep zones, and bosses.
 - Hidden field-note system with staged long-term goals, lore reveals, and a mystery HUD that appears only after the first impossible clue.
-- Shadow pressure system with energy drain, stronger darkness feedback, and a non-hostile hidden Watcher NPC.
+- Shadow pressure system with lamp-cell drain, energy pressure, stronger darkness feedback, and a non-hostile hidden Watcher NPC.
 - Achievements, unlock toasts, craft-ready notifications, contracts, minimap, pause menu, and death recap.
 - Local Playwright smoke test covering spawn quality, progression data, camp anchors, biome variety, hidden-lore progression, and Watcher runtime hooks.
 

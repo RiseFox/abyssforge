@@ -129,6 +129,19 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     sim.stats.shadowPeaks = 1;
     sim.pickLevel = 6;
     sim.lamp = 2;
+    sim.refillLamp?.();
+    const lampStart = sim.lampChargeRatio?.() || 0;
+    const lampDrain = sim.drainLamp?.(18, 1.2);
+    const lampAfterDrain = sim.lampChargeRatio?.() || 0;
+    sim.lampCharge = 0.2;
+    sim.inventory.battery = 1;
+    const lampSwap = sim.drainLamp?.(1, 1.2);
+    const lampAfterSwap = sim.lampChargeRatio?.() || 0;
+    const batteryAfterSwap = sim.inventory.battery || 0;
+    sim.lampCharge = 0;
+    sim.inventory.battery = 0;
+    const lampEmpty = sim.drainLamp?.(1, 1);
+    const lampOutputEmpty = sim.lampOutput?.();
     sim.recallCharm = true;
     sim.ward = true;
     sim.inventory.mushroom = 5;
@@ -197,6 +210,15 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       mobWakeTexture: Boolean(scene?.textures?.exists?.("mobWake")),
       watcherRuntime: typeof scene?.spawnWatcherSighting === "function" && typeof scene?.updateShadowPressure === "function" && typeof scene?.dismissWatcher === "function" && typeof scene?.leaveWatcherTrace === "function",
       mobWakeRuntime: typeof scene?.mobWakeInfo === "function" && typeof scene?.queueMobMaterialize === "function" && typeof scene?.updatePendingMobSpawns === "function" && typeof scene?.cancelPendingMobSpawn === "function",
+      lampRuntime: typeof sim.drainLamp === "function" && typeof sim.lampOutput === "function" && typeof sim.refillLamp === "function",
+      lampStart,
+      lampDrainState: lampDrain?.state,
+      lampAfterDrain,
+      lampSwapState: lampSwap?.state,
+      lampAfterSwap,
+      batteryAfterSwap,
+      lampEmptyState: lampEmpty?.state,
+      lampEmptyOutput: lampOutputEmpty?.radius || 0,
       endlessRuntime: typeof sim.extendDepth === "function" && typeof sim.worldHeight === "function" && typeof scene?.openAbyssSeam === "function" && typeof scene?.rebuildWorldLayer === "function",
       heightBefore,
       heightAfter,
@@ -330,6 +352,14 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || !progressionCheck.mobWakeTexture
     || !progressionCheck.watcherRuntime
     || !progressionCheck.mobWakeRuntime
+    || !progressionCheck.lampRuntime
+    || progressionCheck.lampStart < 0.99
+    || progressionCheck.lampAfterDrain >= progressionCheck.lampStart
+    || progressionCheck.lampSwapState !== "swapped"
+    || progressionCheck.lampAfterSwap < 0.99
+    || progressionCheck.batteryAfterSwap !== 0
+    || progressionCheck.lampEmptyState !== "empty"
+    || progressionCheck.lampEmptyOutput !== 0
     || !progressionCheck.endlessRuntime
     || progressionCheck.heightAfter <= progressionCheck.heightBefore
     || progressionCheck.extensionRows < 48

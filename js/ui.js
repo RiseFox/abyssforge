@@ -125,6 +125,7 @@
     stone: "Terrain",
     wood: "Build",
     torch: "Light",
+    battery: "Cell",
     ladder: "Route",
     platform: "Route",
     charge: "Blast",
@@ -196,7 +197,9 @@
     const depth = Math.max(0, Math.floor(py / TILE - (sim.surface[tileX] || 24)));
     ui.depthText.textContent = `${depth} m`;
     ui.depthBar.style.width = `${clamp(depth / 230 * 100, 0, 100)}%`;
-    ui.lightText.textContent = light > 0.7 ? "Clear" : light > 0.35 ? "Dim" : "Dark";
+    const lampPct = Math.round((sim.lampChargeRatio?.() ?? 0) * 100);
+    const lightState = light > 0.7 ? "Clear" : light > 0.35 ? "Dim" : "Dark";
+    ui.lightText.textContent = `${lightState} · ${lampPct}%`;
     ui.lightBar.style.width = `${Math.round(light * 100)}%`;
     const shadow = clamp(scene?.shadowPressure ?? sim.shadowPressure ?? 0, 0, 100);
     if (ui.shadowText && ui.shadowBar) {
@@ -213,7 +216,9 @@
     ui.pickHudText.textContent = pickName;
     ui.pickTierText.textContent = `Tier ${sim.pickLevel}`;
     ui.damageText.textContent = `${sim.attackDamage()} · ${BLADES[sim.blade].name}`;
-    const gear = [LAMPS[sim.lamp].name];
+    const cells = sim.inventory?.battery || 0;
+    const gear = [`${LAMPS[sim.lamp].name} ${lampPct}%`];
+    gear.push(`${cells} cell${cells === 1 ? "" : "s"}`);
     if (sim.boots) gear.push("Cave boots");
     if (sim.speedBoost) gear.push("Greaves");
     if (sim.fallGuard) gear.push("Soles");

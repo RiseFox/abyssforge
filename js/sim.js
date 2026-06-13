@@ -22,6 +22,8 @@
       this.blade = this.blade || 0;
       this.boots = Boolean(this.boots);
       this.lamp = this.lamp || 0;
+      this.lampCharge = Number.isFinite(this.lampCharge) ? this.lampCharge : this.maxLampCharge();
+      this.lampCharge = clamp(this.lampCharge, 0, this.maxLampCharge());
       this.maxHealth = this.maxHealth || 100;
       this.maxEnergy = this.maxEnergy || 100;
       this.ward = Boolean(this.ward);
@@ -44,7 +46,7 @@
         ? { x: this.lastCamp.x, y: this.lastCamp.y }
         : null;
       this.inventory = Object.assign(
-        { dirt: 0, stone: 0, wood: 0, coal: 0, copper: 0, iron: 0, gold: 0, crystal: 0, obsidian: 0, gel: 0, coin: 0, silk: 0, fang: 0, relic: 0, core: 0, torch: 0, ladder: 0, platform: 0, charge: 0, mushroom: 0, kit: 0 },
+        { dirt: 0, stone: 0, wood: 0, coal: 0, copper: 0, iron: 0, gold: 0, crystal: 0, obsidian: 0, gel: 0, coin: 0, silk: 0, fang: 0, relic: 0, core: 0, torch: 0, battery: 0, ladder: 0, platform: 0, charge: 0, mushroom: 0, kit: 0 },
         this.inventory || {}
       );
       if (!Array.isArray(this.secrets)) this.secrets = [];
@@ -72,6 +74,7 @@
       this.blade = 0;
       this.boots = false;
       this.lamp = 0;
+      this.lampCharge = this.maxLampCharge();
       this.ward = false;
       this.fallGuard = false;
       this.speedBoost = false;
@@ -85,7 +88,7 @@
       this.inventory = {
         dirt: 0, stone: 0, wood: 8, coal: 2, copper: 0, iron: 0, gold: 0, crystal: 0,
         obsidian: 0, gel: 0, coin: 0, silk: 0, fang: 0, relic: 0, core: 0,
-        torch: 6, ladder: 8, platform: 0, charge: 0, mushroom: 0, kit: 1
+        torch: 6, battery: 1, ladder: 8, platform: 0, charge: 0, mushroom: 0, kit: 1
       };
       const generated = this.generateWorld(seed);
       this.world = generated.world;
@@ -1012,6 +1015,7 @@
         blade: this.blade,
         boots: this.boots,
         lamp: this.lamp,
+        lampCharge: this.lampCharge,
         ward: this.ward,
         fallGuard: this.fallGuard,
         speedBoost: this.speedBoost,
@@ -1071,6 +1075,58 @@
       return true;
     }
 
+    lampSpec() {
+      return ML.LAMPS[this.lamp] || ML.LAMPS[0];
+    }
+
+    maxLampCharge() {
+      return this.lampSpec()?.capacity || 120;
+    }
+
+    lampChargeRatio() {
+      return clamp((this.lampCharge ?? 0) / Math.max(1, this.maxLampCharge()), 0, 1);
+    }
+
+    lampOutput() {
+      const spec = this.lampSpec();
+      const ratio = this.lampChargeRatio();
+      if (ratio <= 0) return { radius: 0, glow: 0, ratio, powered: false };
+      const fade = ratio < 0.18 ? 0.38 + ratio / 0.18 * 0.62 : 1;
+      return {
+        radius: spec.radius * fade,
+        glow: spec.glow * fade,
+        ratio,
+        powered: true
+      };
+    }
+
+    refillLamp() {
+      this.lampCharge = this.maxLampCharge();
+      return this.lampCharge;
+    }
+
+    useLampCell() {
+      if (!this.removeItem("battery", 1)) return false;
+      this.refillLamp();
+      return true;
+    }
+
+    drainLamp(dt, demand = 1) {
+      const spec = this.lampSpec();
+      const before = this.lampChargeRatio();
+      if (this.lampCharge <= 0) {
+        return this.useLampCell() ? { state: "swapped", before, after: 1 } : { state: "empty", before, after: 0 };
+      }
+      const drain = Math.max(0, dt) * (spec.drain || 1) * clamp(demand, 0.15, 1.65);
+      this.lampCharge = clamp(this.lampCharge - drain, 0, this.maxLampCharge());
+      const after = this.lampChargeRatio();
+      if (after <= 0) {
+        return this.useLampCell() ? { state: "swapped", before, after: 1 } : { state: "empty", before, after: 0 };
+      }
+      if (before > 0.22 && after <= 0.22) return { state: "low", before, after };
+      return { state: "draining", before, after };
+    }
+
     attackDamage() {
       return 1 + Math.floor(this.pickLevel / 2) + ML.BLADES[this.blade].bonus;
     }
@@ -1099,7 +1155,10 @@
       }
       if (recipe.upgrade) this.pickLevel = recipe.upgrade;
       if (recipe.blade) this.blade = recipe.blade;
-      if (recipe.lamp) this.lamp = recipe.lamp;
+      if (recipe.lamp) {
+        this.lamp = recipe.lamp;
+        this.refillLamp();
+      }
       if (recipe.boots) this.boots = true;
       if (recipe.ward) this.ward = true;
       if (recipe.fallGuard) this.fallGuard = true;

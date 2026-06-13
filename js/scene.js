@@ -4,7 +4,7 @@
   const ML = window.ML;
   const {
     TILE, WORLD_W, WORLD_H, AIR, DAY_LENGTH, INTERACT_RANGE_TILES,
-    Tile, BLOCKS, SOLID_TILES, BLOCK_TINTS, ITEM_META, HOTBAR, PICKS, LAMPS, ENEMIES, clamp
+    Tile, BLOCKS, SOLID_TILES, BLOCK_TINTS, ITEM_META, HOTBAR, PICKS, ENEMIES, clamp
   } = ML;
 
   const SKY_DAY = { r: 0x6f, g: 0x9f, b: 0xd6 };
@@ -67,6 +67,8 @@
       this.autoPausedByVisibility = false;
       this.lastSizzleAt = 0;
       this.lastDarkWarnAt = 0;
+      this.lastLampWarnAt = 0;
+      this.lastLampSwapAt = 0;
       this.lastCampHintAt = 0;
       this.lastBiomeId = null;
       this.lastBiomeToastAt = 0;
@@ -469,6 +471,7 @@
 
       this.updateEnemies(dt);
       this.updateCaveEvents(dt);
+      this.updateLampBattery(dt);
       this.updateHazards(dt, inLava);
       this.updateSky();
       this.drawAnimatedTileFx();
@@ -606,8 +609,43 @@
       return clamp(Math.max(floor, df * this.surfaceBrightness()), floor, 1);
     }
 
+    updateLampBattery(dt) {
+      const depth = this.depthMeters();
+      const ambient = this.ambientLight();
+      if (depth <= 6 && ambient > 0.58) return;
+      if (this.nearCamp()) return;
+
+      const eventRelief = this.caveEvent?.id === "lanternDraft" ? 0.55 : 1;
+      const demand = clamp((0.52 + depth / 260 + Math.max(0, 0.52 - ambient) * 1.15) * eventRelief, 0.2, 1.55);
+      const result = this.sim.drainLamp(dt, demand);
+      const now = this.time.now;
+
+      if (result.state === "swapped" && now - this.lastLampSwapAt > 900) {
+        this.lastLampSwapAt = now;
+        this.lastLampWarnAt = now;
+        ML.showToast(`Lamp cell swapped. ${this.sim.inventory.battery || 0} spare cells left.`, 1800);
+        ML.bumpItem("battery");
+        this.setAction("Cell swapped", 1100);
+        return;
+      }
+
+      if (result.state === "low" && now - this.lastLampWarnAt > 7000) {
+        this.lastLampWarnAt = now;
+        ML.showToast("Lamp cell is low. Craft cells or return to a campfire.", 2400);
+        this.setAction("Low lamp cell", 1200);
+        return;
+      }
+
+      if (result.state === "empty" && now - this.lastLampWarnAt > 3600) {
+        this.lastLampWarnAt = now;
+        ML.showToast("Lamp is out of cells. Torches and campfires still give light.", 2600);
+        this.setAction("Lamp empty", 1300);
+      }
+    }
+
     playerLight() {
-      let best = Math.max(this.ambientLight(), LAMPS[this.sim.lamp].glow);
+      const lamp = this.sim.lampOutput();
+      let best = Math.max(this.ambientLight(), lamp.glow);
       if (this.sim.ward) best = Math.max(best, 0.28);
       if (this.caveEvent?.id === "lanternDraft") best = Math.max(best, 0.46);
       const px = this.player.x / TILE;
@@ -631,10 +669,11 @@
       if (this.sim.ward) best = Math.max(best, 0.18);
       if (this.caveEvent?.id === "lanternDraft") best = Math.max(best, 0.38);
 
-      const lampRadius = LAMPS[this.sim.lamp].radius / TILE;
+      const lamp = this.sim.lampOutput();
+      const lampRadius = lamp.radius / TILE;
       const playerDistance = Math.hypot(x / TILE - this.player.x / TILE, y / TILE - this.player.y / TILE);
       if (playerDistance < lampRadius) {
-        best = Math.max(best, (1 - playerDistance / lampRadius) * Math.max(0.28, LAMPS[this.sim.lamp].glow));
+        best = Math.max(best, (1 - playerDistance / lampRadius) * Math.max(0.28, lamp.glow));
       }
 
       for (const light of this.sim.lights) {
@@ -743,7 +782,7 @@
 
       if (alpha <= 0.03) return;
       rt.fill(0x040309, alpha);
-      let radius = LAMPS[this.sim.lamp].radius;
+      let radius = this.sim.lampOutput().radius;
       const playerScreenX = this.player.x - cam.scrollX;
       const playerScreenY = this.player.y - cam.scrollY;
       drawHeadlampBeam(playerScreenX, playerScreenY, radius);
@@ -1389,6 +1428,7 @@
         () => { loot.torch = (loot.torch || 0) + 2 + Math.floor(Math.random() * 2); },
         () => { loot.ladder = (loot.ladder || 0) + 2 + Math.floor(Math.random() * 2); },
         () => { loot.charge = (loot.charge || 0) + 1 + Math.floor(Math.random() * 2); },
+        () => { loot.battery = (loot.battery || 0) + 1 + (depth > 120 && Math.random() < 0.45 ? 1 : 0); },
         () => { loot.mushroom = (loot.mushroom || 0) + 2; },
         () => { if (Math.random() < 0.35) loot.kit = (loot.kit || 0) + 1; },
         () => { loot.gel = (loot.gel || 0) + 2 + Math.floor(Math.random() * 3); },
@@ -1404,6 +1444,7 @@
         loot.coin = (loot.coin || 0) + 10 + secret.tier * 6;
         loot.relic = (loot.relic || 0) + secret.tier;
         loot.silk = (loot.silk || 0) + 1 + secret.tier;
+        loot.battery = (loot.battery || 0) + 1 + Math.floor(secret.tier / 2);
         if (secret.tier >= 2) loot.gold = (loot.gold || 0) + 2;
         if (secret.tier >= 3) {
           loot.crystal = (loot.crystal || 0) + 2;
@@ -2871,6 +2912,7 @@
       this.physics.world.resume();
       this.sim.health = this.sim.maxHealth;
       this.sim.energy = this.sim.maxEnergy;
+      this.sim.refillLamp?.();
       const anchor = ML.CampSystem.activeCamp(this.sim);
       const safe = ML.CampSystem.campSpawnPixels(this.sim, anchor);
       this.player.setPosition(safe.x, safe.y);

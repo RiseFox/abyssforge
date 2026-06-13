@@ -112,6 +112,7 @@
     if (service.kind === "rest") {
       sim.health = sim.maxHealth;
       sim.energy = sim.maxEnergy;
+      sim.refillLamp?.();
       if (player) anchor = activateNearest(sim, player);
     }
     if (service.kind === "rerollContract") {
@@ -125,7 +126,7 @@
   }
 
   function serviceSummary(service) {
-    if (service.kind === "rest") return "Full health, energy, recall ready, and respawn anchor set.";
+    if (service.kind === "rest") return "Full health, energy, lamp charge, recall ready, and respawn anchor set.";
     if (service.kind === "rerollContract") return "Replace the active contract.";
     return Object.entries(service.out || {})
       .map(([item, count]) => `${count} ${ML.ITEM_META[item]?.name || item}`)
