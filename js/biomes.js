@@ -131,12 +131,14 @@
   const ABYSS_TILES = new Set([Tile.OBSIDIAN, Tile.LAVA, Tile.BEDROCK]);
 
   function depthAt(sim, x, y) {
-    const tx = clamp(Math.floor(x), 0, WORLD_W - 1);
+    const width = sim?.worldWidth?.() || sim?.world?.[0]?.length || WORLD_W;
+    const tx = clamp(Math.floor(x), 0, width - 1);
     return Math.max(0, Math.floor(y) - (sim.surface?.[tx] || 24));
   }
 
   function scan(sim, x, y, radius = 5) {
-    const cx = clamp(Math.floor(x), 0, WORLD_W - 1);
+    const width = sim?.worldWidth?.() || sim?.world?.[0]?.length || WORLD_W;
+    const cx = clamp(Math.floor(x), 0, width - 1);
     const height = sim.worldHeight?.() || sim.world?.length || WORLD_H;
     const cy = clamp(Math.floor(y), 0, height - 1);
     const counts = {
@@ -152,7 +154,7 @@
 
     for (let yy = cy - radius; yy <= cy + radius; yy += 1) {
       for (let xx = cx - radius; xx <= cx + radius; xx += 1) {
-        if (xx < 0 || yy < 0 || xx >= WORLD_W || yy >= height) continue;
+        if (xx < 0 || yy < 0 || xx >= width || yy >= height) continue;
         const tile = sim.tileAt(xx, yy);
         if (tile === AIR) {
           counts.air += 1;

@@ -6,6 +6,7 @@ window.ML = window.ML || {};
   const TILE = 32;
   const WORLD_W = 180;
   const WORLD_H = 300;
+  const HORIZONTAL_EXPAND_COLUMNS = 96;
   const AIR = -1;
   const DAY_LENGTH = 240; // seconds for a full day/night cycle
 
@@ -416,6 +417,7 @@ window.ML = window.ML || {};
     { id: "campNetwork", name: "Wayfire Network", note: "Activate three campfire anchors.", stat: "camps", at: 3 },
     { id: "worldBelow", name: "No Bottom", note: "Split the lower bedrock seam and open another stratum.", stat: "worldExpansions", at: 1 },
     { id: "voidglass", name: "False Floor", note: "Open two abyss seams and reach the stranger repeating shelves.", stat: "worldExpansions", at: 2 },
+    { id: "farHorizon", name: "Far Horizon", note: "Open a new horizontal region beyond the old map edge.", stat: "horizontalExpansions", at: 1 },
     { id: "firstFieldNote", name: "It Does Not Fit", note: "Decode your first hidden field note.", loreNotes: 1 },
     { id: "loreHunter", name: "Between the Contracts", note: "Decode five hidden field notes.", loreNotes: 5 },
     { id: "firstWatcher", name: "Watched From the Dark", note: "Notice the hidden observer beyond your light.", stat: "watcherSightings", at: 1 },
@@ -730,11 +732,11 @@ window.ML = window.ML || {};
     TILE,
     WORLD_W,
     WORLD_H,
+    HORIZONTAL_EXPAND_COLUMNS,
     AIR,
     DAY_LENGTH,
     INTERACT_RANGE_TILES: 3.05,
-    SAVE_KEY: "abyssforge.save.v1",
-    LEGACY_SAVE_KEY: "minerland.save.v2",
+    SAVE_KEY: "abyssforge.save.v2",
     MUTE_KEY: "abyssforge.muted",
     Tile,
     BLOCKS,

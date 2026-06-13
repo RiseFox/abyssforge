@@ -3,11 +3,11 @@
 (() => {
   "use strict";
   const ML = window.ML;
-  const { TILE, WORLD_W, WORLD_H, AIR, Tile, BLOCKS, ENEMIES, MOB_SPAWN_RULES, clamp, mulberry32 } = ML;
+  const { TILE, WORLD_W, WORLD_H, HORIZONTAL_EXPAND_COLUMNS, AIR, Tile, BLOCKS, ENEMIES, MOB_SPAWN_RULES, clamp, mulberry32 } = ML;
 
   class MinerSim {
     constructor() {
-      const saved = this.load() || this.loadLegacy();
+      const saved = this.load();
       if (saved) {
         Object.assign(this, saved);
         this.ensureDefaults();
@@ -54,6 +54,7 @@
         watcherTraces: 0,
         shadowPeaks: 0,
         worldExpansions: 0,
+        horizontalExpansions: 0,
         observerAnomalies: 0,
         heroThoughts: 0,
         mobAwareness: 0,
@@ -134,6 +135,7 @@
         watcherTraces: 0,
         shadowPeaks: 0,
         worldExpansions: 0,
+        horizontalExpansions: 0,
         observerAnomalies: 0,
         heroThoughts: 0,
         mobAwareness: 0,
@@ -361,12 +363,16 @@
       return Array.isArray(this.world) ? this.world.length : WORLD_H;
     }
 
+    worldWidth() {
+      return Array.isArray(this.world?.[0]) ? this.world[0].length : WORLD_W;
+    }
+
     canOpenDepthSeam(x, y) {
-      return y >= this.worldHeight() - 7 && x > 1 && x < WORLD_W - 2;
+      return y >= this.worldHeight() - 7 && x > 1 && x < this.worldWidth() - 2;
     }
 
     depthAtTile(x, y, surfaceOverride = this.surface) {
-      const tx = clamp(Math.floor(x), 0, WORLD_W - 1);
+      const tx = clamp(Math.floor(x), 0, this.worldWidth() - 1);
       return Math.max(0, Math.floor(y) - (surfaceOverride?.[tx] || 24));
     }
 
@@ -396,8 +402,7 @@
       return entries[entries.length - 1]?.[0] || null;
     }
 
-    deepTileFor(x, y, rand, surfaceOverride = this.surface) {
-      const surfaceY = surfaceOverride?.[x] || 24;
+    deepTileForColumn(y, surfaceY, rand) {
       const depth = y - surfaceY;
       const profile = this.stratumForDepth(depth);
       let tile = depth > (profile?.deepAt ?? 210) ? Tile.DEEP : Tile.STONE;
@@ -413,26 +418,236 @@
       return tile;
     }
 
+    deepTileFor(x, y, rand, surfaceOverride = this.surface) {
+      return this.deepTileForColumn(y, surfaceOverride?.[x] || 24, rand);
+    }
+
     carveAirCircle(cx, cy, radius, minY = 1, maxY = this.worldHeight() - 2) {
       for (let ox = -radius; ox <= radius; ox += 1) {
         for (let oy = -radius; oy <= radius; oy += 1) {
           if (ox * ox + oy * oy > radius * radius + 0.7) continue;
           const x = cx + ox;
           const y = cy + oy;
-          if (x <= 2 || x >= WORLD_W - 3 || y < minY || y > maxY) continue;
+          if (x <= 2 || x >= this.worldWidth() - 3 || y < minY || y > maxY) continue;
           this.world[y][x] = AIR;
         }
       }
     }
 
+    shiftTileCoordinates(deltaX) {
+      if (!deltaX) return;
+      const shiftPoint = (point) => {
+        if (point && Number.isFinite(point.x)) point.x += deltaX;
+      };
+      shiftPoint(this.spawn);
+      shiftPoint(this.shaft);
+      shiftPoint(this.lastCamp);
+      for (const secret of this.secrets || []) {
+        secret.x += deltaX;
+        shiftPoint(secret.chest);
+        shiftPoint(secret.camp);
+        shiftPoint(secret.boss);
+      }
+      for (const light of this.lights || []) shiftPoint(light);
+      for (const mob of this.mobs || []) shiftPoint(mob);
+      if (this.player && Number.isFinite(this.player.x)) this.player.x += deltaX * TILE;
+      if (this.campAnchors && typeof this.campAnchors === "object") {
+        const shifted = {};
+        for (const [key, value] of Object.entries(this.campAnchors)) {
+          const [x, y] = key.split(":").map(Number);
+          if (Number.isFinite(x) && Number.isFinite(y)) shifted[`${x + deltaX}:${y}`] = value;
+          else shifted[key] = value;
+        }
+        this.campAnchors = shifted;
+      }
+    }
+
+    extendHorizontal(direction = "right", columns = HORIZONTAL_EXPAND_COLUMNS || 96) {
+      if (!Array.isArray(this.world) || !Array.isArray(this.surface)) return null;
+      const side = direction === "left" ? "left" : "right";
+      const addColumns = clamp(Math.floor(columns), 48, 160);
+      const oldWidth = this.worldWidth();
+      const height = this.worldHeight();
+      const left = side === "left";
+      const edgeX = left ? 0 : oldWidth - 1;
+      const seedMix = (this.seed
+        ^ (oldWidth * 1103515245)
+        ^ (height * 2654435761)
+        ^ (((this.stats.horizontalExpansions || 0) + 1) * 2246822519)
+        ^ (left ? 0x51f15e : 0xe451de)) >>> 0;
+      const rand = mulberry32(seedMix);
+
+      const outwardSurfaces = [];
+      let surfaceY = this.surface[edgeX] || 24;
+      for (let i = 0; i < addColumns; i += 1) {
+        const drift = Math.floor(rand() * 3) - 1 + (rand() < 0.08 ? (rand() < 0.5 ? -1 : 1) : 0);
+        surfaceY = clamp(surfaceY + drift, 17, 34);
+        outwardSurfaces.push(surfaceY);
+      }
+      const newSurfaces = left ? outwardSurfaces.reverse() : outwardSurfaces;
+      const newColumns = newSurfaces.map((colSurface) => {
+        const column = Array(height).fill(AIR);
+        for (let y = colSurface; y < height; y += 1) {
+          if (y >= height - 4) column[y] = Tile.BEDROCK;
+          else if (y === colSurface) column[y] = Tile.GRASS;
+          else if (y < colSurface + 5) column[y] = Tile.DIRT;
+          else column[y] = this.deepTileForColumn(y, colSurface, rand);
+        }
+        return column;
+      });
+
+      for (let y = 0; y < height; y += 1) {
+        const cells = newColumns.map((column) => column[y]);
+        if (left) this.world[y].unshift(...cells);
+        else this.world[y].push(...cells);
+      }
+      if (left) {
+        this.surface.unshift(...newSurfaces);
+        this.shiftTileCoordinates(addColumns);
+      } else {
+        this.surface.push(...newSurfaces);
+      }
+
+      const regionStart = left ? 0 : oldWidth;
+      const regionEnd = regionStart + addColumns - 1;
+      const minX = regionStart + 4;
+      const maxX = regionEnd - 4;
+      const randX = () => minX + Math.floor(rand() * Math.max(1, maxX - minX + 1));
+      const solidAt = (x, y) => {
+        const t = this.tileAt(x, y);
+        return t !== AIR && BLOCKS[t]?.solid;
+      };
+
+      const seamX = left ? addColumns : oldWidth - 1;
+      for (let i = 0; i < 5; i += 1) {
+        const base = this.surface[clamp(seamX, 0, this.worldWidth() - 1)] || 24;
+        const y = clamp(base + 20 + i * 38 + Math.floor(rand() * 12), base + 9, height - 8);
+        const start = left ? seamX - 8 : seamX - 5;
+        const end = left ? seamX + 5 : seamX + 8;
+        for (let x = start; x <= end; x += 1) this.carveAirCircle(x, y, rand() < 0.35 ? 2 : 1, base + 4, height - 6);
+      }
+
+      const caveWorms = Math.max(20, Math.round(addColumns * 0.52));
+      for (let c = 0; c < caveWorms; c += 1) {
+        let x = randX();
+        let y = (this.surface[x] || 24) + 18 + Math.floor(rand() * Math.max(16, height - (this.surface[x] || 24) - 32));
+        let radius = rand() < 0.7 ? 1 : 2;
+        const steps = 24 + Math.floor(rand() * 70);
+        for (let i = 0; i < steps; i += 1) {
+          this.carveAirCircle(x, y, radius, (this.surface[x] || 24) + 5, height - 6);
+          x = clamp(x + Math.floor(rand() * 3) - 1, minX, maxX);
+          y = clamp(y + Math.floor(rand() * 3) - 1, (this.surface[x] || 24) + 8, height - 8);
+          if (rand() < 0.13) radius = radius === 1 ? 2 : 1;
+        }
+      }
+
+      let chests = 0;
+      let camps = 0;
+      const featureSpots = [];
+      for (let tries = 0; tries < 420; tries += 1) {
+        const x = randX();
+        const y = (this.surface[x] || 24) + 14 + Math.floor(rand() * Math.max(12, height - (this.surface[x] || 24) - 28));
+        if (this.tileAt(x, y) !== AIR || !solidAt(x, y + 1)) continue;
+        featureSpots.push({ x, y });
+        const depth = this.mobDepthAt(x, y);
+        if (chests < Math.max(6, Math.floor(addColumns / 16)) && rand() < 0.28) {
+          this.world[y][x] = Tile.CHEST;
+          chests += 1;
+          continue;
+        }
+        if (camps < 2 && depth > 18 && rand() < 0.08) {
+          this.world[y][x] = Tile.CAMPFIRE;
+          camps += 1;
+          continue;
+        }
+        if (rand() < 0.16) this.world[y][x] = Tile.MUSHROOM;
+      }
+      const targetChests = Math.max(3, Math.floor(addColumns / 24));
+      for (const spot of featureSpots) {
+        if (chests >= targetChests) break;
+        if (this.world[spot.y][spot.x] !== AIR || !solidAt(spot.x, spot.y + 1)) continue;
+        this.world[spot.y][spot.x] = Tile.CHEST;
+        chests += 1;
+      }
+      if (camps < 1) {
+        const campSpot = featureSpots.find((spot) => this.mobDepthAt(spot.x, spot.y) > 24 && this.world[spot.y][spot.x] === AIR && solidAt(spot.x, spot.y + 1));
+        if (campSpot) {
+          this.world[campSpot.y][campSpot.x] = Tile.CAMPFIRE;
+          camps += 1;
+        }
+      }
+
+      for (let y = 210; y < height - 8; y += 1) {
+        for (let x = minX; x <= maxX; x += 1) {
+          if (this.world[y][x] === AIR && solidAt(x, y + 1) && rand() < 0.035) {
+            this.world[y][x] = Tile.LAVA;
+            if (this.world[y][x + 1] === AIR && solidAt(x + 1, y + 1) && rand() < 0.55) this.world[y][x + 1] = Tile.LAVA;
+          }
+        }
+      }
+
+      for (let x = minX; x <= maxX; x += 1) {
+        if (Math.abs(x - (this.shaft?.x || -9999)) <= 9) continue;
+        if (rand() >= 0.08) continue;
+        const ground = this.surface[x] || 24;
+        const trunk = 3 + Math.floor(rand() * 3);
+        for (let y = ground - trunk; y < ground; y += 1) this.world[y][x] = Tile.WOOD;
+        for (let ox = -2; ox <= 2; ox += 1) {
+          for (let oy = -2; oy <= 1; oy += 1) {
+            const tx = x + ox;
+            const ty = ground - trunk + oy;
+            if (tx <= 1 || tx >= this.worldWidth() - 2 || ty <= 2 || this.world[ty][tx] !== AIR) continue;
+            if (Math.abs(ox) + Math.abs(oy) < 4 && rand() > 0.12) this.world[ty][tx] = Tile.LEAVES;
+          }
+        }
+      }
+
+      let mobAdds = 0;
+      const mobCap = Math.max(12, Math.floor(addColumns / 5));
+      for (let tries = 0; tries < 360 && mobAdds < mobCap; tries += 1) {
+        const x = randX();
+        const y = (this.surface[x] || 24) + 16 + Math.floor(rand() * Math.max(12, height - (this.surface[x] || 24) - 24));
+        const picked = this.pickMobForSpot(x, y, rand, { natural: true });
+        if (!picked) continue;
+        const depth = picked.y - (this.surface[x] || 24);
+        this.addMob(x, picked.y, picked.kind, { elite: depth > 140 && rand() < 0.07 });
+        mobAdds += 1;
+      }
+      if (mobAdds < 4) {
+        for (const spot of featureSpots) {
+          if (mobAdds >= 4) break;
+          const picked = this.pickMobForSpot(spot.x, spot.y, rand, { natural: true });
+          if (!picked) continue;
+          const depth = picked.y - (this.surface[spot.x] || 24);
+          this.addMob(spot.x, picked.y, picked.kind, { elite: depth > 140 && rand() < 0.07 });
+          mobAdds += 1;
+        }
+      }
+
+      this.rebuildLights();
+      this.mobBaseline = Math.max(this.mobBaseline || 0, (this.mobs || []).length);
+      this.stats.horizontalExpansions = (this.stats.horizontalExpansions || 0) + 1;
+      return {
+        direction: side,
+        from: left ? 0 : oldWidth,
+        to: this.worldWidth(),
+        columns: addColumns,
+        shiftTiles: left ? addColumns : 0,
+        chests,
+        camps,
+        mobs: mobAdds
+      };
+    }
+
     extendDepth(entryX = Math.floor(WORLD_W / 2), rows = 96) {
       if (!Array.isArray(this.world)) return null;
+      const width = this.worldWidth();
       const oldHeight = this.worldHeight();
       const addRows = clamp(Math.floor(rows), 48, 160);
       const newHeight = oldHeight + addRows;
       const seedMix = (this.seed ^ (oldHeight * 1103515245) ^ (entryX * 2654435761)) >>> 0;
       const rand = mulberry32(seedMix);
-      entryX = clamp(Math.floor(entryX), 5, WORLD_W - 6);
+      entryX = clamp(Math.floor(entryX), 5, width - 6);
       const stratum = this.stratumAt(entryX, oldHeight) || this.stratumForDepth(oldHeight);
       const caveWorms = Math.max(18, Math.round(42 * (stratum?.caveWorms || 1)));
       const caveStepScale = stratum?.caveSteps || 1;
@@ -441,14 +656,14 @@
       const mobCap = stratum?.mobCap ?? 24;
 
       for (let y = Math.max(0, oldHeight - 8); y < oldHeight; y += 1) {
-        for (let x = 0; x < WORLD_W; x += 1) {
+        for (let x = 0; x < width; x += 1) {
           if (this.world[y][x] === Tile.BEDROCK) this.world[y][x] = this.deepTileFor(x, y, rand);
         }
       }
 
       for (let y = oldHeight; y < newHeight; y += 1) {
-        const row = Array(WORLD_W).fill(AIR);
-        for (let x = 0; x < WORLD_W; x += 1) {
+        const row = Array(width).fill(AIR);
+        for (let x = 0; x < width; x += 1) {
           row[x] = y >= newHeight - 4 ? Tile.BEDROCK : this.deepTileFor(x, y, rand);
         }
         this.world.push(row);
@@ -457,20 +672,20 @@
       // Ensure the old bottom becomes an explorable seam instead of a hard stop.
       let riftX = entryX;
       for (let y = oldHeight - 10; y < Math.min(newHeight - 8, oldHeight + Math.floor(addRows * 0.62)); y += 1) {
-        riftX = clamp(riftX + Math.floor(rand() * 3) - 1, 6, WORLD_W - 7);
+        riftX = clamp(riftX + Math.floor(rand() * 3) - 1, 6, width - 7);
         const radius = rand() < 0.28 ? 2 : 1;
         this.carveAirCircle(riftX, y, radius, oldHeight - 12, newHeight - 6);
-        if (rand() < (stratum?.ladderChance ?? 0.24)) this.world[y][clamp(riftX + (rand() < 0.5 ? -2 : 2), 2, WORLD_W - 3)] = Tile.LADDER;
+        if (rand() < (stratum?.ladderChance ?? 0.24)) this.world[y][clamp(riftX + (rand() < 0.5 ? -2 : 2), 2, width - 3)] = Tile.LADDER;
       }
 
       for (let c = 0; c < caveWorms; c += 1) {
-        let x = 6 + Math.floor(rand() * (WORLD_W - 12));
+        let x = 6 + Math.floor(rand() * (width - 12));
         let y = oldHeight + 4 + Math.floor(rand() * Math.max(1, addRows - 18));
         let radius = rand() < 0.68 ? 1 : 2;
         const steps = Math.round((18 + Math.floor(rand() * 58)) * caveStepScale);
         for (let i = 0; i < steps; i += 1) {
           this.carveAirCircle(x, y, radius, oldHeight - 6, newHeight - 6);
-          x = clamp(x + Math.floor(rand() * 3) - 1, 4, WORLD_W - 5);
+          x = clamp(x + Math.floor(rand() * 3) - 1, 4, width - 5);
           y = clamp(y + Math.floor(rand() * 3) - 1, oldHeight - 4, newHeight - 8);
           if (rand() < 0.13) radius = radius === 1 ? 2 : 1;
         }
@@ -483,7 +698,7 @@
       let chests = 0;
       let camps = 0;
       for (let tries = 0; tries < 420; tries += 1) {
-        const x = 5 + Math.floor(rand() * (WORLD_W - 10));
+        const x = 5 + Math.floor(rand() * (width - 10));
         const y = oldHeight + 4 + Math.floor(rand() * Math.max(1, addRows - 16));
         if (this.tileAt(x, y) !== AIR || !solidAt(x, y + 1)) continue;
         if (chests < maxChests && rand() < (stratum?.cacheChance ?? 0.32)) {
@@ -500,7 +715,7 @@
       }
 
       for (let y = oldHeight + 8; y < newHeight - 8; y += 1) {
-        for (let x = 4; x < WORLD_W - 4; x += 1) {
+        for (let x = 4; x < width - 4; x += 1) {
           if (this.world[y][x] === AIR && solidAt(x, y + 1) && rand() < (stratum?.lavaChance ?? 0.045)) {
             this.world[y][x] = Tile.LAVA;
             if (this.world[y][x + 1] === AIR && solidAt(x + 1, y + 1) && rand() < (stratum?.lavaSpread ?? 0.55)) this.world[y][x + 1] = Tile.LAVA;
@@ -510,7 +725,7 @@
 
       let mobAdds = 0;
       for (let tries = 0; tries < 320 && mobAdds < mobCap; tries += 1) {
-        const x = 4 + Math.floor(rand() * (WORLD_W - 8));
+        const x = 4 + Math.floor(rand() * (width - 8));
         const y = oldHeight + 6 + Math.floor(rand() * Math.max(1, addRows - 18));
         const picked = this.pickMobForSpot(x, y, rand, { natural: true });
         if (!picked) continue;
@@ -529,7 +744,7 @@
     // live at fixed homes in the caves and only get a sprite when the player
     // comes near. Killed mobs are gone for good (minus a small dawn repop).
     mobDepthAt(x, y) {
-      const tx = clamp(Math.floor(x), 0, WORLD_W - 1);
+      const tx = clamp(Math.floor(x), 0, this.worldWidth() - 1);
       return Math.floor(y) - (this.surface?.[tx] || 24);
     }
 
@@ -605,8 +820,9 @@
       const cfg = ENEMIES?.[kind];
       const rule = this.mobSpawnRule(kind);
       if (!cfg || !rule) return false;
+      const width = this.worldWidth();
       const height = this.worldHeight();
-      x = clamp(Math.floor(x), 1, WORLD_W - 2);
+      x = clamp(Math.floor(x), 1, width - 2);
       y = clamp(Math.floor(y), 1, height - 2);
       const depth = this.mobDepthAt(x, y);
       const biomeId = this.mobBiomeIdAt(x, y);
@@ -687,7 +903,7 @@
         for (let ox = -r; ox <= r; ox += 1) {
           for (let oy = -r; oy <= r; oy += 1) {
             if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue;
-            const x = clamp((mob.x || 1) + ox, 1, WORLD_W - 2);
+            const x = clamp((mob.x || 1) + ox, 1, this.worldWidth() - 2);
             const y = clamp((mob.y || 1) + oy, 1, this.worldHeight() - 2);
             if (this.canSpawnMobAt(mob.kind, x, y, context)) return { x, y };
           }
@@ -726,12 +942,13 @@
 
     generateMobs(rand = Math.random) {
       const mobs = [];
+      const width = this.worldWidth();
       this.mobSeq = 1;
       const solidAt = (x, y) => {
         const t = this.tileAt(x, y);
         return t !== AIR && BLOCKS[t] && BLOCKS[t].solid;
       };
-      for (let x = 3; x < WORLD_W - 3 && mobs.length < 140; x += 1) {
+      for (let x = 3; x < width - 3 && mobs.length < Math.max(140, Math.floor(width * 0.78)); x += 1) {
         const surfaceY = this.surface[x] || 24;
         for (let y = surfaceY + 16; y < WORLD_H - 6; y += 1) {
           // Needs a 2-tall air pocket standing on solid ground (not lava).
@@ -773,8 +990,9 @@
       this.lights = [];
       if (!this.world) return;
       const height = this.worldHeight();
+      const width = this.worldWidth();
       for (let y = 0; y < height; y += 1) {
-        for (let x = 0; x < WORLD_W; x += 1) {
+        for (let x = 0; x < width; x += 1) {
           const t = this.world[y][x];
           if (t !== AIR && BLOCKS[t] && BLOCKS[t].light) this.lights.push({ x, y, t });
         }
@@ -802,31 +1020,32 @@
 
     repairSpawnShaft() {
       if (!this.world || !this.spawn) return;
+      const width = this.worldWidth();
       const shaft = this.shaft || { x: this.spawn.x, y: this.spawn.y };
       const sx = shaft.x;
       const sy = shaft.y;
       this.shaft = { x: sx, y: sy };
-      this.spawn = { x: clamp(sx - 3, 1, WORLD_W - 2), y: sy };
+      this.spawn = { x: clamp(sx - 3, 1, width - 2), y: sy };
       const floorY = sy + 2;
 
       for (let y = sy - 7; y < sy + 18; y += 1) {
         if (y < 0 || y >= WORLD_H) continue;
         for (let x = sx - 2; x <= sx + 2; x += 1) {
-          if (x >= 0 && x < WORLD_W) this.world[y][x] = AIR;
+          if (x >= 0 && x < width) this.world[y][x] = AIR;
         }
         if (y >= sy + 2) this.world[y][sx] = Tile.LADDER;
         if (y === sy + 7 || y === sy + 15) this.world[y][sx + 1] = Tile.TORCH;
       }
 
       for (let x = sx - 4; x <= sx + 4; x += 1) {
-        if (x < 0 || x >= WORLD_W || floorY >= WORLD_H) continue;
+        if (x < 0 || x >= width || floorY >= WORLD_H) continue;
         if (Math.abs(x - sx) > 1) this.world[floorY][x] = Tile.GRASS;
         else this.world[floorY][x] = AIR;
       }
       for (let y = floorY + 1; y <= floorY + 4; y += 1) {
         if (y < 0 || y >= WORLD_H) continue;
         for (let x = sx - 4; x <= sx + 4; x += 1) {
-          if (x < 0 || x >= WORLD_W) continue;
+          if (x < 0 || x >= width) continue;
           if (Math.abs(x - sx) > 1) this.world[y][x] = Tile.DIRT;
           else this.world[y][x] = x === sx ? Tile.LADDER : AIR;
         }
@@ -838,7 +1057,7 @@
       this.world[floorY - 2][this.spawn.x - 1] = AIR;
       this.world[floorY - 1][this.spawn.x + 1] = AIR;
       this.world[floorY - 2][this.spawn.x + 1] = AIR;
-      const campX = clamp(sx - 4, 1, WORLD_W - 2);
+      const campX = clamp(sx - 4, 1, width - 2);
       if (floorY - 1 > 0) {
         this.world[floorY - 1][campX] = Tile.CAMPFIRE;
         this.world[floorY - 2][campX] = AIR;
@@ -872,7 +1091,7 @@
 
     hasPlayerSupport(player = this.player) {
       if (!player) return false;
-      const centerX = clamp(Math.floor(player.x / TILE), 0, WORLD_W - 1);
+      const centerX = clamp(Math.floor(player.x / TILE), 0, this.worldWidth() - 1);
       const height = this.worldHeight();
       const bodyY = clamp(Math.floor(player.y / TILE), 0, height - 1);
       const footY = clamp(Math.floor((player.y + 18) / TILE), 0, height - 1);
@@ -884,7 +1103,7 @@
 
     snapPlayerToTileCenter(player = this.player) {
       if (!player) return this.safeSpawnPixels();
-      const centerX = clamp(Math.floor(player.x / TILE), 1, WORLD_W - 2);
+      const centerX = clamp(Math.floor(player.x / TILE), 1, this.worldWidth() - 2);
       const height = this.worldHeight();
       const footY = clamp(Math.floor((player.y + 18) / TILE), 0, height - 1);
       const bodyY = clamp(Math.floor(player.y / TILE), 0, height - 1);
@@ -906,14 +1125,15 @@
 
     nearestSafePlayerPixels(player = this.player) {
       if (!player) return this.safeSpawnPixels();
-      const startX = clamp(Math.floor(player.x / TILE), 1, WORLD_W - 2);
+      const width = this.worldWidth();
+      const startX = clamp(Math.floor(player.x / TILE), 1, width - 2);
       const height = this.worldHeight();
       const startY = clamp(Math.floor((player.y + 18) / TILE), 0, height - 2);
 
       for (let y = startY; y < Math.min(height - 2, startY + 5); y += 1) {
         for (let radius = 0; radius <= 3; radius += 1) {
           for (const x of [startX - radius, startX + radius]) {
-            if (x < 1 || x >= WORLD_W - 1) continue;
+            if (x < 1 || x >= width - 1) continue;
             const t = this.tileAt(x, y);
             if (t !== AIR && BLOCKS[t]?.solid && this.hasHeadClearance(x, y)) {
               return { x: x * TILE + TILE / 2, y: y * TILE - 17 };
@@ -1049,28 +1269,6 @@
       }
     }
 
-    // Migrate pre-rename saves. Old MinerLand v2 saves live under the legacy
-    // key; older v1 saves need a small equipment reset.
-    loadLegacy() {
-      try {
-        const raw = localStorage.getItem(ML.LEGACY_SAVE_KEY);
-        if (!raw) return null;
-        const data = JSON.parse(raw);
-        if (!data || !data.state || !Array.isArray(data.state.world)) return null;
-        const state = data.state;
-        if (data.version === 1) {
-          delete state.torches;
-          state.blade = 0;
-          state.boots = false;
-          state.lamp = 0;
-        }
-        // The legacy key is removed only after a v2 save succeeds (see save()).
-        return state;
-      } catch {
-        return null;
-      }
-    }
-
     save(player) {
       if (player) {
         this.player = { x: player.x, y: player.y };
@@ -1119,7 +1317,6 @@
       };
       try {
         localStorage.setItem(ML.SAVE_KEY, JSON.stringify({ version: 2, state }));
-        localStorage.removeItem(ML.LEGACY_SAVE_KEY);
         return true;
       } catch {
         return false;
@@ -1127,12 +1324,12 @@
     }
 
     tileAt(x, y) {
-      if (x < 0 || y < 0 || x >= WORLD_W || y >= this.worldHeight()) return Tile.BEDROCK;
+      if (x < 0 || y < 0 || x >= this.worldWidth() || y >= this.worldHeight()) return Tile.BEDROCK;
       return this.world[y][x];
     }
 
     setTile(x, y, tile) {
-      if (x < 0 || y < 0 || x >= WORLD_W || y >= this.worldHeight()) return;
+      if (x < 0 || y < 0 || x >= this.worldWidth() || y >= this.worldHeight()) return;
       this.world[y][x] = tile;
     }
 

@@ -8,7 +8,7 @@ You start with a weak pick, a few torches, and a campfire beside the first shaft
 
 ## Game Fantasy
 
-The old lift network under the Guild is broken. Below it, the mine is not just deeper rock - it is a layered machine of roots, ore faults, glow hollows, crystal veins, and obsidian heat. Campfires are the only reliable marks of human control. Light buys time. Crafting buys options. Going deeper buys answers.
+The old lift network under the Guild is broken. Below it, the mine is not just deeper rock - it is a layered machine of roots, ore faults, glow hollows, crystal veins, and obsidian heat. The horizon is unstable too: when an expedition reaches an old map edge, new side-country tears open with fresh caverns, caches, camps, and threats. Campfires are the only reliable marks of human control. Light buys time. Crafting buys options. Going deeper and farther buys answers.
 
 The long-term goal is to recover enough relic technology to reach the Warden's forge and survive what the first expedition woke up.
 
@@ -67,11 +67,11 @@ Depth is no longer a single hardcoded ore ladder. AbyssForge now uses data-drive
 | Obsidian Abyss | 220 m | Lava-glass danger with fewer camps, heavier mobs, richer caches, and severe darkness. |
 | Voidglass Shelf | 330 m | Strange repeating lower shelves where safe light is scarce and the mine stops behaving naturally. |
 
-Opening bedrock seams extends the world and moves the next generated abyss section into the active stratum instead of repeating the same cave recipe forever.
+Opening bedrock seams extends the world downward and moves the next generated abyss section into the active stratum instead of repeating the same cave recipe forever. Reaching the far left or right horizon now opens a new horizontal region instead of ending at a hard boundary, preserving the player position while the map, minimap, mobs, caches, and camp hooks expand around the expedition.
 
 ## Current Features
 
-- Seeded procedural world with a quality-gated spawn area.
+- Seeded procedural world with a quality-gated spawn area and procedural horizontal horizon expansion.
 - Data-driven strata profiles for ore distribution, cave shape, lava, caches, camps, mob pressure, elite chance, cave events, and mining fatigue.
 - Stable starter shaft, no-air spawn checks, and a protected first drop bridge.
 - Mining, block placement, ladders, torches, platforms, charges, and hotbar use.
@@ -79,6 +79,7 @@ Opening bedrock seams extends the world and moves the next generated abyss secti
 - Expanded crafting across tools, blocks, survival items, and relic upgrades.
 - Campfire rest points with warm light, services, safe respawn anchors, and recall support.
 - Secret vault rooms with chests, rare relic materials, boss rooms, and deeper camp points.
+- Endless-style horizontal exploration that opens fresh side regions with cave routes, loot caches, camp points, trees, lava shelves, and region-appropriate mobs.
 - Dynamic cave events: ore surge, lantern draft, depth swarm, and cave tremor.
 - Story-phase event variants: familiar cave events start as mining hazards, then slowly read like signals from a broken machine.
 - Instinct-based enemy behavior: mobs react to light, weakness, allies, distance, and their own health instead of only walking at the player.
@@ -116,7 +117,7 @@ npm install
 npm test
 ```
 
-`npm test` launches Playwright, opens the game, verifies 300 generated starts, checks that the spawn has real support, confirms the starter camp is reachable, validates campfire anchors and progression systems, samples biome variety, and runs a HUD performance smoke gate for FPS, frame time, DOM weight, and default overlay state.
+`npm test` launches Playwright, opens the game, verifies 300 generated starts, checks that the spawn has real support, confirms the starter camp is reachable, validates campfire anchors, vertical and horizontal world expansion, progression systems, biome variety, and runs a HUD performance smoke gate for FPS, frame time, DOM weight, and default overlay state.
 
 ## Project Shape
 
@@ -134,4 +135,4 @@ npm test
 
 ## Design Direction
 
-AbyssForge is moving toward a deeper Terraria-like expedition structure: each descent should force a route decision, each biome should change the rules slightly, and every campfire should feel like a meaningful foothold in a hostile vertical world.
+AbyssForge is moving toward a deeper Terraria-like expedition structure: each descent should force a route decision, each side horizon should feel like newly found territory, each biome should change the rules slightly, and every campfire should feel like a meaningful foothold in a hostile living world.

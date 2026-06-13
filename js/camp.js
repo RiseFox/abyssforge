@@ -10,9 +10,10 @@
   }
 
   function tileFromPlayer(player, sim = null) {
+    const width = sim?.worldWidth?.() || sim?.world?.[0]?.length || WORLD_W;
     const height = sim?.worldHeight?.() || sim?.world?.length || WORLD_H;
     return {
-      x: clamp(Math.floor(player.x / TILE), 0, WORLD_W - 1),
+      x: clamp(Math.floor(player.x / TILE), 0, width - 1),
       y: clamp(Math.floor(player.y / TILE), 0, height - 1)
     };
   }
@@ -20,11 +21,12 @@
   function nearestCampfire(sim, player, radiusTiles = CAMP_RADIUS_TILES) {
     if (!sim?.world || !player) return null;
     const center = tileFromPlayer(player, sim);
+    const width = sim.worldWidth?.() || sim.world?.[0]?.length || WORLD_W;
     const height = sim.worldHeight?.() || sim.world?.length || WORLD_H;
     let nearest = null;
     let best = Infinity;
     for (let y = Math.max(0, center.y - radiusTiles); y <= Math.min(height - 1, center.y + radiusTiles); y += 1) {
-      for (let x = Math.max(0, center.x - radiusTiles); x <= Math.min(WORLD_W - 1, center.x + radiusTiles); x += 1) {
+      for (let x = Math.max(0, center.x - radiusTiles); x <= Math.min(width - 1, center.x + radiusTiles); x += 1) {
         if (!isCampTile(sim.tileAt(x, y))) continue;
         const distance = Math.hypot(x + 0.5 - player.x / TILE, y + 0.5 - player.y / TILE);
         if (distance <= radiusTiles && distance < best) {

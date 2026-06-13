@@ -203,6 +203,21 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const secondExtension = sim.extendDepth?.(seamX, 48);
     const heightAfterSecond = sim.worldHeight?.() || sim.world.length;
     const secondSeamOpened = sim.tileAt(seamX, heightAfter - 3) !== window.ML.Tile.BEDROCK;
+    const widthBefore = sim.worldWidth?.() || sim.world?.[0]?.length || WORLD_W;
+    const eastExtension = sim.extendHorizontal?.("right", 64);
+    const widthAfterEast = sim.worldWidth?.() || sim.world?.[0]?.length || WORLD_W;
+    const westExtension = sim.extendHorizontal?.("left", 64);
+    const widthAfterWest = sim.worldWidth?.() || sim.world?.[0]?.length || WORLD_W;
+    const horizontalSpawnStable = sim.hasStableSpawnFloor?.();
+    const horizontalCampSupport = sim.hasPlayerSupport?.(sim.safeSpawnPixels?.());
+    const sceneWidthBefore = scene?.worldWidthTiles?.() || scene?.sim?.worldWidth?.() || WORLD_W;
+    const sceneRightOpen = scene?.openHorizontalRegion?.("right");
+    const sceneWidthAfterRight = scene?.worldWidthTiles?.() || scene?.sim?.worldWidth?.() || WORLD_W;
+    const sceneLeftXBefore = scene?.player?.x || 0;
+    const sceneLeftOpen = scene?.openHorizontalRegion?.("left");
+    const sceneWidthAfterLeft = scene?.worldWidthTiles?.() || scene?.sim?.worldWidth?.() || WORLD_W;
+    const sceneLeftShift = (scene?.player?.x || 0) - sceneLeftXBefore;
+    const sceneHorizontalSupport = scene?.sim?.hasPlayerSupport?.({ x: scene.player.x, y: scene.player.y });
     const stratumIds = new Set();
     const stratumSamples = [];
     [24, 96, 168, 252, 350].forEach((depth, index) => {
@@ -221,6 +236,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const packClosed = Boolean(window.ML.ui?.packDrawer?.classList.contains("hidden"));
     return {
       recipes: window.ML.RECIPES.length,
+      tileSize: window.ML.TILE,
       achievements: window.ML.ACHIEVEMENTS.length,
       contracts: window.ML.CONTRACTS.length,
       caveEvents: Object.keys(window.ML.CAVE_EVENTS || {}).length,
@@ -280,6 +296,27 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       secondExtensionStratum: secondExtension?.stratumId || null,
       secondSeamOpened,
       worldExpansions: sim.stats.worldExpansions || 0,
+      horizontalRuntime: typeof sim.extendHorizontal === "function" && typeof sim.worldWidth === "function" && typeof scene?.openHorizontalRegion === "function",
+      widthBefore,
+      widthAfterEast,
+      widthAfterWest,
+      eastColumns: eastExtension?.columns || 0,
+      eastChests: eastExtension?.chests || 0,
+      eastMobs: eastExtension?.mobs || 0,
+      westColumns: westExtension?.columns || 0,
+      westShiftTiles: westExtension?.shiftTiles || 0,
+      westChests: westExtension?.chests || 0,
+      westMobs: westExtension?.mobs || 0,
+      horizontalExpansions: sim.stats.horizontalExpansions || 0,
+      horizontalSpawnStable: Boolean(horizontalSpawnStable),
+      horizontalCampSupport: Boolean(horizontalCampSupport),
+      sceneWidthBefore,
+      sceneRightOpen: Boolean(sceneRightOpen),
+      sceneLeftOpen: Boolean(sceneLeftOpen),
+      sceneWidthAfterRight,
+      sceneWidthAfterLeft,
+      sceneLeftShift,
+      sceneHorizontalSupport: Boolean(sceneHorizontalSupport),
       watcherTraceDelta: traceAfter - traceBefore,
       watcherTraceActive: Boolean(trace),
       watcherSpotDistance: watcherSpot ? Math.round(Math.hypot(watcherSpot.x - scene.player.x, watcherSpot.y - scene.player.y)) : 0,
@@ -386,7 +423,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
   await browser.close();
 
   const progressionFailed = progressionCheck.recipes < 34
-    || progressionCheck.achievements < 45
+    || progressionCheck.achievements < 46
     || progressionCheck.contracts < 5
     || progressionCheck.caveEvents < 4
     || progressionCheck.eventVariantCount < 4
@@ -444,6 +481,25 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.secondExtensionStratum === progressionCheck.extensionStratum
     || !progressionCheck.secondSeamOpened
     || progressionCheck.worldExpansions < 2
+    || !progressionCheck.horizontalRuntime
+    || progressionCheck.widthAfterEast <= progressionCheck.widthBefore
+    || progressionCheck.widthAfterWest <= progressionCheck.widthAfterEast
+    || progressionCheck.eastColumns < 48
+    || progressionCheck.westColumns < 48
+    || progressionCheck.westShiftTiles < 48
+    || progressionCheck.eastChests < 1
+    || progressionCheck.westChests < 1
+    || progressionCheck.eastMobs < 1
+    || progressionCheck.westMobs < 1
+    || progressionCheck.horizontalExpansions < 2
+    || !progressionCheck.horizontalSpawnStable
+    || !progressionCheck.horizontalCampSupport
+    || !progressionCheck.sceneRightOpen
+    || !progressionCheck.sceneLeftOpen
+    || progressionCheck.sceneWidthAfterRight <= progressionCheck.sceneWidthBefore
+    || progressionCheck.sceneWidthAfterLeft <= progressionCheck.sceneWidthAfterRight
+    || progressionCheck.sceneLeftShift < 48 * progressionCheck.tileSize
+    || !progressionCheck.sceneHorizontalSupport
     || !progressionCheck.watcherTraceActive
     || progressionCheck.watcherTraceDelta < 1
     || progressionCheck.watcherSpotDistance < 245

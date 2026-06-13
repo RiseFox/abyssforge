@@ -207,7 +207,8 @@
     ui.energyBar.style.width = `${energyPct * 100}%`;
     const px = player ? player.x : sim.player.x;
     const py = player ? player.y : sim.player.y;
-    const tileX = clamp(Math.floor(px / TILE), 0, WORLD_W - 1);
+    const width = sim.worldWidth?.() || sim.world?.[0]?.length || WORLD_W;
+    const tileX = clamp(Math.floor(px / TILE), 0, width - 1);
     const depth = Math.max(0, Math.floor(py / TILE - (sim.surface[tileX] || 24)));
     ui.depthText.textContent = `${depth} m`;
     const depthCap = Math.max(230, (sim.worldHeight?.() || WORLD_H) - 32);
@@ -826,22 +827,23 @@
     offCtx: null,
 
     init(sim) {
+      const width = sim.worldWidth?.() || sim.world?.[0]?.length || WORLD_W;
       const height = sim.worldHeight?.() || sim.world?.length || WORLD_H;
       this.off = document.createElement("canvas");
-      this.off.width = WORLD_W;
+      this.off.width = width;
       this.off.height = height;
       this.offCtx = this.off.getContext("2d");
       if (ui.minimapCanvas) {
-        ui.minimapCanvas.width = WORLD_W;
+        ui.minimapCanvas.width = width;
         ui.minimapCanvas.height = height;
       }
-      const img = this.offCtx.createImageData(WORLD_W, height);
+      const img = this.offCtx.createImageData(width, height);
       const px = new Uint32Array(img.data.buffer);
       for (let y = 0; y < height; y += 1) {
         const row = sim.world[y];
-        for (let x = 0; x < WORLD_W; x += 1) {
+        for (let x = 0; x < width; x += 1) {
           const t = row[x];
-          px[y * WORLD_W + x] = t === AIR
+          px[y * width + x] = t === AIR
             ? (y <= (sim.surface[x] || 24) ? SKY_U32 : CAVE_U32)
             : (MAP_COLORS_U32[t] ?? FALLBACK_U32);
         }
@@ -864,16 +866,18 @@
 
     paintTile(sim, x, y) {
       if (!this.offCtx) return;
+      const width = sim.worldWidth?.() || sim.world?.[0]?.length || WORLD_W;
       const height = sim.worldHeight?.() || sim.world?.length || WORLD_H;
-      if (x < 0 || y < 0 || x >= WORLD_W || y >= height) return;
+      if (x < 0 || y < 0 || x >= width || y >= height) return;
       this.paintPixel(sim, x, y);
     },
 
     render(scene) {
       if (!minimapOpen || !this.off || !ui.minimapCanvas) return;
       const ctx = ui.minimapCanvas.getContext("2d");
+      const width = scene?.sim?.worldWidth?.() || scene?.sim?.world?.[0]?.length || WORLD_W;
       const height = scene?.sim?.worldHeight?.() || scene?.sim?.world?.length || WORLD_H;
-      ctx.clearRect(0, 0, WORLD_W, height);
+      ctx.clearRect(0, 0, width, height);
       ctx.drawImage(this.off, 0, 0);
       if (!scene || !scene.player) return;
       // Enemies as red dots, player as a gold dot.
