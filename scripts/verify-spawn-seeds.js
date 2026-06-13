@@ -59,9 +59,18 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     sim.addItem("coin", 24);
     const recallCraft = sim.craft(recallRecipe);
     const campService = window.ML.CAMP_SERVICES.find((service) => service.id === "torchCache");
+    const restService = window.ML.CAMP_SERVICES.find((service) => service.id === "rest");
     sim.addItem("coin", 8);
     const torchesBefore = sim.inventory.torch || 0;
     const campResult = sim.campService(campService);
+    const camp = sim.secrets.find((secret) => secret.camp)?.camp || window.ML.CampSystem.surfaceCamp(sim);
+    sim.health = 12;
+    sim.energy = 8;
+    const campPlayer = { x: camp.x * window.ML.TILE + window.ML.TILE / 2, y: (camp.y + 1) * window.ML.TILE - 17 };
+    const restResult = sim.campService(restService, campPlayer);
+    const activeCamp = window.ML.CampSystem.activeCamp(sim);
+    const campSpawn = window.ML.CampSystem.activeCampSpawnPixels(sim);
+    const campSupport = sim.hasPlayerSupport(campSpawn);
     const contractBefore = sim.contractProgress();
     if (contractBefore?.contract.absolute) {
       sim.stats[contractBefore.contract.type] = contractBefore.target;
@@ -81,6 +90,12 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       recallCraft,
       recallCharm: sim.recallCharm,
       campResult,
+      restResult,
+      activeCamp,
+      campSpawn,
+      campSupport,
+      campAnchors: Object.keys(sim.campAnchors || {}).length,
+      camps: sim.stats.camps,
       campUses: sim.stats.campUses,
       torchDelta: (sim.inventory.torch || 0) - torchesBefore,
       contractBefore,
@@ -134,6 +149,11 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || !progressionCheck.recallCraft.ok
     || !progressionCheck.recallCharm
     || !progressionCheck.campResult.ok
+    || !progressionCheck.restResult.ok
+    || !progressionCheck.activeCamp
+    || !progressionCheck.campSupport
+    || progressionCheck.campAnchors < 1
+    || progressionCheck.camps < 1
     || progressionCheck.campUses < 1
     || progressionCheck.torchDelta < 6
     || !progressionCheck.contractBefore

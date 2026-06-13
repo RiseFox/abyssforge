@@ -34,9 +34,13 @@
       this.blastRadius = this.blastRadius || 0;
       this.health = clamp(this.health ?? this.maxHealth, 0, this.maxHealth);
       this.energy = clamp(this.energy ?? this.maxEnergy, 0, this.maxEnergy);
-      this.stats = Object.assign({ mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0, recalls: 0, campUses: 0 }, this.stats || {});
+      this.stats = Object.assign({ mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0, recalls: 0, campUses: 0, camps: 0 }, this.stats || {});
       this.achievements = Object.assign({}, this.achievements || {});
       this.craftedRecipes = Object.assign({}, this.craftedRecipes || {});
+      this.campAnchors = Object.assign({}, this.campAnchors || {});
+      this.lastCamp = this.lastCamp && Number.isFinite(this.lastCamp.x) && Number.isFinite(this.lastCamp.y)
+        ? { x: this.lastCamp.x, y: this.lastCamp.y }
+        : null;
       this.inventory = Object.assign(
         { dirt: 0, stone: 0, wood: 0, coal: 0, copper: 0, iron: 0, gold: 0, crystal: 0, obsidian: 0, gel: 0, coin: 0, silk: 0, fang: 0, relic: 0, core: 0, torch: 0, ladder: 0, platform: 0, charge: 0, mushroom: 0, kit: 0 },
         this.inventory || {}
@@ -85,9 +89,11 @@
       this.spawn = generated.spawn;
       this.shaft = generated.shaft;
       this.secrets = generated.secrets || [];
-      this.stats = { mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0, recalls: 0, campUses: 0 };
+      this.stats = { mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0, recalls: 0, campUses: 0, camps: 0 };
       this.achievements = {};
       this.craftedRecipes = {};
+      this.campAnchors = {};
+      this.lastCamp = null;
       this.contractSeq = 0;
       this.contract = null;
       this.repairSpawnShaft();
@@ -623,8 +629,8 @@
       return { completed, next };
     }
 
-    campService(service) {
-      return ML.CampSystem.applyService(this, service);
+    campService(service, player = null) {
+      return ML.CampSystem.applyService(this, service, player);
     }
 
     load() {
@@ -699,6 +705,8 @@
         stats: this.stats,
         achievements: this.achievements,
         craftedRecipes: this.craftedRecipes,
+        campAnchors: this.campAnchors,
+        lastCamp: this.lastCamp,
         contract: this.contract,
         contractSeq: this.contractSeq
       };

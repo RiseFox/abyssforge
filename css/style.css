@@ -802,6 +802,11 @@ canvas:focus { outline: none; }
   transform: translateY(-1px);
 }
 
+.camp-service.anchored {
+  border-color: rgba(118, 182, 111, 0.46);
+  background: rgba(73, 104, 54, 0.14);
+}
+
 .camp-service strong {
   display: block;
   font-size: 13px;

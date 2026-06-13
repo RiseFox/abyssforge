@@ -10,13 +10,13 @@ AbyssForge is a browser-based 2D mining, crafting, and survival prototype inspir
 - Expedition contracts with rotating objectives, persistent progress, and item rewards.
 - Dynamic cave events: ore surges, lantern drafts, depth swarms, and tremors.
 - Rare elite mobs with stronger stats and better loot.
-- Recall-to-camp survival action with energy cost, cooldown, boss lockout, and a craftable Recall charm upgrade.
-- Physical campfire points with warm light, passive recovery, camp services, and deeper secret-room rest stops.
+- Recall-to-campfire-anchor survival action with energy cost, cooldown, boss lockout, and a craftable Recall charm upgrade.
+- Physical campfire points with warm light, passive recovery, camp services, respawn anchors, and deeper secret-room rest stops.
 - Boss health bar, depth-zone labeling, and clearer active objective tracking.
 - Torch, campfire, and headlamp lighting, day/night mood, situational background music, and compact pixel-art UI.
 - Craft-ready HUD badge and notifications when new recipes become buildable.
 - Expanded crafting with block kits, survival kits, relic charms, movement upgrades, loot upgrades, and boss-material progression.
-- Achievements with unlock toasts and a pause-menu progress list.
+- Achievements with unlock toasts, camp-anchor goals, and a pause-menu progress list.
 - Local Playwright smoke check for spawn stability across many seeds.
 
 ## Controls
@@ -27,7 +27,7 @@ AbyssForge is a browser-based 2D mining, crafting, and survival prototype inspir
 - Left mouse - mine blocks or hit targets
 - Right mouse - place or use the selected hotbar item
 - `F` - attack with the pickaxe
-- `R` - recall to the surface camp when deep routes get dangerous
+- `R` - recall to the active campfire anchor when deep routes get dangerous
 - `C` - open camp services while standing near a campfire
 - `E` - craft selected recipe
 - `1`-`9` - select hotbar slot
@@ -47,4 +47,4 @@ npm install
 npm test
 ```
 
-The test launches the game with Playwright and checks that generated starts have stable floor support instead of spawning the player in air or between blocks. It also verifies that the start has a reachable campfire, and that progression data for crafting, contracts, cave events, achievements, secrets, bosses, and camp services is available in the runtime.
+The test launches the game with Playwright and checks that generated starts have stable floor support instead of spawning the player in air or between blocks. It also verifies that the start has a reachable campfire, campfire anchors produce safe respawn positions, and progression data for crafting, contracts, cave events, achievements, secrets, bosses, and camp services is available in the runtime.

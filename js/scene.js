@@ -870,9 +870,20 @@
 
     recallToCamp() {
       if (this.pausedByUI || this.dead) return false;
-      if (this.depthMeters() <= 7) {
+      const anchor = ML.CampSystem.activeCamp(this.sim);
+      const anchorSpawn = ML.CampSystem.campSpawnPixels(this.sim, anchor);
+      const anchorDepth = ML.CampSystem.campDepth(this.sim, anchor);
+      const currentDepth = this.depthMeters();
+      const nearest = ML.CampSystem.nearestCampfire(this.sim, this.player);
+      if (ML.CampSystem.sameCamp(anchor, nearest)) {
         this.setAction("At camp", 900);
-        ML.showToast("You are already near the surface campfire.", 1200);
+        ML.showToast("You are already near the anchored campfire.", 1200);
+        return false;
+      }
+      if (currentDepth + 3 < anchorDepth) {
+        this.setAction("Anchor below", 1100);
+        ML.audio.play("denied");
+        ML.showToast("Recall cannot pull you deeper to an anchored campfire.", 1900);
         return false;
       }
       if (this.hasActiveBoss()) {
@@ -912,7 +923,7 @@
       ML.audio.play("recall");
       this.cameras.main.fadeOut(110, 12, 18, 28);
       this.time.delayedCall(130, () => {
-        const safe = this.sim.safeSpawnPixels();
+        const safe = anchorSpawn;
         this.player.setPosition(safe.x, safe.y);
         this.player.setVelocity(0, 0);
         this.sim.player = safe;
@@ -922,7 +933,7 @@
         this.playerIframesUntil = this.time.now + 900;
         this.cameras.main.fadeIn(190, 12, 18, 28);
         this.emitDust(this.player.x, this.player.y + 14, 8);
-        ML.showToast("Recalled to surface camp.", 1600);
+        ML.showToast(`Recalled to campfire anchor (${ML.CampSystem.campLabel(this.sim, anchor)}).`, 1700);
         this.checkAchievements();
         ML.renderAll(this.sim);
         this.saveGame();
@@ -2030,9 +2041,12 @@
         return false;
       }
       const service = (ML.CAMP_SERVICES || []).find((entry) => entry.id === id);
-      const result = this.sim.campService(service);
+      const result = this.sim.campService(service, { x: this.player.x, y: this.player.y });
       ML.audio.play(result.ok ? (service?.kind === "rest" ? "recall" : "craft") : "denied");
-      ML.showToast(result.message, result.ok ? 1500 : 1800);
+      const message = result.ok && result.anchor?.ok
+        ? `${result.message} Anchor set at ${ML.CampSystem.campLabel(this.sim, result.anchor.camp)}.`
+        : result.message;
+      ML.showToast(message, result.ok ? 1900 : 1800);
       if (!result.ok) {
         ML.renderCamp(this.sim);
         return false;
@@ -2123,7 +2137,8 @@
       this.physics.world.resume();
       this.sim.health = this.sim.maxHealth;
       this.sim.energy = this.sim.maxEnergy;
-      const safe = this.sim.safeSpawnPixels();
+      const anchor = ML.CampSystem.activeCamp(this.sim);
+      const safe = ML.CampSystem.campSpawnPixels(this.sim, anchor);
       this.player.setPosition(safe.x, safe.y);
       this.sim.player = safe;
       this.player.setVelocity(0, 0);
@@ -2133,6 +2148,7 @@
       this.playerIframesUntil = this.time.now + 1200;
       this.cameras.main.fadeIn(220, 0, 0, 0);
       this.focusGameInput();
+      ML.showToast(`Returned to campfire anchor (${ML.CampSystem.campLabel(this.sim, anchor)}).`, 1500);
       ML.renderAll(this.sim);
     }
 

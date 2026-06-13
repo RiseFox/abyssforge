@@ -223,7 +223,7 @@ window.ML = window.ML || {};
   ];
 
   const CAMP_SERVICES = [
-    { id: "rest", name: "Rest at camp", action: "Rest", kind: "rest", cost: {}, note: "Restore health, energy, and recall cooldown." },
+    { id: "rest", name: "Rest at camp", action: "Rest", kind: "rest", cost: {}, note: "Restore health, energy, recall cooldown, and respawn anchor." },
     { id: "torchCache", name: "Torch cache", action: "Buy", cost: { coin: 8 }, out: { torch: 6 }, note: "Cheap light for another descent." },
     { id: "ladderCache", name: "Ladder cache", action: "Buy", cost: { coin: 10 }, out: { ladder: 10 }, note: "Fast vertical route restock." },
     { id: "medicPack", name: "Medic pack", action: "Buy", cost: { coin: 14 }, out: { kit: 1 }, note: "One field kit from the camp medic." },
@@ -258,10 +258,12 @@ window.ML = window.ML || {};
     { id: "contractFive", name: "Guild Regular", note: "Complete five expedition contracts.", stat: "contracts", at: 5 },
     { id: "eventOne", name: "Living Mine", note: "Encounter your first cave event.", stat: "events", at: 1 },
     { id: "eventFive", name: "Faultline Veteran", note: "Encounter five cave events.", stat: "events", at: 5 },
-    { id: "recallOne", name: "Back to Camp", note: "Recall safely to the surface camp.", stat: "recalls", at: 1 },
+    { id: "recallOne", name: "Back to Camp", note: "Recall safely to a campfire anchor.", stat: "recalls", at: 1 },
     { id: "recallCharm", name: "Anchor Spark", note: "Craft the Recall charm.", flag: "recallCharm" },
     { id: "campFirst", name: "Camp Ledger", note: "Use a campfire service.", stat: "campUses", at: 1 },
-    { id: "campTen", name: "Quartermaster", note: "Use ten campfire services.", stat: "campUses", at: 10 }
+    { id: "campTen", name: "Quartermaster", note: "Use ten campfire services.", stat: "campUses", at: 10 },
+    { id: "campAnchor", name: "Warm Anchor", note: "Set your first campfire anchor.", stat: "camps", at: 1 },
+    { id: "campNetwork", name: "Wayfire Network", note: "Activate three campfire anchors.", stat: "camps", at: 3 }
   ];
 
   const CONTRACTS = [

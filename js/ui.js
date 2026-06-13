@@ -324,8 +324,10 @@
     if (!ui.recallText) return;
     const remaining = scene?.recallCooldownRemaining ? scene.recallCooldownRemaining() : 0;
     const cost = scene?.recallCost ? scene.recallCost() : 0;
+    const anchor = scene?.sim ? ML.CampSystem.activeCamp(scene.sim) : null;
+    const anchorText = scene?.sim ? ML.CampSystem.campLabel(scene.sim, anchor) : "camp";
     ui.recallText.textContent = remaining > 0 ? `${remaining}s` : "R";
-    ui.recallText.title = remaining > 0 ? `Recall recharging: ${remaining}s` : `Recall to camp: ${cost} energy`;
+    ui.recallText.title = remaining > 0 ? `Recall recharging: ${remaining}s` : `Recall to ${anchorText} campfire: ${cost} energy`;
     ui.recallText.closest(".action-chip")?.classList.toggle("disabled", remaining > 0);
   }
 
@@ -408,7 +410,11 @@
     const scene = ML.sceneRef;
     if (!scene || !ui.campServices || !scene.campOpen) return;
     const near = scene.nearCamp ? scene.nearCamp() : false;
-    ui.campStatus.textContent = near ? "Campfire ready" : "Find a campfire";
+    const nearby = ML.CampSystem.nearestCampfire(sim, scene.player);
+    const anchor = ML.CampSystem.activeCamp(sim);
+    ui.campStatus.textContent = near
+      ? `Campfire ready · anchor ${ML.CampSystem.campLabel(sim, anchor)}`
+      : `Find a campfire · anchor ${ML.CampSystem.campLabel(sim, anchor)}`;
     ui.campServices.textContent = "";
     CAMP_SERVICES.forEach((service) => {
       const ok = near && ML.canAfford(sim.inventory, service.cost || {});
@@ -440,6 +446,7 @@
       const action = document.createElement("b");
       action.textContent = near ? service.action : "Away";
       btn.append(copy, action);
+      if (nearby && anchor && ML.CampSystem.sameCamp(nearby, anchor)) btn.classList.add("anchored");
       ui.campServices.appendChild(btn);
     });
   }
@@ -590,6 +597,12 @@
           ctx.fillRect(secret.chest.x - 1, secret.chest.y - 1, 3, 3);
         }
       }
+      const activeCamp = ML.CampSystem.activeCamp(scene.sim);
+      for (const light of scene.sim.lights || []) {
+        if (light.t !== ML.Tile.CAMPFIRE) continue;
+        ctx.fillStyle = activeCamp && ML.CampSystem.sameCamp(activeCamp, light) ? "#76d66f" : "#f0a84d";
+        ctx.fillRect(light.x - 1, light.y - 1, 3, 3);
+      }
       ctx.fillStyle = "#ffd76a";
       ctx.fillRect(Math.floor(scene.player.x / TILE) - 1, Math.floor(scene.player.y / TILE) - 1, 3, 3);
     }
@@ -614,7 +627,8 @@
   }
 
   function showDeath(sim, cause, day) {
-    ui.deathCause.textContent = `${cause} The lift pulled you back up with part of the haul lost.`;
+    const anchor = ML.CampSystem.activeCamp(sim);
+    ui.deathCause.textContent = `${cause} Your campfire anchor (${ML.CampSystem.campLabel(sim, anchor)}) pulled you back with part of the haul lost.`;
     ui.deathStats.textContent = "";
     const stats = [
       ["Blocks mined", sim.stats.mined],
@@ -626,6 +640,7 @@
       ["Events", sim.stats.events || 0],
       ["Recalls", sim.stats.recalls || 0],
       ["Camp", sim.stats.campUses || 0],
+      ["Anchors", sim.stats.camps || 0],
       ["Achievements", Object.keys(sim.achievements || {}).length],
       ["Days", day]
     ];
