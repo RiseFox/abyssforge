@@ -425,6 +425,28 @@
     dc.fillRect(0, 0, 8, 8);
     dust.refresh();
 
+    const mobWake = freshCanvasTexture("mobWake", 48, 28);
+    const mw = mobWake.getContext();
+    mw.clearRect(0, 0, 48, 28);
+    mw.fillStyle = "rgba(0,0,0,0.48)";
+    mw.fillRect(7, 21, 34, 4);
+    mw.fillStyle = "rgba(216,182,255,0.34)";
+    mw.fillRect(8, 17, 31, 2);
+    mw.fillRect(13, 13, 21, 2);
+    mw.fillRect(18, 9, 12, 2);
+    mw.fillStyle = "#5a3d78";
+    mw.fillRect(11, 18, 7, 3);
+    mw.fillRect(27, 18, 8, 3);
+    mw.fillStyle = "#8d6db3";
+    mw.fillRect(15, 15, 4, 2);
+    mw.fillRect(30, 14, 4, 2);
+    mw.fillStyle = "#d8b6ff";
+    mw.fillRect(17, 7, 3, 3);
+    mw.fillRect(30, 8, 3, 3);
+    mw.fillStyle = "rgba(255,213,106,0.58)";
+    mw.fillRect(22, 19, 7, 1);
+    mobWake.refresh();
+
     const orb = freshCanvasTexture("lightOrb", 256, 256);
     const oc = orb.getContext();
     oc.clearRect(0, 0, 256, 256);

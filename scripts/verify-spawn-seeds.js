@@ -158,6 +158,13 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const trace = scene?.leaveWatcherTrace?.(scene.player.x + 280, scene.player.y, "test");
     const traceAfter = scene?.watcherTraceMarks?.length || 0;
     const watcherSpot = scene?.findWatcherSpot?.({ force: true });
+    const sceneSim = scene?.sim;
+    const stagedMob = sceneSim?.mobs?.find?.((mob) => !mob.boss && !scene.activeMobIds?.has?.(mob.id));
+    const stagedSpot = stagedMob ? scene.findMobSpot?.(stagedMob) : null;
+    const mobWakeQueued = stagedMob && stagedSpot ? scene.queueMobMaterialize?.(stagedMob, stagedSpot, { delay: 1200, reason: "test" }) : false;
+    const pendingAfterQueue = scene?.pendingMobSpawns?.size || 0;
+    if (mobWakeQueued) scene.cancelPendingMobSpawn?.(stagedMob.id, false);
+    const pendingAfterCancel = scene?.pendingMobSpawns?.size || 0;
     scene?.togglePack?.(true);
     const packVisible = Boolean(window.ML.ui?.packDrawer && !window.ML.ui.packDrawer.classList.contains("hidden"));
     const packChips = window.ML.ui?.packGrid?.children?.length || 0;
@@ -179,10 +186,15 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       loreGoalDone: Boolean(loreIntel.done),
       watcherTexture: Boolean(scene?.textures?.exists?.("watcher")),
       watcherTraceTexture: Boolean(scene?.textures?.exists?.("watcherTrace")),
+      mobWakeTexture: Boolean(scene?.textures?.exists?.("mobWake")),
       watcherRuntime: typeof scene?.spawnWatcherSighting === "function" && typeof scene?.updateShadowPressure === "function" && typeof scene?.dismissWatcher === "function" && typeof scene?.leaveWatcherTrace === "function",
+      mobWakeRuntime: typeof scene?.mobWakeInfo === "function" && typeof scene?.queueMobMaterialize === "function" && typeof scene?.updatePendingMobSpawns === "function" && typeof scene?.cancelPendingMobSpawn === "function",
       watcherTraceDelta: traceAfter - traceBefore,
       watcherTraceActive: Boolean(trace),
       watcherSpotDistance: watcherSpot ? Math.round(Math.hypot(watcherSpot.x - scene.player.x, watcherSpot.y - scene.player.y)) : 0,
+      mobWakeQueued: Boolean(mobWakeQueued),
+      pendingAfterQueue,
+      pendingAfterCancel,
       shadowPressure: sim.shadowPressure,
       watcherSightings: sim.stats.watcherSightings,
       watcherTraces: sim.stats.watcherTraces,
@@ -295,10 +307,15 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || !progressionCheck.loreGoalDone
     || !progressionCheck.watcherTexture
     || !progressionCheck.watcherTraceTexture
+    || !progressionCheck.mobWakeTexture
     || !progressionCheck.watcherRuntime
+    || !progressionCheck.mobWakeRuntime
     || !progressionCheck.watcherTraceActive
     || progressionCheck.watcherTraceDelta < 1
     || progressionCheck.watcherSpotDistance < 245
+    || !progressionCheck.mobWakeQueued
+    || progressionCheck.pendingAfterQueue < 1
+    || progressionCheck.pendingAfterCancel !== 0
     || progressionCheck.watcherSightings < 3
     || progressionCheck.watcherTraces < 1
     || progressionCheck.shadowPeaks < 1

@@ -45,6 +45,7 @@
       this.mineProgress = 0;
       this.enemyClock = 0;
       this.activeMobIds = new Set();
+      this.pendingMobSpawns = new Map();
       this.lastDay = Math.floor(this.sim.time / DAY_LENGTH) + 1;
       this.lastHudUpdate = 0;
       this.lastMapUpdate = 0;
@@ -1744,7 +1745,9 @@
       const ty = clamp(Math.floor(enemy.y / TILE), 2, WORLD_H - 3);
       if (!this.sim.canSpawnMobAt(kind, tx, ty, { summoned: true })) return;
       const mob = this.sim.addMob(tx, ty, kind, { summoned: true });
-      this.materializeMob(mob);
+      const spot = this.findMobSpot(mob);
+      if (spot) this.queueMobMaterialize(mob, spot, { delay: 620, reason: "summon", event: true });
+      else this.sim.mobs = this.sim.mobs.filter((entry) => entry.id !== mob.id);
       this.floatText(enemy.x - 20, enemy.y - 34, "Summon", "#d8b6ff");
       ML.audio.play("roar");
     }
@@ -1787,6 +1790,7 @@
       const cam = this.cameras.main;
       const wakeX = Math.max(34, cam.width / TILE / 2 + 4);
       const wakeY = Math.max(22, cam.height / TILE / 2 + 4);
+      this.updatePendingMobSpawns();
 
       // Sleep sprites that wandered far from the player.
       const list = this.enemies.getChildren();
@@ -1800,11 +1804,43 @@
 
       // Wake dormant mobs whose homes are just off-screen.
       for (const mob of this.sim.mobs) {
-        if (this.enemies.countActive(true) >= 12) break;
+        if (this.enemies.countActive(true) + this.pendingMobSpawns.size >= 12) break;
         if (this.activeMobIds.has(mob.id)) continue;
+        if (this.pendingMobSpawns.has(mob.id)) continue;
         if (Math.abs(mob.x - px) > wakeX || Math.abs(mob.y - py) > wakeY) continue;
-        this.materializeMob(mob);
+        const spot = this.findMobSpot(mob);
+        if (!spot) continue;
+        const wake = this.mobWakeInfo(mob, spot);
+        if (!wake.canWake) continue;
+        if (wake.needsTelegraph) this.queueMobMaterialize(mob, spot, { delay: wake.delay, reason: "wake" });
+        else this.materializeMob(mob, { spot });
       }
+    }
+
+    mobWakeInfo(mob, spot) {
+      const cam = this.cameras.main;
+      const wx = spot.x * TILE + TILE / 2;
+      const wy = spot.y * TILE + 12;
+      const sx = wx - cam.scrollX;
+      const sy = wy - cam.scrollY;
+      const inView = sx > 18 && sx < cam.width - 18 && sy > 22 && sy < cam.height - 116;
+      const distance = Phaser.Math.Distance.Between(wx, wy, this.player.x, this.player.y);
+      const tileDx = Math.abs(spot.x - this.player.x / TILE);
+      const tileDy = Math.abs(spot.y - this.player.y / TILE);
+      const natural = !mob.boss && !mob.event && !mob.summoned && !mob.surf;
+      const tooClose = distance < (mob.event || mob.summoned ? 185 : 285) || (tileDx < 6 && tileDy < 4);
+      const bright = natural && this.lightLevelAt(wx, wy) > 0.48;
+      const canWake = !tooClose && !bright;
+      const delay = mob.event || mob.summoned ? Phaser.Math.Between(560, 780) : Phaser.Math.Between(850, 1250);
+      return {
+        canWake,
+        inView,
+        tooClose,
+        bright,
+        distance,
+        needsTelegraph: inView || distance < 430 || Boolean(mob.event || mob.summoned),
+        delay
+      };
     }
 
     findMobSpot(mob) {
@@ -1832,8 +1868,93 @@
       return null; // buried — stays dormant
     }
 
-    materializeMob(mob) {
-      const spot = this.findMobSpot(mob);
+    queueMobMaterialize(mob, spot, options = {}) {
+      if (!mob || !spot || this.activeMobIds.has(mob.id) || this.pendingMobSpawns.has(mob.id)) return false;
+      const wx = spot.x * TILE + TILE / 2;
+      const wy = spot.y * TILE + 12;
+      const cfg = ENEMIES[mob.kind];
+      const marker = this.add.image(wx, wy + 6, "mobWake")
+        .setOrigin(0.5, 1)
+        .setDepth(83)
+        .setAlpha(0)
+        .setScale(cfg?.heavy ? 1.55 : 1.32);
+      marker.setTint(mob.elite ? 0xf0c75e : mob.event ? 0xd8b6ff : 0x8a6fa8);
+      marker.setBlendMode(Phaser.BlendModes.ADD);
+      this.emitDust(wx, wy + 8, mob.event ? 5 : 3);
+      this.tweens.add({
+        targets: marker,
+        alpha: { from: 0.28, to: 0.9 },
+        y: wy + 1,
+        duration: 240,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut"
+      });
+      this.pendingMobSpawns.set(mob.id, {
+        mob,
+        spot,
+        marker,
+        queuedAt: this.time.now,
+        readyAt: this.time.now + (options.delay ?? 900),
+        event: Boolean(mob.event || mob.summoned || options.event),
+        reason: options.reason || "wake"
+      });
+      return true;
+    }
+
+    cancelPendingMobSpawn(id, fade = true) {
+      const pending = this.pendingMobSpawns?.get(id);
+      if (!pending) return false;
+      this.pendingMobSpawns.delete(id);
+      if (!pending.marker) return true;
+      this.tweens.killTweensOf(pending.marker);
+      if (!fade) {
+        pending.marker.destroy();
+        return true;
+      }
+      this.tweens.add({
+        targets: pending.marker,
+        alpha: 0,
+        y: pending.marker.y - 7,
+        duration: 180,
+        ease: "Sine.easeIn",
+        onComplete: () => pending.marker.destroy()
+      });
+      return true;
+    }
+
+    clearPendingMobSpawns(fade = false) {
+      for (const id of Array.from(this.pendingMobSpawns?.keys?.() || [])) {
+        this.cancelPendingMobSpawn(id, fade);
+      }
+    }
+
+    updatePendingMobSpawns() {
+      if (!this.pendingMobSpawns?.size) return;
+      for (const [id, pending] of Array.from(this.pendingMobSpawns.entries())) {
+        const stillExists = this.sim.mobs.some((mob) => mob.id === id);
+        if (!stillExists || this.activeMobIds.has(id)) {
+          this.cancelPendingMobSpawn(id, false);
+          continue;
+        }
+        const wake = this.mobWakeInfo(pending.mob, pending.spot);
+        if (!pending.event && !wake.canWake) {
+          this.cancelPendingMobSpawn(id);
+          continue;
+        }
+        if (wake.tooClose) {
+          pending.readyAt = this.time.now + 420;
+          continue;
+        }
+        if (this.time.now < pending.readyAt) continue;
+        if (this.enemies.countActive(true) >= 12) continue;
+        this.cancelPendingMobSpawn(id, false);
+        this.materializeMob(pending.mob, { spot: pending.spot, staged: true });
+      }
+    }
+
+    materializeMob(mob, options = {}) {
+      const spot = options.spot || this.findMobSpot(mob);
       if (!spot) return;
       mob.x = spot.x;
       mob.y = spot.y;
@@ -1862,6 +1983,17 @@
       enemy.bobSeed = Math.random() * 10;
       enemy.setDepth(enemy.boss ? 11 : 9);
       if (cfg.fly) enemy.body.setAllowGravity(false);
+      if (options.staged) {
+        enemy.setAlpha(0).setScale(0.84);
+        this.emitDust(enemy.x, enemy.y + 8, enemy.boss ? 8 : 5);
+        this.tweens.add({
+          targets: enemy,
+          alpha: 1,
+          scale: 1,
+          duration: 220,
+          ease: "Back.easeOut"
+        });
+      }
       if (enemy.boss) {
         this.cameras.main.shake(160, 0.005);
         ML.audio.play("roar");
@@ -2050,7 +2182,12 @@
           spawnY = picked.y;
         }
         const mob = this.sim.addMob(x, spawnY, spawnKind, { event: true, elite });
-        this.materializeMob(mob);
+        const spot = this.findMobSpot(mob);
+        if (!spot) {
+          this.sim.mobs = this.sim.mobs.filter((entry) => entry.id !== mob.id);
+          continue;
+        }
+        this.queueMobMaterialize(mob, spot, { delay: Phaser.Math.Between(560, 760), reason: "swarm", event: true });
         return true;
       }
       return false;
@@ -2645,6 +2782,7 @@
       this.autoPausedByVisibility = false;
       this.sim.health = 0;
       this.physics.world.pause();
+      this.clearPendingMobSpawns(false);
       this.toggleCamp(false);
       this.toggleCraft(false);
       this.toggleHelp(false);
@@ -2669,6 +2807,7 @@
       this.resetInputState();
       ML.ui.pauseIcon.innerHTML = '<path d="M8 5v14"/><path d="M16 5v14"/>';
       ML.hideDeath();
+      this.clearPendingMobSpawns(false);
       this.toggleCamp(false);
       this.toggleCraft(false);
       this.toggleHelp(false);
@@ -2696,6 +2835,7 @@
       try { localStorage.removeItem(ML.SAVE_KEY); } catch { /* ignore */ }
       this.sim.newWorld();
       ML.hideDeath();
+      this.clearPendingMobSpawns(false);
       this.toggleCamp(false);
       this.toggleCraft(false);
       this.toggleHelp(false);
