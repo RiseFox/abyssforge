@@ -124,6 +124,21 @@
   let achievementTimer = 0;
   let achievementQueue = [];
   let achievementShowing = false;
+  const renderCache = {
+    biome: "",
+    contract: "",
+    event: "",
+    boss: "",
+    recall: "",
+    interaction: "",
+    craftReady: "",
+    craft: "",
+    camp: "",
+    pack: "",
+    mystery: "",
+    story: "",
+    achievements: ""
+  };
   const perfState = {
     lastAt: 0,
     frames: 0,
@@ -159,6 +174,55 @@
 
   const RARE_ITEMS = new Set(["gold", "crystal", "obsidian", "silk", "fang", "relic", "core"]);
   const VOLATILE_ITEMS = new Set(["charge", "core"]);
+
+  function setText(el, value) {
+    if (!el) return;
+    const text = String(value);
+    if (el.textContent !== text) el.textContent = text;
+  }
+
+  function setTitle(el, value) {
+    if (!el) return;
+    const text = String(value);
+    if (el.title !== text) el.title = text;
+  }
+
+  function setWidth(el, value) {
+    if (!el) return;
+    const width = typeof value === "number" ? `${value}%` : String(value);
+    if (el.style.width !== width) el.style.width = width;
+  }
+
+  function setClass(el, cls, on) {
+    if (!el) return;
+    if (el.classList.contains(cls) !== Boolean(on)) el.classList.toggle(cls, Boolean(on));
+  }
+
+  function inventorySignature(sim, options = {}) {
+    const keys = inventoryItemKeys(sim, options);
+    return keys.map((item) => `${item}:${sim.inventory[item] || 0}`).join("|");
+  }
+
+  function recipeStateSignature(sim) {
+    return [
+      inventorySignature(sim, { includeEmpty: true }),
+      sim.pickLevel,
+      sim.blade,
+      sim.lamp,
+      sim.boots ? 1 : 0,
+      sim.ward ? 1 : 0,
+      sim.fallGuard ? 1 : 0,
+      sim.noiseMuffle ? 1 : 0,
+      sim.speedBoost ? 1 : 0,
+      sim.regenBoost ? 1 : 0,
+      sim.treasureSense ? 1 : 0,
+      sim.lootBonus ? 1 : 0,
+      sim.recallCharm ? 1 : 0,
+      sim.maxHealth || 100,
+      sim.maxEnergy || 100,
+      sim.blastRadius || 0
+    ].join("|");
+  }
 
   function itemAccent(item) {
     const tint = ITEM_META[item]?.tint;
@@ -201,40 +265,40 @@
     const maxEnergy = sim.maxEnergy || 100;
     const healthPct = clamp(sim.health / maxHealth, 0, 1);
     const energyPct = clamp(sim.energy / maxEnergy, 0, 1);
-    ui.healthText.textContent = maxHealth > 100 ? `${Math.round(sim.health)}/${maxHealth}` : String(Math.round(sim.health));
-    ui.healthBar.style.width = `${healthPct * 100}%`;
-    ui.energyText.textContent = maxEnergy > 100 ? `${Math.round(sim.energy)}/${maxEnergy}` : String(Math.round(sim.energy));
-    ui.energyBar.style.width = `${energyPct * 100}%`;
+    setText(ui.healthText, maxHealth > 100 ? `${Math.round(sim.health)}/${maxHealth}` : Math.round(sim.health));
+    setWidth(ui.healthBar, healthPct * 100);
+    setText(ui.energyText, maxEnergy > 100 ? `${Math.round(sim.energy)}/${maxEnergy}` : Math.round(sim.energy));
+    setWidth(ui.energyBar, energyPct * 100);
     const px = player ? player.x : sim.player.x;
     const py = player ? player.y : sim.player.y;
     const width = sim.worldWidth?.() || sim.world?.[0]?.length || WORLD_W;
     const tileX = clamp(Math.floor(px / TILE), 0, width - 1);
     const depth = Math.max(0, Math.floor(py / TILE - (sim.surface[tileX] || 24)));
-    ui.depthText.textContent = `${depth} m`;
+    setText(ui.depthText, `${depth} m`);
     const depthCap = Math.max(230, (sim.worldHeight?.() || WORLD_H) - 32);
-    ui.depthBar.style.width = `${clamp(depth / depthCap * 100, 0, 100)}%`;
+    setWidth(ui.depthBar, clamp(depth / depthCap * 100, 0, 100));
     const lampPct = Math.round((sim.lampChargeRatio?.() ?? 0) * 100);
     const lightState = light > 0.7 ? "Clear" : light > 0.35 ? "Dim" : "Dark";
-    ui.lightText.textContent = `${lightState} · ${lampPct}%`;
-    ui.lightBar.style.width = `${Math.round(light * 100)}%`;
+    setText(ui.lightText, `${lightState} · ${lampPct}%`);
+    setWidth(ui.lightBar, Math.round(light * 100));
     const shadow = clamp(scene?.shadowPressure ?? sim.shadowPressure ?? 0, 0, 100);
     if (ui.shadowText && ui.shadowBar) {
-      ui.shadowText.textContent = shadow > 76 ? "Watched" : shadow > 48 ? "Rising" : shadow > 14 ? "Whisper" : "Still";
-      ui.shadowBar.style.width = `${Math.round(shadow)}%`;
+      setText(ui.shadowText, shadow > 76 ? "Watched" : shadow > 48 ? "Rising" : shadow > 14 ? "Whisper" : "Still");
+      setWidth(ui.shadowBar, Math.round(shadow));
     }
     const day = scene ? scene.dayNumber() : 1;
     const phase = scene ? scene.phaseName() : "Day";
     const biome = scene?.currentBiome ? scene.currentBiome() : ML.BiomeSystem?.current?.(sim, { x: px, y: py });
     const stratum = scene?.currentStratum ? scene.currentStratum() : sim.stratumAt?.(tileX, Math.floor(py / TILE));
     const zoneLabel = stratum?.name || biome?.name || "Surface";
-    ui.worldLabel.textContent = `Day ${day} · ${phase} · ${zoneLabel}`;
-    ui.worldLabel.title = `Seed ${sim.seed}${biome?.name ? ` · ${biome.name}` : ""}${stratum?.name ? ` · ${stratum.name}` : ""}`;
+    setText(ui.worldLabel, `Day ${day} · ${phase} · ${zoneLabel}`);
+    setTitle(ui.worldLabel, `Seed ${sim.seed}${biome?.name ? ` · ${biome.name}` : ""}${stratum?.name ? ` · ${stratum.name}` : ""}`);
     renderBiome(biome, stratum);
     const pickName = PICKS[sim.pickLevel]?.name || "Pickaxe";
-    ui.pickText.textContent = pickName;
-    ui.pickHudText.textContent = pickName;
-    ui.pickTierText.textContent = `Tier ${sim.pickLevel}`;
-    ui.damageText.textContent = `${sim.attackDamage()} · ${BLADES[sim.blade].name}`;
+    setText(ui.pickText, pickName);
+    setText(ui.pickHudText, pickName);
+    setText(ui.pickTierText, `Tier ${sim.pickLevel}`);
+    setText(ui.damageText, `${sim.attackDamage()} · ${BLADES[sim.blade].name}`);
     const cells = sim.inventory?.battery || 0;
     const lampMode = scene?.lampStandby ? "standby" : scene?.lampDemand > 1.05 ? "draw" : "active";
     const gear = [`${LAMPS[sim.lamp].name} ${lampPct}% ${lampMode}`];
@@ -245,27 +309,32 @@
     if (sim.noiseMuffle) gear.push("Echo padding");
     if (sim.ward) gear.push("Ward");
     if (sim.recallCharm) gear.push("Recall");
-    ui.gearText.textContent = gear.join(" · ");
-    ui.actionText.textContent = scene?.currentAction || "Explore";
-    ui.targetText.textContent = scene?.targetLabel || "None";
-    ui.campToggle?.classList.toggle("camp-ready", Boolean(scene?.nearCamp?.()));
+    setText(ui.gearText, gear.join(" · "));
+    setText(ui.actionText, scene?.currentAction || "Explore");
+    setText(ui.targetText, scene?.targetLabel || "None");
+    setClass(ui.campToggle, "camp-ready", Boolean(scene?.nearCamp?.()));
     if (ui.hud) {
-      ui.hud.style.setProperty("--health-pct", healthPct.toFixed(3));
-      ui.hud.style.setProperty("--energy-pct", energyPct.toFixed(3));
-      ui.hud.style.setProperty("--light-pct", clamp(light, 0, 1).toFixed(3));
-      ui.hud.style.setProperty("--shadow-pct", (shadow / 100).toFixed(3));
-      ui.hud.classList.toggle("low-health", healthPct < 0.34);
-      ui.hud.classList.toggle("low-energy", energyPct < 0.28);
-      ui.hud.classList.toggle("low-light", light < 0.34);
-      ui.hud.classList.toggle("shadow-warning", shadow > 48);
-      ui.hud.classList.toggle("near-camp", Boolean(scene?.nearCamp?.()));
-      ui.hud.classList.toggle("event-active", Boolean(scene?.caveEvent));
-      ui.hud.classList.toggle("boss-active", Boolean(scene?.activeBoss?.()));
+      const cssVars = {
+        "--health-pct": healthPct.toFixed(3),
+        "--energy-pct": energyPct.toFixed(3),
+        "--light-pct": clamp(light, 0, 1).toFixed(3),
+        "--shadow-pct": (shadow / 100).toFixed(3)
+      };
+      for (const [name, value] of Object.entries(cssVars)) {
+        if (ui.hud.style.getPropertyValue(name) !== value) ui.hud.style.setProperty(name, value);
+      }
+      setClass(ui.hud, "low-health", healthPct < 0.34);
+      setClass(ui.hud, "low-energy", energyPct < 0.28);
+      setClass(ui.hud, "low-light", light < 0.34);
+      setClass(ui.hud, "shadow-warning", shadow > 48);
+      setClass(ui.hud, "near-camp", Boolean(scene?.nearCamp?.()));
+      setClass(ui.hud, "event-active", Boolean(scene?.caveEvent));
+      setClass(ui.hud, "boss-active", Boolean(scene?.activeBoss?.()));
     }
-    ui.healthBar.closest(".stat")?.classList.toggle("warning", healthPct < 0.34);
-    ui.energyBar.closest(".stat")?.classList.toggle("warning", energyPct < 0.28);
-    ui.lightBar.closest(".stat")?.classList.toggle("warning", light < 0.34);
-    ui.shadowBar?.closest(".stat")?.classList.toggle("warning", shadow > 48);
+    setClass(ui.healthBar.closest(".stat"), "warning", healthPct < 0.34);
+    setClass(ui.energyBar.closest(".stat"), "warning", energyPct < 0.28);
+    setClass(ui.lightBar.closest(".stat"), "warning", light < 0.34);
+    setClass(ui.shadowBar?.closest(".stat"), "warning", shadow > 48);
   }
 
   function updatePerformance(scene = ML.sceneRef, delta = 0) {
@@ -286,12 +355,12 @@
     const rows = scene?.sim?.worldHeight?.() || scene?.sim?.world?.length || WORLD_H;
     const status = fps < 30 || avgFrame > 34 ? "bad" : fps < 45 || avgFrame > 24 ? "warn" : "good";
 
-    ui.fpsText.textContent = String(Math.round(fps));
-    ui.frameText.textContent = `${avgFrame.toFixed(1)} ms`;
-    if (ui.perfMetaText) ui.perfMetaText.textContent = `${rows} rows · ${enemies} mobs`;
-    ui.perfChip.classList.toggle("perf-good", status === "good");
-    ui.perfChip.classList.toggle("perf-warn", status === "warn");
-    ui.perfChip.classList.toggle("perf-bad", status === "bad");
+    setText(ui.fpsText, Math.round(fps));
+    setText(ui.frameText, `${avgFrame.toFixed(1)} ms`);
+    setText(ui.perfMetaText, `${rows} rows · ${enemies} mobs`);
+    setClass(ui.perfChip, "perf-good", status === "good");
+    setClass(ui.perfChip, "perf-warn", status === "warn");
+    setClass(ui.perfChip, "perf-bad", status === "bad");
 
     perfState.samples += 1;
     ML.performanceSnapshot = {
@@ -313,12 +382,19 @@
 
   function renderBiome(biome, stratum = null) {
     if (!ui.biomePanel || !biome || !ui.biomeName || !ui.biomeEffects || !ui.biomeLore) return;
-    ui.biomeName.textContent = biome.name;
     const biomeEffects = ML.BiomeSystem?.effectText?.(biome) || biome.tone || "";
-    ui.biomeEffects.textContent = stratum?.tone ? `${biomeEffects} · ${stratum.tone}` : biomeEffects;
-    ui.biomeLore.textContent = stratum?.note ? `${biome.lore || ""} ${stratum.note}`.trim() : (biome.lore || "");
-    ui.biomePanel.style.borderColor = biome.accent || "";
-    ui.biomePanel.style.boxShadow = `0 0 0 1px ${biome.accent || "rgba(236, 205, 135, 0.24)"}22, 0 12px 32px var(--shadow)`;
+    const effects = stratum?.tone ? `${biomeEffects} · ${stratum.tone}` : biomeEffects;
+    const lore = stratum?.note ? `${biome.lore || ""} ${stratum.note}`.trim() : (biome.lore || "");
+    const accent = biome.accent || "";
+    const sig = `${biome.id || biome.name}|${stratum?.id || ""}|${effects}|${lore}|${accent}`;
+    if (renderCache.biome === sig) return;
+    renderCache.biome = sig;
+    setText(ui.biomeName, biome.name);
+    setText(ui.biomeEffects, effects);
+    setText(ui.biomeLore, lore);
+    if (ui.biomePanel.style.borderColor !== accent) ui.biomePanel.style.borderColor = accent;
+    const shadow = `0 0 0 1px ${accent || "rgba(236, 205, 135, 0.24)"}22, 0 12px 32px var(--shadow)`;
+    if (ui.biomePanel.style.boxShadow !== shadow) ui.biomePanel.style.boxShadow = shadow;
   }
 
   // The hotbar DOM is built once; later calls only patch counts and selection.
@@ -371,11 +447,12 @@
     HOTBAR.forEach((item, index) => {
       const { slot, count } = hotbarEls[index];
       const amount = sim.inventory[item] || 0;
-      slot.className = `slot ${itemStateClass(item, amount)}`;
-      slot.classList.toggle("selected", sim.selected === index);
+      const cls = `slot ${itemStateClass(item, amount)}`;
+      if (slot.className !== cls) slot.className = cls;
+      setClass(slot, "selected", sim.selected === index);
       const label = String(amount);
       if (count.textContent !== label) count.textContent = label;
-      count.classList.toggle("zero", amount <= 0);
+      setClass(count, "zero", amount <= 0);
     });
   }
 
@@ -411,13 +488,16 @@
   }
 
   function updateCraftReady(sim) {
+    const sig = recipeStateSignature(sim);
+    if (renderCache.craftReady === sig) return;
+    renderCache.craftReady = sig;
     const ready = craftableRecipes(sim);
     const ids = new Set(ready.map((recipe) => recipe.id));
     const count = ready.length;
-    ui.craftToggle?.classList.toggle("has-ready", count > 0);
+    setClass(ui.craftToggle, "has-ready", count > 0);
     if (ui.craftBadge) {
-      ui.craftBadge.textContent = String(Math.min(count, 99));
-      ui.craftBadge.classList.toggle("hidden", count === 0);
+      setText(ui.craftBadge, Math.min(count, 99));
+      setClass(ui.craftBadge, "hidden", count === 0);
     }
 
     if (lastCraftableIds) {
@@ -455,32 +535,45 @@
     if (!ui.contractTitle || !sim?.contractProgress) return;
     const state = sim.contractProgress();
     if (!state) {
-      ui.contractTitle.textContent = "No contract";
-      ui.contractText.textContent = "Explore";
-      ui.contractReward.textContent = "";
-      ui.contractBar.style.width = "0%";
+      if (renderCache.contract === "none") return;
+      renderCache.contract = "none";
+      setText(ui.contractTitle, "No contract");
+      setText(ui.contractText, "Explore");
+      setText(ui.contractReward, "");
+      setWidth(ui.contractBar, 0);
       return;
     }
     const { contract, progress, target, done } = state;
     const unit = contract.unit || "done";
-    ui.contractTitle.textContent = contract.name;
-    ui.contractText.textContent = `${contract.label}: ${progress}/${target} ${unit}`;
-    ui.contractReward.textContent = done ? "Ready to claim" : rewardText(contract.reward);
-    ui.contractBar.style.width = `${clamp(progress / target * 100, 0, 100)}%`;
-    ui.contractTitle.closest(".objective-panel")?.classList.toggle("complete", done);
+    const reward = done ? "Ready to claim" : rewardText(contract.reward);
+    const width = clamp(progress / target * 100, 0, 100);
+    const sig = `${contract.id}|${progress}|${target}|${done}|${reward}`;
+    if (renderCache.contract === sig) return;
+    renderCache.contract = sig;
+    setText(ui.contractTitle, contract.name);
+    setText(ui.contractText, `${contract.label}: ${progress}/${target} ${unit}`);
+    setText(ui.contractReward, reward);
+    setWidth(ui.contractBar, width);
+    setClass(ui.contractTitle.closest(".objective-panel"), "complete", done);
   }
 
   function renderEvent(scene = ML.sceneRef) {
     if (!ui.eventChip) return;
     const event = scene?.caveEvent;
     if (!event) {
-      ui.eventChip.classList.add("hidden");
+      if (renderCache.event !== "none") {
+        renderCache.event = "none";
+        ui.eventChip.classList.add("hidden");
+      }
       return;
     }
     const seconds = Math.max(0, Math.ceil((event.until - scene.time.now) / 1000));
-    ui.eventName.textContent = event.name;
-    ui.eventTimer.textContent = `${seconds}s`;
-    ui.eventNote.textContent = event.note;
+    const sig = `${event.id}|${event.name}|${event.note}|${seconds}`;
+    if (renderCache.event === sig) return;
+    renderCache.event = sig;
+    setText(ui.eventName, event.name);
+    setText(ui.eventTimer, `${seconds}s`);
+    setText(ui.eventNote, event.note);
     ui.eventChip.classList.remove("hidden");
   }
 
@@ -488,13 +581,20 @@
     if (!ui.bossBar) return;
     const boss = scene?.activeBoss ? scene.activeBoss() : null;
     if (!boss) {
-      ui.bossBar.classList.add("hidden");
+      if (renderCache.boss !== "none") {
+        renderCache.boss = "none";
+        ui.bossBar.classList.add("hidden");
+      }
       return;
     }
     const hp = clamp((boss.hp || 0) / Math.max(1, boss.maxHp || 1), 0, 1);
-    ui.bossName.textContent = scene.enemyName ? scene.enemyName(boss.kind, boss) : "Boss";
-    ui.bossHp.textContent = `${Math.ceil(hp * 100)}%`;
-    ui.bossFill.style.width = `${hp * 100}%`;
+    const name = scene.enemyName ? scene.enemyName(boss.kind, boss) : "Boss";
+    const sig = `${boss.mobId || boss.kind}|${name}|${Math.ceil(hp * 100)}`;
+    if (renderCache.boss === sig) return;
+    renderCache.boss = sig;
+    setText(ui.bossName, name);
+    setText(ui.bossHp, `${Math.ceil(hp * 100)}%`);
+    setWidth(ui.bossFill, hp * 100);
     ui.bossBar.classList.remove("hidden");
   }
 
@@ -504,9 +604,14 @@
     const cost = scene?.recallCost ? scene.recallCost() : 0;
     const anchor = scene?.sim ? ML.CampSystem.activeCamp(scene.sim) : null;
     const anchorText = scene?.sim ? ML.CampSystem.campLabel(scene.sim, anchor) : "camp";
-    ui.recallText.textContent = remaining > 0 ? `${remaining}s` : "R";
-    ui.recallText.title = remaining > 0 ? `Recall recharging: ${remaining}s` : `Recall to ${anchorText} campfire: ${cost} energy`;
-    ui.recallText.closest(".action-chip")?.classList.toggle("disabled", remaining > 0);
+    const label = remaining > 0 ? `${remaining}s` : "R";
+    const title = remaining > 0 ? `Recall recharging: ${remaining}s` : `Recall to ${anchorText} campfire: ${cost} energy`;
+    const sig = `${label}|${title}`;
+    if (renderCache.recall === sig) return;
+    renderCache.recall = sig;
+    setText(ui.recallText, label);
+    setTitle(ui.recallText, title);
+    setClass(ui.recallText.closest(".action-chip"), "disabled", remaining > 0);
   }
 
   function renderInteraction(scene = ML.sceneRef) {
@@ -514,13 +619,27 @@
     const target = (!scene?.pausedByUI && !scene?.dead && !scene?.craftOpen && !scene?.campOpen && !scene?.helpOpen && !scene?.packOpen)
       ? scene.interactionTarget?.()
       : null;
-    ui.interactPrompt.classList.toggle("hidden", !target);
-    if (!target) return;
-    ui.interactKey.textContent = target.key || "E";
-    ui.interactAction.textContent = target.action || "Use";
-    ui.interactName.textContent = target.name || "Object";
-    ui.interactHint.textContent = target.hint || "Nearby";
-    ui.interactPrompt.title = `${target.key || "E"}: ${target.action || "Use"} ${target.name || "object"}`;
+    if (!target) {
+      if (renderCache.interaction !== "none") {
+        renderCache.interaction = "none";
+        ui.interactPrompt.classList.add("hidden");
+      }
+      return;
+    }
+    const key = target.key || "E";
+    const action = target.action || "Use";
+    const name = target.name || "Object";
+    const hint = target.hint || "Nearby";
+    const title = `${key}: ${action} ${target.name || "object"}`;
+    const sig = `${key}|${action}|${name}|${hint}|${target.x ?? ""}|${target.y ?? ""}`;
+    if (renderCache.interaction === sig) return;
+    renderCache.interaction = sig;
+    ui.interactPrompt.classList.remove("hidden");
+    setText(ui.interactKey, key);
+    setText(ui.interactAction, action);
+    setText(ui.interactName, name);
+    setText(ui.interactHint, hint);
+    setTitle(ui.interactPrompt, title);
   }
 
   function inventoryItemKeys(sim, options = {}) {
@@ -564,17 +683,23 @@
     const used = keys.filter((item) => (sim.inventory[item] || 0) > 0).length;
     const total = Math.max(1, keys.length);
     const itemCount = keys.reduce((sum, item) => sum + (sim.inventory[item] || 0), 0);
+    const selected = HOTBAR[sim.selected] || HOTBAR[0];
+    const sig = `${used}|${total}|${itemCount}|${sim.selected}|${inventorySignature(sim, { includeEmpty: true })}`;
+    if (renderCache.pack === sig) return;
+    renderCache.pack = sig;
     renderInventoryGrid(ui.packGrid, sim, { includeEmpty: true });
-    if (ui.packSummary) ui.packSummary.textContent = `${used}/${total} stacks · ${itemCount} items`;
-    if (ui.packFill) ui.packFill.style.width = `${Math.round(used / total * 100)}%`;
+    setText(ui.packSummary, `${used}/${total} stacks · ${itemCount} items`);
+    setWidth(ui.packFill, Math.round(used / total * 100));
     if (ui.packHint) {
-      const selected = HOTBAR[sim.selected] || HOTBAR[0];
-      ui.packHint.textContent = `Quick belt: ${ITEM_META[selected]?.name || selected}. Press 1-9 for tools, blocks, lights, and consumables.`;
+      setText(ui.packHint, `Quick belt: ${ITEM_META[selected]?.name || selected}. Press 1-9 for tools, blocks, lights, and consumables.`);
     }
   }
 
   function renderCraft(sim) {
     if (!ML.sceneRef || !ML.sceneRef.craftOpen) return;
+    const sig = `${craftTab}|${recipeStateSignature(sim)}`;
+    if (renderCache.craft === sig) return;
+    renderCache.craft = sig;
 
     ui.craftTabs.textContent = "";
     CRAFT_CATS.forEach((cat) => {
@@ -605,6 +730,9 @@
         showToast(result.message);
         ML.audio.play(result.ok ? "craft" : "denied");
         if (result.ok) {
+          renderCache.craft = "";
+          renderCache.craftReady = "";
+          renderCache.pack = "";
           ML.sceneRef?.checkContract?.();
           ML.sceneRef?.checkLore?.("craft", { recipe });
           ML.sceneRef?.checkAchievements?.();
@@ -643,9 +771,13 @@
     const near = scene.nearCamp ? scene.nearCamp() : false;
     const nearby = ML.CampSystem.nearestCampfire(sim, scene.player);
     const anchor = ML.CampSystem.activeCamp(sim);
-    ui.campStatus.textContent = near
-      ? `Campfire ready · anchor ${ML.CampSystem.campLabel(sim, anchor)}`
-      : `Find a campfire · anchor ${ML.CampSystem.campLabel(sim, anchor)}`;
+    const campLabel = ML.CampSystem.campLabel(sim, anchor);
+    const sig = `${near ? 1 : 0}|${campLabel}|${nearby?.x ?? ""}:${nearby?.y ?? ""}|${inventorySignature(sim, { includeEmpty: true })}`;
+    if (renderCache.camp === sig) return;
+    renderCache.camp = sig;
+    setText(ui.campStatus, near
+      ? `Campfire ready · anchor ${campLabel}`
+      : `Find a campfire · anchor ${campLabel}`);
     ui.campServices.textContent = "";
     CAMP_SERVICES.forEach((service) => {
       const ok = near && ML.canAfford(sim.inventory, service.cost || {});
@@ -685,25 +817,42 @@
   function renderMystery(sim) {
     if (!ui.mysteryPanel || !ML.LoreSystem) return;
     const intel = ML.LoreSystem.intel(sim);
-    ui.mysteryPanel.classList.toggle("hidden", !intel.awakened);
-    if (!intel.awakened) return;
+    if (!intel.awakened) {
+      if (renderCache.mystery !== "hidden") {
+        renderCache.mystery = "hidden";
+        ui.mysteryPanel.classList.add("hidden");
+      }
+      return;
+    }
     const goal = intel.goal;
     const progress = intel.goalProgress;
-    ui.mysteryTitle.textContent = intel.done ? "Forge truth assembled" : goal?.title || "Field notes";
-    ui.mysteryText.textContent = progress
+    const title = intel.done ? "Forge truth assembled" : goal?.title || "Field notes";
+    const text = progress
       ? `${progress.current}/${progress.target} ${progress.unit}`
       : `${intel.noteCount}/${intel.totalNotes} notes`;
-    ui.mysteryNote.textContent = intel.done
+    const note = intel.done
       ? "The mine was built to survive a collapse, not to feed the guild."
       : (goal?.hint || intel.last?.body || "The contracts are not the whole story.");
-    ui.mysteryBar.style.width = `${Math.round((progress?.ratio || 0) * 100)}%`;
-    ui.mysteryPanel.classList.toggle("complete", Boolean(intel.done));
+    const width = Math.round((progress?.ratio || 0) * 100);
+    const sig = `${title}|${text}|${note}|${width}|${intel.done ? 1 : 0}`;
+    if (renderCache.mystery === sig) return;
+    renderCache.mystery = sig;
+    ui.mysteryPanel.classList.remove("hidden");
+    setText(ui.mysteryTitle, title);
+    setText(ui.mysteryText, text);
+    setText(ui.mysteryNote, note);
+    setWidth(ui.mysteryBar, width);
+    setClass(ui.mysteryPanel, "complete", Boolean(intel.done));
   }
 
   function renderStory(sim) {
     if (!ui.storyList || !ui.storyProgress || !ML.LoreSystem) return;
     const intel = ML.LoreSystem.intel(sim);
-    ui.storyProgress.textContent = `${intel.noteCount}/${intel.totalNotes}`;
+    const knownSig = ML.LORE_NOTES.map((entry) => sim.lore?.notes?.[entry.id] ? "1" : "0").join("");
+    const sig = `${intel.awakened ? 1 : 0}|${intel.noteCount}|${intel.totalNotes}|${knownSig}`;
+    if (renderCache.story === sig) return;
+    renderCache.story = sig;
+    setText(ui.storyProgress, `${intel.noteCount}/${intel.totalNotes}`);
     ui.storyList.textContent = "";
 
     if (!intel.awakened) {
@@ -733,7 +882,15 @@
     });
   }
 
-  function renderAll(sim) {
+  function resetRenderCache() {
+    Object.keys(renderCache).forEach((key) => {
+      renderCache[key] = "";
+    });
+    lastCraftableIds = null;
+  }
+
+  function renderAll(sim, options = {}) {
+    if (options.force) resetRenderCache();
     const scene = ML.sceneRef;
     renderStatus(sim, scene?.player, scene?.playerLight ? scene.playerLight() : 1);
     renderHotbar(sim);
@@ -764,7 +921,10 @@
   function renderAchievements(sim) {
     if (!ui.achievementList || !ui.achievementProgress) return;
     const unlocked = ACHIEVEMENTS.filter((achievement) => sim.achievements?.[achievement.id]).length;
-    ui.achievementProgress.textContent = `${unlocked}/${ACHIEVEMENTS.length}`;
+    const sig = `${unlocked}/${ACHIEVEMENTS.length}|${ACHIEVEMENTS.map((achievement) => sim.achievements?.[achievement.id] ? "1" : "0").join("")}`;
+    if (renderCache.achievements === sig) return;
+    renderCache.achievements = sig;
+    setText(ui.achievementProgress, `${unlocked}/${ACHIEVEMENTS.length}`);
     ui.achievementList.textContent = "";
     ACHIEVEMENTS.forEach((achievement) => {
       const done = Boolean(sim.achievements?.[achievement.id]);
@@ -1088,6 +1248,7 @@
     toggleMinimap,
     showDeath,
     renderAchievements,
+    resetRenderCache,
     showAchievement,
     hideDeath,
     bindUi

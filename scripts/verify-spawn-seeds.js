@@ -300,6 +300,44 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       sceneUndergroundRead = scene.readSurfaceDiscovery?.(sceneUndergroundDiscovery.x, sceneUndergroundDiscovery.y) || false;
     }
     const sceneUndergroundAfter = scene?.sim?.stats?.undergroundDiscoveries || 0;
+    let poiAmbienceCheck = null;
+    const curiosityDiscovery = scene?.sim?.surfaceDiscoveries?.find?.((entry) =>
+      entry !== sceneUndergroundDiscovery
+      && entry.scope === "underground"
+      && scene.sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN
+    );
+    if (scene && curiosityDiscovery) {
+      const { TILE } = window.ML;
+      scene.player.setPosition(curiosityDiscovery.x * TILE + TILE / 2, (curiosityDiscovery.y + 1) * TILE - 17);
+      scene.sim.player = { x: scene.player.x, y: scene.player.y };
+      scene.cameras.main.centerOn(scene.player.x, scene.player.y);
+      scene.nextPoiSignalScanAt = 0;
+      scene.updatePoiAmbience?.();
+      const cfg = window.ML.ENEMIES.golem;
+      const enemy = scene.enemies.create((curiosityDiscovery.x + 1.5) * TILE, curiosityDiscovery.y * TILE + 12, cfg.texture);
+      enemy.kind = "golem";
+      enemy.body.setSize(cfg.bodyW, cfg.bodyH).setOffset(cfg.offX, cfg.offY);
+      enemy.hp = cfg.hp;
+      enemy.maxHp = cfg.hp;
+      enemy.speed = cfg.speed;
+      enemy.touch = cfg.touch;
+      enemy.boss = false;
+      enemy.elite = false;
+      enemy.bobSeed = 0;
+      enemy.nextThinkAt = 0;
+      scene.player.setPosition((curiosityDiscovery.x + 18) * TILE, (curiosityDiscovery.y + 1) * TILE - 17);
+      scene.sim.player = { x: scene.player.x, y: scene.player.y };
+      const intent = scene.enemyInstinct?.(enemy, (scene.time?.now || 0) + 1200);
+      poiAmbienceCheck = {
+        runtime: typeof scene.updatePoiAmbience === "function" && typeof scene.discoveryAnchorForEnemy === "function",
+        visible: Boolean(scene.visiblePoiSignals?.some?.((entry) => entry.id === curiosityDiscovery.id)),
+        poiCurious: Boolean(intent?.poiCurious),
+        mode: intent?.mode || null,
+        targetNear: Math.abs((intent?.targetX || 0) - (curiosityDiscovery.x * TILE + TILE / 2)) < 2
+          && Math.abs((intent?.targetY || 0) - (curiosityDiscovery.y * TILE + TILE / 2)) < 2
+      };
+      enemy.destroy();
+    }
     let combatLosCheck = null;
     if (scene?.player && scene?.enemies && scene?.sim && typeof scene.hasSightToEnemy === "function") {
       const { TILE, AIR, Tile, BLOCKS } = window.ML;
@@ -584,6 +622,11 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       sceneUndergroundDiscoveryRead: Boolean(sceneUndergroundRead),
       sceneUndergroundDiscoveryReadState: Boolean(sceneUndergroundDiscovery?.read),
       sceneUndergroundDiscoveryStatDelta: sceneUndergroundAfter - sceneUndergroundBefore,
+      poiAmbienceRuntime: Boolean(poiAmbienceCheck?.runtime),
+      poiVisibleSignal: Boolean(poiAmbienceCheck?.visible),
+      poiCuriousMob: Boolean(poiAmbienceCheck?.poiCurious),
+      poiCuriousMode: poiAmbienceCheck?.mode || null,
+      poiCuriousTarget: Boolean(poiAmbienceCheck?.targetNear),
       combatLosRuntime: Boolean(combatLosCheck?.runtime),
       actionRulesRuntime: Boolean(combatLosCheck?.actionRulesRuntime),
       mobSensorsRuntime: Boolean(combatLosCheck?.mobSensorsRuntime),
@@ -831,6 +874,10 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || !progressionCheck.sceneUndergroundDiscoveryRead
     || !progressionCheck.sceneUndergroundDiscoveryReadState
     || progressionCheck.sceneUndergroundDiscoveryStatDelta < 1
+    || !progressionCheck.poiAmbienceRuntime
+    || !progressionCheck.poiVisibleSignal
+    || !progressionCheck.poiCuriousMob
+    || !progressionCheck.poiCuriousTarget
     || !progressionCheck.combatLosRuntime
     || !progressionCheck.actionRulesRuntime
     || !progressionCheck.mobSensorsRuntime

@@ -54,6 +54,8 @@
       this.lastHudUpdate = 0;
       this.lastMapUpdate = 0;
       this.lastMusicCheck = 0;
+      this.nextDarknessDrawAt = 0;
+      this.darknessDrawKey = "";
       this.achievementClock = 0;
       this.currentAction = "Explore";
       this.targetLabel = "None";
@@ -76,6 +78,9 @@
       this.lampStandby = false;
       this.lampDemand = 0;
       this.externalLight = 1;
+      this.visiblePoiSignals = [];
+      this.nextPoiSignalScanAt = 0;
+      this.nextPoiSignalToastAt = 0;
       this.lastSurfaceDiscoveryAt = 0;
       this.lastSurfaceDiscoveryCheckAt = 0;
       this.lastCampHintAt = 0;
@@ -251,7 +256,8 @@
       ML.ui.packDrawer?.classList.add("hidden");
       this.scheduleNextCaveEvent(true);
       this.refreshMobActivation();
-      ML.renderAll(this.sim);
+      ML.resetRenderCache?.();
+      ML.renderAll(this.sim, { force: true });
       this.checkLore("load", { silent: true });
       this.checkAchievements();
       ML.showToast("Pickaxe ready. LMB mines, RMB places or uses, E opens nearby objects or crafts, F attacks.", 4600);
@@ -504,10 +510,11 @@
       this.updateHazards(dt, inLava);
       this.updateHorizontalExpansion();
       this.updateSurfaceDiscoveries();
+      this.updatePoiAmbience();
       this.updateObserverAwareness(dt, { vx, left, right, up, down, jumpPressed, onFloor, onLadder, pointer });
       this.updateSky();
       this.drawAnimatedTileFx();
-      this.drawDarkness();
+      this.updateDarkness();
       this.updatePickaxeVisual(Boolean(this.mineTarget));
 
       this.lastHudUpdate += delta;
@@ -776,6 +783,45 @@
           fx.fillRect(x + 10, y + 5, 12, 3);
         }
       }
+      for (const discovery of this.visiblePoiSignals || []) {
+        const x = discovery.x * TILE;
+        const y = discovery.y * TILE;
+        if (x < minX || x > maxX || y < minY || y > maxY) continue;
+        const underground = discovery.scope === "underground";
+        const unread = !discovery.read;
+        const pulse = 0.5 + Math.sin(now / (underground ? 420 : 560) + discovery.x * 0.37 + discovery.y * 0.21) * 0.5;
+        const color = underground ? 0x9efff0 : 0xffe2a0;
+        const alpha = (unread ? 0.42 : 0.18) + pulse * (unread ? 0.18 : 0.08);
+        fx.lineStyle(1, color, alpha);
+        fx.strokeRect(x + 4, y + 4, TILE - 8, TILE - 8);
+        if (underground && unread) {
+          fx.fillStyle(color, 0.12 + pulse * 0.08);
+          fx.fillCircle(x + TILE / 2, y + TILE / 2, 10 + pulse * 4);
+        }
+      }
+    }
+
+    updateDarkness() {
+      const now = this.time.now || 0;
+      const speed = Math.hypot(this.player.body?.velocity?.x || 0, this.player.body?.velocity?.y || 0);
+      const key = [
+        Math.round(this.player.x / 5),
+        Math.round(this.player.y / 5),
+        Math.round(this.cameras.main.scrollX / 5),
+        Math.round(this.cameras.main.scrollY / 5),
+        Math.round((this.shadowPressure || 0) / 2),
+        Math.round((this.lampCharge || this.sim.lampCharge || 0) * 20),
+        Math.round((this.externalLight || 0) * 20),
+        Math.round(this.ambientLight() * 40),
+        this.sim.lamp,
+        this.lampStandby ? 1 : 0,
+        this.sim.lights?.length || 0
+      ].join("|");
+      const idleDelay = speed > 8 || this.caveEvent || this.hasActiveBoss() ? 0 : 72;
+      if (key === this.darknessDrawKey && now < this.nextDarknessDrawAt) return;
+      this.darknessDrawKey = key;
+      this.nextDarknessDrawAt = now + idleDelay;
+      this.drawDarkness();
     }
 
     drawDarkness() {
@@ -1355,6 +1401,38 @@
       ML.renderAll(this.sim);
       this.saveGame();
       return true;
+    }
+
+    updatePoiAmbience() {
+      const now = this.time.now || 0;
+      if (now < this.nextPoiSignalScanAt) return;
+      this.nextPoiSignalScanAt = now + 320;
+      if (!Array.isArray(this.sim.surfaceDiscoveries) || !this.sim.surfaceDiscoveries.length) {
+        this.visiblePoiSignals = [];
+        return;
+      }
+      const cam = this.cameras.main;
+      const minX = (cam.scrollX - 128) / TILE;
+      const maxX = (cam.scrollX + cam.width + 128) / TILE;
+      const minY = (cam.scrollY - 128) / TILE;
+      const maxY = (cam.scrollY + cam.height + 128) / TILE;
+      const px = this.player.x / TILE;
+      const py = this.player.y / TILE;
+      const visible = [];
+      for (const discovery of this.sim.surfaceDiscoveries) {
+        if (this.sim.tileAt(discovery.x, discovery.y) !== Tile.SIGN) continue;
+        if (discovery.x < minX || discovery.x > maxX || discovery.y < minY || discovery.y > maxY) continue;
+        const distance = Math.hypot(discovery.x + 0.5 - px, discovery.y + 0.5 - py);
+        visible.push({ discovery, distance });
+      }
+      visible.sort((a, b) => a.distance - b.distance);
+      this.visiblePoiSignals = visible.slice(0, 14).map((entry) => entry.discovery);
+
+      const nearest = visible.find((entry) => entry.discovery.scope === "underground" && !entry.discovery.read && entry.distance < 9);
+      if (nearest && now > this.nextPoiSignalToastAt) {
+        this.nextPoiSignalToastAt = now + 9000;
+        this.floatText(nearest.discovery.x * TILE - 20, nearest.discovery.y * TILE - 20, "SIGNAL", "#9efff0");
+      }
     }
 
     updateSurfaceDiscoveries() {
@@ -2181,6 +2259,28 @@
 
     // ---- Enemies ------------------------------------------------------------------
 
+    discoveryAnchorForEnemy(enemy, now = this.time.now) {
+      if (!enemy?.active || !Array.isArray(this.sim.surfaceDiscoveries)) return null;
+      if (enemy.nextPoiScanAt && now < enemy.nextPoiScanAt) return enemy.poiAnchor || null;
+      enemy.nextPoiScanAt = now + Phaser.Math.Between(760, 1240);
+      enemy.poiAnchor = null;
+      let best = null;
+      let bestDistance = Infinity;
+      for (const discovery of this.sim.surfaceDiscoveries) {
+        if (discovery.scope !== "underground" || discovery.read) continue;
+        if (this.sim.tileAt(discovery.x, discovery.y) !== Tile.SIGN) continue;
+        const wx = discovery.x * TILE + TILE / 2;
+        const wy = discovery.y * TILE + TILE / 2;
+        const distance = Phaser.Math.Distance.Between(enemy.x, enemy.y, wx, wy);
+        if (distance > 280 || distance >= bestDistance) continue;
+        if (!this.hasSightBetweenWorld(enemy.x, enemy.y, wx, wy)) continue;
+        bestDistance = distance;
+        best = { x: wx, y: wy, discovery, distance };
+      }
+      enemy.poiAnchor = best;
+      return best;
+    }
+
     enemyInstinct(enemy, now = this.time.now) {
       if (enemy.nextThinkAt && now < enemy.nextThinkAt && enemy.intent) return enemy.intent;
       const sensor = ML.MobSensors?.sense?.(this, enemy, now) || null;
@@ -2197,6 +2297,12 @@
         || (this.sim.energy / Math.max(1, this.sim.maxEnergy) < 0.24)
         || (this.shadowPressure || 0) > 58;
       const observed = this.isEnemyObserved(enemy);
+      const poiAnchor = !cfg.boss && !enemy.elite ? this.discoveryAnchorForEnemy(enemy, now) : null;
+      const poiCurious = Boolean(poiAnchor
+        && !sensor?.canSeePlayer
+        && !sensor?.heardNoise
+        && !sensor?.hasMemory
+        && ["guardian", "stalker", "ambusher", "harrier"].includes(ai.mind));
       const aware = Boolean(sensor?.canSeePlayer || sensor?.heardNoise || sensor?.hasMemory || cfg.boss || enemy.elite);
       let allies = 0;
       for (const other of this.enemies.getChildren()) {
@@ -2206,7 +2312,8 @@
 
       let mode = aware ? "press" : "wait";
       if (!aware) {
-        mode = ai.mind === "guardian" ? "guard" : "wait";
+        if (poiCurious) mode = ai.mind === "guardian" ? "guard" : ai.mind === "ambusher" ? "wait" : "stalk";
+        else mode = ai.mind === "guardian" ? "guard" : "wait";
       } else if (!sensor?.canSeePlayer && sensor?.heardNoise) {
         mode = ai.mind === "ambusher" ? "wait" : "stalk";
       } else if (!sensor?.canSeePlayer && sensor?.hasMemory) {
@@ -2239,12 +2346,18 @@
         : mode === "watch" ? 0
         : mode === "retreat" ? 1.05
         : 1;
+      const targetX = poiCurious ? poiAnchor.x : sensor?.targetX ?? this.player.x;
+      const targetY = poiCurious ? poiAnchor.y : sensor?.targetY ?? this.player.y;
+      const moveDx = poiCurious ? targetX - enemy.x : dx;
+      const moveDy = poiCurious ? targetY - enemy.y : dy;
+      const moveDistance = poiCurious ? Math.max(1, Math.hypot(moveDx, moveDy)) : distance;
+      const moveDir = Math.sign(moveDx) || dir;
       enemy.intent = {
         mode,
-        dx,
-        dy,
-        dir,
-        distance,
+        dx: moveDx,
+        dy: moveDy,
+        dir: moveDir,
+        distance: moveDistance,
         playerDistance,
         localLight,
         hpRatio,
@@ -2255,14 +2368,16 @@
         sensorReason: sensor?.reason || "direct",
         canSeePlayer: Boolean(sensor?.canSeePlayer),
         heardNoise: Boolean(sensor?.heardNoise),
-        targetX: sensor?.targetX ?? this.player.x,
-        targetY: sensor?.targetY ?? this.player.y
+        poiCurious,
+        targetX,
+        targetY
       };
       enemy.nextThinkAt = now + Phaser.Math.Between(240, 420);
       if (enemy.lastIntentMode !== mode && now > (enemy.intentToastAt || 0)) {
         enemy.intentToastAt = now + 4200;
         enemy.lastIntentMode = mode;
         if (mode === "stalk" && sensor?.heardNoise && playerDistance < 320) this.floatText(enemy.x - 18, enemy.y - 24, "HEARS", "#d8b6ff");
+        if (poiCurious && playerDistance < 360) this.floatText(enemy.x - 20, enemy.y - 25, mode === "guard" ? "GUARDS" : "STUDIES", "#9efff0");
         if (mode === "pressure" && playerDistance < 260) this.floatText(enemy.x - 18, enemy.y - 26, "HUNTS", "#f0c75e");
         if (mode === "retreat" && playerDistance < 220) this.floatText(enemy.x - 16, enemy.y - 24, "FLEES", "#9efff0");
         if (mode === "watch") {

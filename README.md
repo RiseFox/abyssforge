@@ -88,6 +88,8 @@ Opening bedrock seams extends the world downward and moves the next generated ab
 - Situational music modes for surface, night, caves, danger, treasure, camp, deep zones, and bosses.
 - Hidden field-note system with staged long-term goals, lore reveals, and a mystery HUD that appears only after the first impossible clue.
 - Shadow pressure system with lamp-cell drain, energy pressure, stronger darkness feedback, and a non-hostile hidden Watcher NPC.
+- Living discovery feedback: unread underground points of interest pulse softly, and some active mobs can guard or study unread field marks instead of only chasing the player.
+- Cached HUD rendering and throttled idle darkness redraws keep the DOM and lightmap from doing expensive work when nothing visible changed.
 - Achievements, unlock toasts, craft-ready notifications, contracts, minimap, pause menu, and death recap.
 - Local Playwright smoke test covering spawn quality, progression data, camp anchors, biome variety, hidden-lore progression, and Watcher runtime hooks.
 
