@@ -186,6 +186,7 @@ canvas:focus { outline: none; }
 .bar.energy > i { background: linear-gradient(90deg, #8aa55b, #d6be65); }
 .bar.depth > i { background: linear-gradient(90deg, #5d8f9c, #79d0c5); }
 .bar.light > i { background: linear-gradient(90deg, #90633e, #edc66a); }
+.bar.shadow > i { background: linear-gradient(90deg, #2b2438, #7c5a91, #d8b6ff); }
 
 .tool-panel {
   width: min(330px, calc(100vw - 24px));

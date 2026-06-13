@@ -67,6 +67,10 @@
       this.lastCampHintAt = 0;
       this.lastBiomeId = null;
       this.lastBiomeToastAt = 0;
+      this.shadowPressure = clamp(this.sim.shadowPressure || 0, 0, 100);
+      this.lastShadowWarnAt = 0;
+      this.nextWatcherAt = 9000;
+      this.watcherUntil = 0;
       this.caveEvent = null;
       this.nextCaveEventAt = 0;
       this.eventPulseAt = 0;
@@ -131,6 +135,11 @@
         .setScrollFactor(0)
         .setDepth(79);
       this.tileFx = this.add.graphics().setDepth(9);
+      this.watcher = this.add.image(this.player.x, this.player.y, "watcher")
+        .setOrigin(0.5, 1)
+        .setDepth(8)
+        .setVisible(false)
+        .setAlpha(0);
 
       // Screen-space darkness with holes punched out around light sources.
       this.darknessRT = this.add.renderTexture(0, 0, this.scale.width, this.scale.height)
@@ -486,6 +495,7 @@
       if (this.hasActiveBoss()) return "boss";
       if (this.caveEvent?.id === "swarm" || this.caveEvent?.id === "tremor") return "danger";
       if (this.caveEvent?.id === "oreSurge") return "treasure";
+      if ((this.shadowPressure || 0) > 74 || this.watcher?.visible) return "danger";
       if (this.hasNearbyDanger()) return "danger";
       if (this.nearCamp()) return "camp";
       if (this.nearUnopenedSecretChest()) return "treasure";
@@ -622,7 +632,8 @@
     drawDarkness() {
       const cam = this.cameras.main;
       const ambient = this.ambientLight();
-      const alpha = clamp(0.86 - ambient * 0.86, 0, 0.86);
+      const pressureBoost = clamp((this.shadowPressure || 0) / 100 * 0.1, 0, 0.1);
+      const alpha = clamp(0.86 - ambient * 0.86 + pressureBoost, 0, 0.9);
       const rt = this.darknessRT;
       const glow = this.lightGlow;
       if (glow) glow.clear();
@@ -1920,6 +1931,7 @@
       for (const enemy of this.enemies.getChildren()) {
         if (enemy.active && enemy.mobId) this.syncMobEntry(enemy);
       }
+      this.sim.shadowPressure = clamp(this.shadowPressure || 0, 0, 100);
       const snapshot = { x: this.player.x, y: this.player.y };
       if (!this.sim.hasPlayerSupport(snapshot)) {
         const vy = Math.abs(this.player.body?.velocity?.y || 0);
@@ -1928,6 +1940,126 @@
         return this.sim.save(repaired);
       }
       return this.sim.save(this.sim.snapPlayerToTileCenter(snapshot));
+    }
+
+    // ---- Shadow pressure + watcher ---------------------------------------------
+
+    updateShadowPressure(dt, light, depth, biome) {
+      const now = this.time.now;
+      const previous = this.shadowPressure || 0;
+      const nearCamp = this.nearCamp();
+      const darkLimit = depth > 12 && !nearCamp ? 0.34 : 0.18;
+      if (light < darkLimit && depth > 8) {
+        const deficit = darkLimit - light;
+        const biomeFactor = 1 + (biome?.darkPressure || 0) * 0.32;
+        const depthFactor = clamp(depth / 190, 0.2, 1.2);
+        const wardCap = this.sim.ward ? 74 : 100;
+        this.shadowPressure = clamp(previous + dt * (8 + deficit * 72) * biomeFactor * (0.65 + depthFactor), 0, wardCap);
+      } else {
+        const relief = nearCamp ? 42 : light > 0.58 ? 28 : 14;
+        this.shadowPressure = clamp(previous - dt * relief, 0, 100);
+      }
+
+      if (this.shadowPressure > 34 && light < 0.32) {
+        const drain = (this.sim.ward ? 0.45 : 1) * clamp((this.shadowPressure - 28) / 25, 0, 3.2);
+        this.sim.energy = clamp(this.sim.energy - dt * drain, 0, this.sim.maxEnergy);
+      }
+
+      if (this.shadowPressure >= 70 && previous < 70) {
+        this.sim.stats.shadowPeaks = (this.sim.stats.shadowPeaks || 0) + 1;
+        this.cameras.main.shake(90, 0.002);
+        this.checkLore("shadowPeak", { shadowPeak: true, biome });
+      }
+
+      if (this.shadowPressure > 44 && now - this.lastShadowWarnAt > 15000) {
+        this.lastShadowWarnAt = now;
+        ML.showToast("The dark is listening. Place light or return to a campfire before it rises.", 2600);
+      }
+
+      if (this.shadowPressure > 54 && depth > 28 && light < 0.34 && now > this.nextWatcherAt && !this.hasActiveBoss()) {
+        this.spawnWatcherSighting();
+      }
+
+      this.sim.shadowPressure = this.shadowPressure;
+      this.updateWatcherSprite(dt, light);
+    }
+
+    findWatcherSpot() {
+      const px = Math.floor(this.player.x / TILE);
+      const py = Math.floor(this.player.y / TILE);
+      const firstSide = this.player.flipX ? 1 : -1;
+      const sides = [firstSide, -firstSide];
+      const distances = [7, 9, 11, 5];
+      const yOffsets = [0, -2, 2, -4, 4, 6];
+
+      for (const distance of distances) {
+        for (const side of sides) {
+          const x = clamp(px + side * distance, 2, WORLD_W - 3);
+          for (const offset of yOffsets) {
+            const startY = clamp(py + offset, 4, WORLD_H - 6);
+            for (let y = startY; y < Math.min(WORLD_H - 4, startY + 7); y += 1) {
+              const tile = this.sim.tileAt(x, y);
+              if (tile !== AIR && BLOCKS[tile]?.solid && this.sim.hasHeadClearance(x, y)) {
+                return { x: x * TILE + TILE / 2, y: y * TILE, side };
+              }
+            }
+          }
+        }
+      }
+      return null;
+    }
+
+    spawnWatcherSighting() {
+      const spot = this.findWatcherSpot();
+      const now = this.time.now;
+      this.nextWatcherAt = now + Phaser.Math.Between(16000, 28000);
+      if (!spot || !this.watcher) return false;
+
+      this.watcher.setPosition(spot.x, spot.y)
+        .setFlipX(spot.x < this.player.x)
+        .setVisible(true)
+        .setAlpha(0);
+      this.watcherUntil = now + Phaser.Math.Between(3800, 6200);
+      this.sim.stats.watcherSightings = (this.sim.stats.watcherSightings || 0) + 1;
+      this.checkLore("watcher", { watcher: true });
+      this.checkAchievements();
+      this.setAction("Watched", 1200);
+      this.floatText(this.player.x - 38, this.player.y - 48, "SOMETHING WATCHES", "#d8b6ff");
+      ML.audio.play("secret");
+      ML.showToast("A silhouette watches from where the lamp cannot reach.", 3000);
+      this.tweens.add({
+        targets: this.watcher,
+        alpha: 0.68,
+        duration: 420,
+        ease: "Sine.easeOut"
+      });
+      return true;
+    }
+
+    updateWatcherSprite(dt, light) {
+      if (!this.watcher?.visible) return;
+      const now = this.time.now;
+      if (now > this.watcherUntil || light > 0.54 || this.nearCamp()) {
+        this.tweens.killTweensOf(this.watcher);
+        this.tweens.add({
+          targets: this.watcher,
+          alpha: 0,
+          y: this.watcher.y - 10,
+          duration: 420,
+          ease: "Sine.easeIn",
+          onComplete: () => this.watcher?.setVisible(false)
+        });
+        return;
+      }
+
+      const side = this.watcher.x < this.player.x ? -1 : 1;
+      const desiredX = this.player.x + side * clamp(180 + (this.shadowPressure || 0), 170, 270);
+      const desiredY = this.player.y + 20 + Math.sin(now / 420) * 7;
+      this.watcher.x = Phaser.Math.Linear(this.watcher.x, desiredX, clamp(dt * 0.55, 0, 1));
+      this.watcher.y = Phaser.Math.Linear(this.watcher.y, desiredY, clamp(dt * 0.35, 0, 1));
+      this.watcher.setFlipX(this.watcher.x < this.player.x);
+      const targetAlpha = clamp((this.shadowPressure - 30) / 80, 0.22, 0.72);
+      this.watcher.setAlpha(Phaser.Math.Linear(this.watcher.alpha, targetAlpha, clamp(dt * 1.2, 0, 1)));
     }
 
     // ---- Hazards -----------------------------------------------------------------
@@ -1953,6 +2085,7 @@
 
       const light = this.playerLight();
       const biome = this.currentBiome();
+      this.updateShadowPressure(dt, light, depth, biome);
       const darkPressure = biome?.darkPressure || 0;
       const darkDepth = biome?.darkDepth ?? 140;
       const darkThreshold = biome?.darkThreshold ?? 0.22;

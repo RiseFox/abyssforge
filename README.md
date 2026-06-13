@@ -20,6 +20,12 @@ The hidden thread asks the player to rebuild the old wayfire network, decode cac
 
 ![AbyssForge hidden field notes](docs/images/abyssforge-hidden-lore.png)
 
+## Darkness And The Watcher
+
+Light now has a second failure state. Before the deep dark starts killing the player, low light builds **Shadow pressure**: energy drains faster, the darkness thickens, field notes can unlock, and a hidden NPC called **the Watcher** may appear at the edge of the lamp radius.
+
+The Watcher does not attack. It follows from outside safe light, retreats from campfires and strong lamps, and quietly ties into the old wayfire lore. Repeated sightings reveal that it is less a monster than a leftover witness to the forge network.
+
 ## Core Loop
 
 - Mine blocks, ores, mushrooms, and hidden caches.
@@ -29,6 +35,7 @@ The hidden thread asks the player to rebuild the old wayfire network, decode cac
 - Complete expedition contracts for supplies and coin.
 - Discover secret rooms with chests, camp points, relics, and bosses.
 - Push through deeper biomes where darkness, recovery, and music change with the terrain.
+- Manage Shadow pressure when light runs low and learn why something follows beyond the lamp.
 - Decode hidden field notes that reveal the Warden, the wayfires, and the true purpose of the abyss forge.
 
 ## Biomes With Properties
@@ -60,8 +67,9 @@ Biomes are runtime systems, not only labels. The current biome affects ambient l
 - Dynamic cave events: ore surge, lantern draft, depth swarm, and cave tremor.
 - Situational music modes for surface, night, caves, danger, treasure, camp, deep zones, and bosses.
 - Hidden field-note system with staged long-term goals, lore reveals, and a mystery HUD that appears only after the first impossible clue.
+- Shadow pressure system with energy drain, stronger darkness feedback, and a non-hostile hidden Watcher NPC.
 - Achievements, unlock toasts, craft-ready notifications, contracts, minimap, pause menu, and death recap.
-- Local Playwright smoke test covering spawn quality, progression data, camp anchors, biome variety, and hidden-lore progression.
+- Local Playwright smoke test covering spawn quality, progression data, camp anchors, biome variety, hidden-lore progression, and Watcher runtime hooks.
 
 ## Controls
 

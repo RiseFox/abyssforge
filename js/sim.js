@@ -32,9 +32,10 @@
       this.lootBonus = Boolean(this.lootBonus);
       this.recallCharm = Boolean(this.recallCharm);
       this.blastRadius = this.blastRadius || 0;
+      this.shadowPressure = clamp(this.shadowPressure || 0, 0, 100);
       this.health = clamp(this.health ?? this.maxHealth, 0, this.maxHealth);
       this.energy = clamp(this.energy ?? this.maxEnergy, 0, this.maxEnergy);
-      this.stats = Object.assign({ mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0, recalls: 0, campUses: 0, camps: 0 }, this.stats || {});
+      this.stats = Object.assign({ mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0, recalls: 0, campUses: 0, camps: 0, watcherSightings: 0, shadowPeaks: 0 }, this.stats || {});
       this.achievements = Object.assign({}, this.achievements || {});
       ML.LoreSystem?.ensure?.(this);
       this.craftedRecipes = Object.assign({}, this.craftedRecipes || {});
@@ -78,6 +79,7 @@
       this.lootBonus = false;
       this.recallCharm = false;
       this.blastRadius = 0;
+      this.shadowPressure = 0;
       this.selected = 3;
       this.inventory = {
         dirt: 0, stone: 0, wood: 8, coal: 2, copper: 0, iron: 0, gold: 0, crystal: 0,
@@ -90,7 +92,7 @@
       this.spawn = generated.spawn;
       this.shaft = generated.shaft;
       this.secrets = generated.secrets || [];
-      this.stats = { mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0, recalls: 0, campUses: 0, camps: 0 };
+      this.stats = { mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0, recalls: 0, campUses: 0, camps: 0, watcherSightings: 0, shadowPeaks: 0 };
       this.achievements = {};
       this.lore = ML.LoreSystem?.initialState?.() || { awakened: false, notes: {}, lastNoteId: null, completedGoals: {} };
       this.craftedRecipes = {};
@@ -692,6 +694,7 @@
         lootBonus: this.lootBonus,
         recallCharm: this.recallCharm,
         blastRadius: this.blastRadius,
+        shadowPressure: this.shadowPressure,
         selected: this.selected,
         inventory: this.inventory,
         world: this.world,

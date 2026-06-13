@@ -26,6 +26,27 @@
       condition: (sim) => (sim.stats.camps || 0) >= 1
     },
     {
+      id: "eyesPastLamp",
+      title: "Eyes Past the Lamp",
+      tag: "Watcher",
+      body: "Something stands where your lamp stops. It retreats from fire and follows only when the dark gets loud.",
+      condition: (sim, context) => context.watcher || (sim.stats.watcherSightings || 0) >= 1
+    },
+    {
+      id: "theOneWhoStayed",
+      title: "The One Who Stayed",
+      tag: "Watcher",
+      body: "The silhouette is not hunting you. It watches the anchors, as if counting which wayfires still answer.",
+      condition: (sim) => (sim.stats.watcherSightings || 0) >= 3 && (sim.stats.camps || 0) >= 1
+    },
+    {
+      id: "whenLightFails",
+      title: "When Light Fails",
+      tag: "Dark",
+      body: "Low light does not only hide stone. It lets the mine measure your pulse, drain your breath, and call the watcher closer.",
+      condition: (sim, context) => context.shadowPeak || (sim.stats.shadowPeaks || 0) >= 1
+    },
+    {
       id: "fungalChorus",
       title: "The Fungal Chorus",
       tag: "Biome",
@@ -90,6 +111,12 @@
       progress: (sim) => progress((sim.stats.secrets || 0), 3, "caches")
     },
     {
+      id: "watcher",
+      title: "Understand the silhouette",
+      hint: "Let the dark reveal the observer, then relight the route before pressure peaks.",
+      progress: (sim) => progress((sim.stats.watcherSightings || 0), 3, "sightings")
+    },
+    {
       id: "wayfires",
       title: "Rebuild the wayfire network",
       hint: "Rest at three different campfires to make the mine remember safe points.",
@@ -138,6 +165,7 @@
     const checks = [
       (sim.stats.deepest || 0) >= 220,
       (sim.stats.secrets || 0) >= 5,
+      (sim.stats.watcherSightings || 0) >= 3,
       (sim.stats.bosses || 0) >= 2,
       sim.pickLevel >= 6
     ];

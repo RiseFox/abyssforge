@@ -13,6 +13,8 @@
     depthBar: document.getElementById("depthBar"),
     lightText: document.getElementById("lightText"),
     lightBar: document.getElementById("lightBar"),
+    shadowText: document.getElementById("shadowText"),
+    shadowBar: document.getElementById("shadowBar"),
     worldLabel: document.getElementById("worldLabel"),
     pickHudText: document.getElementById("pickHudText"),
     pickTierText: document.getElementById("pickTierText"),
@@ -127,6 +129,7 @@
   }
 
   function renderStatus(sim, player, light = 1) {
+    const scene = ML.sceneRef;
     const maxHealth = sim.maxHealth || 100;
     const maxEnergy = sim.maxEnergy || 100;
     ui.healthText.textContent = maxHealth > 100 ? `${Math.round(sim.health)}/${maxHealth}` : String(Math.round(sim.health));
@@ -141,8 +144,11 @@
     ui.depthBar.style.width = `${clamp(depth / 230 * 100, 0, 100)}%`;
     ui.lightText.textContent = light > 0.7 ? "Clear" : light > 0.35 ? "Dim" : "Dark";
     ui.lightBar.style.width = `${Math.round(light * 100)}%`;
-
-    const scene = ML.sceneRef;
+    const shadow = clamp(scene?.shadowPressure ?? sim.shadowPressure ?? 0, 0, 100);
+    if (ui.shadowText && ui.shadowBar) {
+      ui.shadowText.textContent = shadow > 76 ? "Watched" : shadow > 48 ? "Rising" : shadow > 14 ? "Whisper" : "Still";
+      ui.shadowBar.style.width = `${Math.round(shadow)}%`;
+    }
     const day = scene ? scene.dayNumber() : 1;
     const phase = scene ? scene.phaseName() : "Day";
     const biome = scene?.currentBiome ? scene.currentBiome() : ML.BiomeSystem?.current?.(sim, { x: px, y: py });

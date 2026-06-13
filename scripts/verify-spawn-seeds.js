@@ -84,12 +84,17 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     sim.stats.secrets = 5;
     sim.stats.camps = 3;
     sim.stats.bosses = 2;
+    sim.stats.watcherSightings = 3;
+    sim.stats.shadowPeaks = 1;
     sim.pickLevel = 6;
     sim.lamp = 2;
     sim.recallCharm = true;
     sim.ward = true;
-    window.ML.LoreSystem?.evaluate?.(sim, { biome: window.ML.BIOMES?.obsidianabyss, bossKind: "warden" });
+    sim.inventory.mushroom = 5;
+    sim.inventory.crystal = 1;
+    window.ML.LoreSystem?.evaluate?.(sim, { biome: window.ML.BIOMES?.obsidianabyss, bossKind: "warden", watcher: true, shadowPeak: true });
     const loreIntel = window.ML.LoreSystem?.intel?.(sim) || {};
+    const scene = window.ML.sceneRef;
     const biomeSamples = [];
     const biomeIds = new Set();
     const sampleBiome = (x, y) => {
@@ -121,6 +126,11 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       loreAwakened: Boolean(loreIntel.awakened),
       loreDecoded: loreIntel.noteCount || 0,
       loreGoalDone: Boolean(loreIntel.done),
+      watcherTexture: Boolean(scene?.textures?.exists?.("watcher")),
+      watcherRuntime: typeof scene?.spawnWatcherSighting === "function" && typeof scene?.updateShadowPressure === "function",
+      shadowPressure: sim.shadowPressure,
+      watcherSightings: sim.stats.watcherSightings,
+      shadowPeaks: sim.stats.shadowPeaks,
       sampleBiomeCount: biomeIds.size,
       biomeSamples,
       campServices: window.ML.CAMP_SERVICES.length,
@@ -179,18 +189,22 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
   await browser.close();
 
   const progressionFailed = progressionCheck.recipes < 34
-    || progressionCheck.achievements < 24
+    || progressionCheck.achievements < 37
     || progressionCheck.contracts < 5
     || progressionCheck.caveEvents < 4
     || progressionCheck.biomes < 8
     || !progressionCheck.biomeSystem
     || progressionCheck.sampleBiomeCount < 6
-    || progressionCheck.loreNotes < 10
-    || progressionCheck.loreGoals < 6
+    || progressionCheck.loreNotes < 13
+    || progressionCheck.loreGoals < 7
     || !progressionCheck.loreSystem
     || !progressionCheck.loreAwakened
-    || progressionCheck.loreDecoded < 6
+    || progressionCheck.loreDecoded < 10
     || !progressionCheck.loreGoalDone
+    || !progressionCheck.watcherTexture
+    || !progressionCheck.watcherRuntime
+    || progressionCheck.watcherSightings < 3
+    || progressionCheck.shadowPeaks < 1
     || progressionCheck.campServices < 5
     || !progressionCheck.campSystem
     || progressionCheck.craftable < 3
