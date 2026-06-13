@@ -159,6 +159,59 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const enemyAiProfiles = Object.values(window.ML.ENEMIES || {}).filter((enemy) => enemy.ai?.mind).length;
     const observerMomentCount = Object.keys(window.ML.OBSERVER_MOMENTS || {}).length;
     const scene = window.ML.sceneRef;
+    const sceneOriginalPlayer = scene?.player ? { x: scene.player.x, y: scene.player.y } : null;
+    const lampSceneSim = scene?.sim;
+    let lampStandbyCheck = null;
+    let lampDarkCheck = null;
+    if (scene && lampSceneSim && typeof scene.externalLightAt === "function" && typeof scene.updateLampBattery === "function") {
+      const litCamp = window.ML.CampSystem.surfaceCamp(lampSceneSim);
+      const litPos = litCamp ? window.ML.CampSystem.campSpawnPixels(lampSceneSim, litCamp) : lampSceneSim.safeSpawnPixels();
+      lampSceneSim.lamp = 2;
+      lampSceneSim.refillLamp?.();
+      lampSceneSim.inventory.battery = 0;
+      scene.player.setPosition(litPos.x, litPos.y);
+      lampSceneSim.player = { x: litPos.x, y: litPos.y };
+      scene.lampStandby = false;
+      const litExternal = scene.externalLightAt(scene.player.x, scene.player.y);
+      const standbyBefore = lampSceneSim.lampChargeRatio?.() || 0;
+      scene.updateLampBattery(18);
+      const standbyAfter = lampSceneSim.lampChargeRatio?.() || 0;
+      lampStandbyCheck = { light: litExternal, before: standbyBefore, after: standbyAfter, standby: Boolean(scene.lampStandby) };
+
+      let darkSpot = null;
+      const width = lampSceneSim.worldWidth?.() || lampSceneSim.world?.[0]?.length || WORLD_W;
+      const height = lampSceneSim.worldHeight?.() || lampSceneSim.world?.length || WORLD_H;
+      for (let y = 64; y < height - 8 && !darkSpot; y += 1) {
+        for (let x = 4; x < width - 4; x += 1) {
+          if (!lampSceneSim.hasHeadClearance?.(x, y)) continue;
+          const floor = lampSceneSim.tileAt(x, y);
+          if (!window.ML.BLOCKS[floor]?.solid) continue;
+          const px = x * window.ML.TILE + window.ML.TILE / 2;
+          const py = y * window.ML.TILE - 17;
+          const external = scene.externalLightAt(px, py);
+          if (external < 0.28) {
+            darkSpot = { x: px, y: py, external };
+            break;
+          }
+        }
+      }
+      lampSceneSim.refillLamp?.();
+      scene.lampStandby = false;
+      if (darkSpot) {
+        scene.player.setPosition(darkSpot.x, darkSpot.y);
+        lampSceneSim.player = { x: darkSpot.x, y: darkSpot.y };
+        const darkBefore = lampSceneSim.lampChargeRatio?.() || 0;
+        scene.updateLampBattery(8);
+        const darkAfter = lampSceneSim.lampChargeRatio?.() || 0;
+        lampDarkCheck = { light: darkSpot.external, before: darkBefore, after: darkAfter, standby: Boolean(scene.lampStandby) };
+      }
+      if (sceneOriginalPlayer) {
+        scene.player.setPosition(sceneOriginalPlayer.x, sceneOriginalPlayer.y);
+        lampSceneSim.player = { x: sceneOriginalPlayer.x, y: sceneOriginalPlayer.y };
+        scene.lampStandby = false;
+        scene.updateLampBattery(0);
+      }
+    }
     const biomeSamples = [];
     const biomeIds = new Set();
     const sampleBiome = (x, y) => {
@@ -282,6 +335,15 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       batteryAfterSwap,
       lampEmptyState: lampEmpty?.state,
       lampEmptyOutput: lampOutputEmpty?.radius || 0,
+      lampStandbyRuntime: Boolean(lampStandbyCheck && lampDarkCheck),
+      lampStandbyLight: lampStandbyCheck?.light || 0,
+      lampStandbyBefore: lampStandbyCheck?.before || 0,
+      lampStandbyAfter: lampStandbyCheck?.after || 0,
+      lampStandbyState: Boolean(lampStandbyCheck?.standby),
+      lampDarkLight: lampDarkCheck?.light ?? 1,
+      lampDarkBefore: lampDarkCheck?.before || 0,
+      lampDarkAfter: lampDarkCheck?.after || 0,
+      lampDarkStandby: Boolean(lampDarkCheck?.standby),
       endlessRuntime: typeof sim.extendDepth === "function" && typeof sim.worldHeight === "function" && typeof scene?.openAbyssSeam === "function" && typeof scene?.rebuildWorldLayer === "function",
       heightBefore,
       heightAfter,
@@ -468,6 +530,13 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.batteryAfterSwap !== 0
     || progressionCheck.lampEmptyState !== "empty"
     || progressionCheck.lampEmptyOutput !== 0
+    || !progressionCheck.lampStandbyRuntime
+    || progressionCheck.lampStandbyLight < 0.58
+    || !progressionCheck.lampStandbyState
+    || progressionCheck.lampStandbyAfter < progressionCheck.lampStandbyBefore - 0.0001
+    || progressionCheck.lampDarkLight > 0.32
+    || progressionCheck.lampDarkStandby
+    || progressionCheck.lampDarkAfter >= progressionCheck.lampDarkBefore
     || !progressionCheck.endlessRuntime
     || progressionCheck.heightAfter <= progressionCheck.heightBefore
     || progressionCheck.extensionRows < 48

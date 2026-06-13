@@ -236,7 +236,8 @@
     ui.pickTierText.textContent = `Tier ${sim.pickLevel}`;
     ui.damageText.textContent = `${sim.attackDamage()} · ${BLADES[sim.blade].name}`;
     const cells = sim.inventory?.battery || 0;
-    const gear = [`${LAMPS[sim.lamp].name} ${lampPct}%`];
+    const lampMode = scene?.lampStandby ? "standby" : scene?.lampDemand > 1.05 ? "draw" : "active";
+    const gear = [`${LAMPS[sim.lamp].name} ${lampPct}% ${lampMode}`];
     gear.push(`${cells} cell${cells === 1 ? "" : "s"}`);
     if (sim.boots) gear.push("Cave boots");
     if (sim.speedBoost) gear.push("Greaves");

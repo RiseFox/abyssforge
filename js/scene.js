@@ -69,6 +69,9 @@
       this.lastDarkWarnAt = 0;
       this.lastLampWarnAt = 0;
       this.lastLampSwapAt = 0;
+      this.lampStandby = false;
+      this.lampDemand = 0;
+      this.externalLight = 1;
       this.lastCampHintAt = 0;
       this.lastBiomeId = null;
       this.lastStratumId = null;
@@ -635,14 +638,49 @@
       return clamp(Math.max(floor, df * this.surfaceBrightness()), floor, 1);
     }
 
+    externalLightAt(x, y) {
+      const tx = clamp(Math.floor(x / TILE), 0, this.worldWidthTiles() - 1);
+      const ty = clamp(Math.floor(y / TILE), 0, this.worldHeightTiles() - 1);
+      const surfaceY = this.sim.surface[tx] || 24;
+      const depth = Math.max(0, ty - surfaceY);
+      const biome = ML.BiomeSystem?.biomeAt?.(this.sim, tx, ty) || this.currentBiome();
+      const floor = biome?.ambientFloor ?? 0.08;
+      const depthFalloff = clamp(1 - depth / 46, 0, 1);
+      let best = clamp(Math.max(floor, depthFalloff * this.surfaceBrightness()), floor, 1);
+      if (this.sim.ward) best = Math.max(best, 0.18);
+      if (this.caveEvent?.id === "lanternDraft") best = Math.max(best, 0.38);
+      const px = x / TILE;
+      const py = y / TILE;
+      for (const light of this.sim.lights) {
+        const r = BLOCKS[light.t]?.light || 0;
+        if (!r) continue;
+        const d = Math.hypot(light.x + 0.5 - px, light.y + 0.5 - py);
+        if (d < r + 1) best = Math.max(best, 1 - d / (r + 1));
+      }
+      return clamp(best, 0, 1);
+    }
+
+    personalLampOutput() {
+      const lamp = this.sim.lampOutput();
+      if (!lamp.powered || !this.lampStandby) return lamp;
+      return { radius: 0, glow: 0, ratio: lamp.ratio, powered: false, standby: true };
+    }
+
     updateLampBattery(dt) {
       const depth = this.depthMeters();
       const ambient = this.ambientLight();
-      if (depth <= 6 && ambient > 0.58) return;
-      if (this.nearCamp()) return;
+      const outsideLight = this.externalLightAt(this.player.x, this.player.y);
+      const standbyThreshold = this.lampStandby ? 0.48 : 0.58;
+      this.externalLight = outsideLight;
+      this.lampStandby = this.nearCamp() || (depth <= 6 && ambient > 0.58) || outsideLight >= standbyThreshold;
+      if (this.lampStandby) {
+        this.lampDemand = 0;
+        return;
+      }
 
       const eventRelief = this.caveEvent?.id === "lanternDraft" ? 0.55 : 1;
-      const demand = clamp((0.52 + depth / 260 + Math.max(0, 0.52 - ambient) * 1.15) * eventRelief, 0.2, 1.55);
+      const demand = clamp((0.52 + depth / 260 + Math.max(0, 0.52 - outsideLight) * 1.15) * eventRelief, 0.2, 1.55);
+      this.lampDemand = demand;
       const result = this.sim.drainLamp(dt, demand);
       const now = this.time.now;
 
@@ -670,43 +708,21 @@
     }
 
     playerLight() {
-      const lamp = this.sim.lampOutput();
-      let best = Math.max(this.ambientLight(), lamp.glow);
+      const lamp = this.personalLampOutput();
+      let best = Math.max(this.externalLightAt(this.player.x, this.player.y), lamp.glow);
       if (this.sim.ward) best = Math.max(best, 0.28);
       if (this.caveEvent?.id === "lanternDraft") best = Math.max(best, 0.46);
-      const px = this.player.x / TILE;
-      const py = this.player.y / TILE;
-      for (const light of this.sim.lights) {
-        const r = BLOCKS[light.t]?.light || 0;
-        if (!r) continue;
-        const d = Math.hypot(light.x + 0.5 - px, light.y + 0.5 - py);
-        if (d < r + 1) best = Math.max(best, 1 - d / (r + 1));
-      }
       return clamp(best, 0, 1);
     }
 
     lightLevelAt(x, y) {
-      const tx = clamp(Math.floor(x / TILE), 0, this.worldWidthTiles() - 1);
-      const surfaceY = this.sim.surface[tx] || 24;
-      const depth = Math.max(0, Math.floor(y / TILE - surfaceY));
-      const biome = ML.BiomeSystem?.biomeAt?.(this.sim, tx, Math.floor(y / TILE)) || this.currentBiome();
-      const depthFalloff = clamp(1 - depth / 46, 0, 1);
-      let best = clamp(Math.max(biome?.ambientFloor ?? 0.08, depthFalloff * this.surfaceBrightness()), biome?.ambientFloor ?? 0.08, 1);
-      if (this.sim.ward) best = Math.max(best, 0.18);
-      if (this.caveEvent?.id === "lanternDraft") best = Math.max(best, 0.38);
+      let best = this.externalLightAt(x, y);
 
-      const lamp = this.sim.lampOutput();
+      const lamp = this.personalLampOutput();
       const lampRadius = lamp.radius / TILE;
       const playerDistance = Math.hypot(x / TILE - this.player.x / TILE, y / TILE - this.player.y / TILE);
       if (playerDistance < lampRadius) {
         best = Math.max(best, (1 - playerDistance / lampRadius) * Math.max(0.28, lamp.glow));
-      }
-
-      for (const light of this.sim.lights) {
-        const r = BLOCKS[light.t]?.light || 0;
-        if (!r) continue;
-        const d = Math.hypot(light.x + 0.5 - x / TILE, light.y + 0.5 - y / TILE);
-        if (d < r + 1) best = Math.max(best, 1 - d / (r + 1));
       }
       return clamp(best, 0, 1);
     }
@@ -808,7 +824,7 @@
 
       if (alpha <= 0.03) return;
       rt.fill(0x040309, alpha);
-      let radius = this.sim.lampOutput().radius;
+      let radius = this.personalLampOutput().radius;
       const playerScreenX = this.player.x - cam.scrollX;
       const playerScreenY = this.player.y - cam.scrollY;
       drawHeadlampBeam(playerScreenX, playerScreenY, radius);
