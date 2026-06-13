@@ -79,6 +79,17 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       sim.stats[contractBefore.contract.type] = contractBefore.contract.start + contractBefore.target;
     }
     const contractClaim = sim.claimContract();
+    const loreSystem = Boolean(window.ML.LoreSystem?.evaluate && window.ML.LoreSystem?.intel);
+    sim.stats.deepest = 230;
+    sim.stats.secrets = 5;
+    sim.stats.camps = 3;
+    sim.stats.bosses = 2;
+    sim.pickLevel = 6;
+    sim.lamp = 2;
+    sim.recallCharm = true;
+    sim.ward = true;
+    window.ML.LoreSystem?.evaluate?.(sim, { biome: window.ML.BIOMES?.obsidianabyss, bossKind: "warden" });
+    const loreIntel = window.ML.LoreSystem?.intel?.(sim) || {};
     const biomeSamples = [];
     const biomeIds = new Set();
     const sampleBiome = (x, y) => {
@@ -104,6 +115,12 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       caveEvents: Object.keys(window.ML.CAVE_EVENTS || {}).length,
       biomes: Object.keys(window.ML.BIOMES || {}).length,
       biomeSystem: Boolean(window.ML.BiomeSystem?.biomeAt && window.ML.BiomeSystem?.current),
+      loreNotes: Object.keys(window.ML.LORE_NOTES || {}).length,
+      loreGoals: Object.keys(window.ML.HIDDEN_GOALS || {}).length,
+      loreSystem,
+      loreAwakened: Boolean(loreIntel.awakened),
+      loreDecoded: loreIntel.noteCount || 0,
+      loreGoalDone: Boolean(loreIntel.done),
       sampleBiomeCount: biomeIds.size,
       biomeSamples,
       campServices: window.ML.CAMP_SERVICES.length,
@@ -168,6 +185,12 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.biomes < 8
     || !progressionCheck.biomeSystem
     || progressionCheck.sampleBiomeCount < 6
+    || progressionCheck.loreNotes < 10
+    || progressionCheck.loreGoals < 6
+    || !progressionCheck.loreSystem
+    || !progressionCheck.loreAwakened
+    || progressionCheck.loreDecoded < 6
+    || !progressionCheck.loreGoalDone
     || progressionCheck.campServices < 5
     || !progressionCheck.campSystem
     || progressionCheck.craftable < 3

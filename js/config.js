@@ -263,7 +263,10 @@ window.ML = window.ML || {};
     { id: "campFirst", name: "Camp Ledger", note: "Use a campfire service.", stat: "campUses", at: 1 },
     { id: "campTen", name: "Quartermaster", note: "Use ten campfire services.", stat: "campUses", at: 10 },
     { id: "campAnchor", name: "Warm Anchor", note: "Set your first campfire anchor.", stat: "camps", at: 1 },
-    { id: "campNetwork", name: "Wayfire Network", note: "Activate three campfire anchors.", stat: "camps", at: 3 }
+    { id: "campNetwork", name: "Wayfire Network", note: "Activate three campfire anchors.", stat: "camps", at: 3 },
+    { id: "firstFieldNote", name: "It Does Not Fit", note: "Decode your first hidden field note.", loreNotes: 1 },
+    { id: "loreHunter", name: "Between the Contracts", note: "Decode five hidden field notes.", loreNotes: 5 },
+    { id: "forgeTruth", name: "The Forge Remembered", note: "Assemble the final truth of the abyss forge.", loreGoal: "truth" }
   ];
 
   const CONTRACTS = [

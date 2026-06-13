@@ -213,6 +213,7 @@
       this.scheduleNextCaveEvent(true);
       this.refreshMobActivation();
       ML.renderAll(this.sim);
+      this.checkLore("load", { silent: true });
       this.checkAchievements();
       ML.showToast("Pickaxe ready. LMB mines, RMB places or uses, F attacks, E crafts, M map.", 4600);
     }
@@ -800,6 +801,7 @@
       this.lastBiomeToastAt = now;
       this.setAction(biome.tone || "Biome", 1000);
       ML.showToast(ML.BiomeSystem.transitionText(biome), 2600);
+      this.checkLore("biome", { biome });
     }
 
     touchingLava() {
@@ -1179,6 +1181,7 @@
       }
       if (secret) {
         this.sim.markSecretOpened(secret);
+        this.checkLore("secret", { secret });
         loot.coin = (loot.coin || 0) + 10 + secret.tier * 6;
         loot.relic = (loot.relic || 0) + secret.tier;
         loot.silk = (loot.silk || 0) + 1 + secret.tier;
@@ -1433,6 +1436,7 @@
         this.cameras.main.shake(260, 0.012);
         this.floatText(enemy.x - 30, enemy.y - 38, "BOSS DOWN", "#ffcf6a");
         ML.showToast(`${this.enemyName(enemy.kind)} defeated. New boss materials unlocked.`, 4200);
+        this.checkLore("boss", { bossKind: enemy.kind });
       }
       this.checkContract();
       this.checkAchievements();
@@ -1932,7 +1936,10 @@
       const depth = this.depthMeters();
       const previousDeepest = this.sim.stats.deepest || 0;
       this.sim.stats.deepest = Math.max(previousDeepest, depth);
-      if (this.sim.stats.deepest !== previousDeepest) this.checkContract();
+      if (this.sim.stats.deepest !== previousDeepest) {
+        this.checkContract();
+        this.checkLore("depth");
+      }
       const now = this.time.now;
 
       if (inLava) {
@@ -2046,6 +2053,28 @@
       if (unlockedAny) ML.renderAll(this.sim);
     }
 
+    checkLore(reason = "explore", context = {}) {
+      if (!ML.LoreSystem) return [];
+      const payload = Object.assign({ reason, biome: this.currentBiome() }, context);
+      const unlocked = ML.LoreSystem.evaluate(this.sim, payload);
+      if (!unlocked.length) {
+        ML.renderMystery?.(this.sim);
+        return [];
+      }
+
+      if (!context.silent) {
+        const first = unlocked[0];
+        this.setAction("Field note", 1300);
+        this.floatText(this.player.x - 32, this.player.y - 44, "FIELD NOTE", "#d8b6ff");
+        ML.audio.play("secret");
+        ML.showToast(`Field note decoded: ${first.title}. ${first.body}`, unlocked.length > 1 ? 5200 : 4300);
+      }
+
+      ML.renderAll(this.sim);
+      this.checkAchievements();
+      return unlocked;
+    }
+
     // ---- UI plumbing ------------------------------------------------------------------
 
     nearCamp() {
@@ -2094,6 +2123,7 @@
       }
       this.setAction("Camp", 900);
       this.floatText(this.player.x - 18, this.player.y - 38, service.action.toUpperCase(), "#f5d77a");
+      this.checkLore("camp", { service, result });
       this.checkAchievements();
       ML.renderAll(this.sim);
       this.saveGame();

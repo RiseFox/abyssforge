@@ -36,6 +36,7 @@
       this.energy = clamp(this.energy ?? this.maxEnergy, 0, this.maxEnergy);
       this.stats = Object.assign({ mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0, recalls: 0, campUses: 0, camps: 0 }, this.stats || {});
       this.achievements = Object.assign({}, this.achievements || {});
+      ML.LoreSystem?.ensure?.(this);
       this.craftedRecipes = Object.assign({}, this.craftedRecipes || {});
       this.campAnchors = Object.assign({}, this.campAnchors || {});
       this.lastCamp = this.lastCamp && Number.isFinite(this.lastCamp.x) && Number.isFinite(this.lastCamp.y)
@@ -91,6 +92,7 @@
       this.secrets = generated.secrets || [];
       this.stats = { mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0, recalls: 0, campUses: 0, camps: 0 };
       this.achievements = {};
+      this.lore = ML.LoreSystem?.initialState?.() || { awakened: false, notes: {}, lastNoteId: null, completedGoals: {} };
       this.craftedRecipes = {};
       this.campAnchors = {};
       this.lastCamp = null;
@@ -704,6 +706,7 @@
         mobBaseline: this.mobBaseline,
         stats: this.stats,
         achievements: this.achievements,
+        lore: this.lore,
         craftedRecipes: this.craftedRecipes,
         campAnchors: this.campAnchors,
         lastCamp: this.lastCamp,

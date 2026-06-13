@@ -72,6 +72,15 @@
           <small id="biomeEffects">Daylight recovery</small>
           <em id="biomeLore">The guild camp marks the last honest sky.</em>
         </div>
+        <div id="mysteryPanel" class="mystery-panel hidden" aria-label="Hidden expedition purpose">
+          <div class="mystery-head">
+            <span>Mystery</span>
+            <strong id="mysteryTitle">No signal</strong>
+          </div>
+          <div class="mystery-progress"><i id="mysteryBar"></i></div>
+          <small id="mysteryText">Keep digging.</small>
+          <em id="mysteryNote">Field notes will appear when something does not fit.</em>
+        </div>
       </div>
 
       <div class="top-right">
@@ -147,6 +156,13 @@
             <span id="achievementProgress">0/0</span>
           </div>
           <div id="achievementList" class="achievement-list"></div>
+        </div>
+        <div class="story-panel">
+          <div class="achievement-head">
+            <strong>Field Notes</strong>
+            <span id="storyProgress">0/0</span>
+          </div>
+          <div id="storyList" class="story-list"></div>
         </div>
       </aside>
 
@@ -256,6 +272,7 @@
   <script src="js/utils.js"></script>
   <script src="js/camp.js"></script>
   <script src="js/biomes.js"></script>
+  <script src="js/lore.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/textures.js"></script>
   <script src="js/sim.js"></script>

@@ -12,6 +12,14 @@ The old lift network under the Guild is broken. Below it, the mine is not just d
 
 The long-term goal is to recover enough relic technology to reach the Warden's forge and survive what the first expedition woke up.
 
+## Hidden Purpose
+
+At first, AbyssForge plays like a direct mining game: dig, craft, light the route, and survive. The deeper structure is deliberately hidden. Reaching suspicious depths, opening secret caches, activating campfire waypoints, entering strange biomes, crafting relic systems, and defeating vault bosses decode field notes that slowly reframe the run.
+
+The hidden thread asks the player to rebuild the old wayfire network, decode cache marks, assemble abyss gear, break two sealed bosses, and eventually learn what the forge was actually built to do.
+
+![AbyssForge hidden field notes](docs/images/abyssforge-hidden-lore.png)
+
 ## Core Loop
 
 - Mine blocks, ores, mushrooms, and hidden caches.
@@ -21,6 +29,7 @@ The long-term goal is to recover enough relic technology to reach the Warden's f
 - Complete expedition contracts for supplies and coin.
 - Discover secret rooms with chests, camp points, relics, and bosses.
 - Push through deeper biomes where darkness, recovery, and music change with the terrain.
+- Decode hidden field notes that reveal the Warden, the wayfires, and the true purpose of the abyss forge.
 
 ## Biomes With Properties
 
@@ -50,8 +59,9 @@ Biomes are runtime systems, not only labels. The current biome affects ambient l
 - Secret vault rooms with chests, rare relic materials, boss rooms, and deeper camp points.
 - Dynamic cave events: ore surge, lantern draft, depth swarm, and cave tremor.
 - Situational music modes for surface, night, caves, danger, treasure, camp, deep zones, and bosses.
+- Hidden field-note system with staged long-term goals, lore reveals, and a mystery HUD that appears only after the first impossible clue.
 - Achievements, unlock toasts, craft-ready notifications, contracts, minimap, pause menu, and death recap.
-- Local Playwright smoke test covering spawn quality, progression data, camp anchors, and biome variety.
+- Local Playwright smoke test covering spawn quality, progression data, camp anchors, biome variety, and hidden-lore progression.
 
 ## Controls
 

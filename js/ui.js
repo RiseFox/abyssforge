@@ -30,6 +30,11 @@
     biomeName: document.getElementById("biomeName"),
     biomeEffects: document.getElementById("biomeEffects"),
     biomeLore: document.getElementById("biomeLore"),
+    mysteryPanel: document.getElementById("mysteryPanel"),
+    mysteryTitle: document.getElementById("mysteryTitle"),
+    mysteryBar: document.getElementById("mysteryBar"),
+    mysteryText: document.getElementById("mysteryText"),
+    mysteryNote: document.getElementById("mysteryNote"),
     hotbar: document.getElementById("hotbar"),
     helpDrawer: document.getElementById("helpDrawer"),
     campDrawer: document.getElementById("campDrawer"),
@@ -83,7 +88,9 @@
     achievementToastName: document.getElementById("achievementToastName"),
     achievementToastNote: document.getElementById("achievementToastNote"),
     achievementProgress: document.getElementById("achievementProgress"),
-    achievementList: document.getElementById("achievementList")
+    achievementList: document.getElementById("achievementList"),
+    storyProgress: document.getElementById("storyProgress"),
+    storyList: document.getElementById("storyList")
   };
 
   const mobile = { left: false, right: false, jumpTap: false, mineTap: false, placeTap: false, attackTap: false };
@@ -390,6 +397,7 @@
         ML.audio.play(result.ok ? "craft" : "denied");
         if (result.ok) {
           ML.sceneRef?.checkContract?.();
+          ML.sceneRef?.checkLore?.("craft", { recipe });
           ML.sceneRef?.checkAchievements?.();
         }
         ML.renderAll(sim); // renderAll already re-renders the open drawer
@@ -465,6 +473,57 @@
     });
   }
 
+  function renderMystery(sim) {
+    if (!ui.mysteryPanel || !ML.LoreSystem) return;
+    const intel = ML.LoreSystem.intel(sim);
+    ui.mysteryPanel.classList.toggle("hidden", !intel.awakened);
+    if (!intel.awakened) return;
+    const goal = intel.goal;
+    const progress = intel.goalProgress;
+    ui.mysteryTitle.textContent = intel.done ? "Forge truth assembled" : goal?.title || "Field notes";
+    ui.mysteryText.textContent = progress
+      ? `${progress.current}/${progress.target} ${progress.unit}`
+      : `${intel.noteCount}/${intel.totalNotes} notes`;
+    ui.mysteryNote.textContent = intel.done
+      ? "The mine was built to survive a collapse, not to feed the guild."
+      : (goal?.hint || intel.last?.body || "The contracts are not the whole story.");
+    ui.mysteryBar.style.width = `${Math.round((progress?.ratio || 0) * 100)}%`;
+    ui.mysteryPanel.classList.toggle("complete", Boolean(intel.done));
+  }
+
+  function renderStory(sim) {
+    if (!ui.storyList || !ui.storyProgress || !ML.LoreSystem) return;
+    const intel = ML.LoreSystem.intel(sim);
+    ui.storyProgress.textContent = `${intel.noteCount}/${intel.totalNotes}`;
+    ui.storyList.textContent = "";
+
+    if (!intel.awakened) {
+      const row = document.createElement("div");
+      row.className = "story-row locked";
+      const title = document.createElement("b");
+      title.textContent = "No field notes decoded";
+      const note = document.createElement("p");
+      note.textContent = "Mine deeper, open strange caches, and watch for places where the contracts stop making sense.";
+      row.append(title, note);
+      ui.storyList.appendChild(row);
+      return;
+    }
+
+    ML.LORE_NOTES.forEach((entry) => {
+      const known = Boolean(sim.lore?.notes?.[entry.id]);
+      const row = document.createElement("div");
+      row.className = "story-row " + (known ? "unlocked" : "locked");
+      const title = document.createElement("b");
+      title.textContent = known ? entry.title : "Unread field note";
+      const tag = document.createElement("small");
+      tag.textContent = known ? entry.tag : "Hidden";
+      const body = document.createElement("p");
+      body.textContent = known ? entry.body : "Keep exploring the depths, caches, bosses, and old wayfires.";
+      row.append(title, tag, body);
+      ui.storyList.appendChild(row);
+    });
+  }
+
   function renderAll(sim) {
     const scene = ML.sceneRef;
     renderStatus(sim, scene?.player, scene?.playerLight ? scene.playerLight() : 1);
@@ -475,6 +534,8 @@
     renderRecall(scene);
     updateCraftReady(sim);
     renderAchievements(sim);
+    renderMystery(sim);
+    renderStory(sim);
     renderCamp(sim);
     renderCraft(sim);
   }
@@ -484,6 +545,8 @@
     if (achievement.item) return (sim.inventory?.[achievement.item] || 0) >= achievement.at;
     if (achievement.prop) return (sim[achievement.prop] || 0) >= achievement.at;
     if (achievement.flag) return Boolean(sim[achievement.flag]);
+    if (achievement.loreNotes) return (ML.LoreSystem?.knownNotes?.(sim).length || 0) >= achievement.loreNotes;
+    if (achievement.loreGoal) return Boolean(sim.lore?.completedGoals?.[achievement.loreGoal]);
     return false;
   }
 
@@ -788,6 +851,8 @@
     renderBossBar,
     renderRecall,
     renderCamp,
+    renderMystery,
+    renderStory,
     renderAll,
     minimap,
     toggleMinimap,

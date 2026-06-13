@@ -446,6 +446,78 @@ canvas:focus { outline: none; }
   color: rgba(242, 232, 211, 0.72);
 }
 
+.mystery-panel {
+  width: min(330px, calc(100vw - 24px));
+  padding: 8px 10px;
+  border: 1px solid rgba(153, 114, 230, 0.34);
+  border-radius: var(--radius);
+  background: rgba(17, 14, 24, 0.91);
+  box-shadow: 0 0 0 1px rgba(153, 114, 230, 0.12), 0 12px 32px var(--shadow);
+}
+
+.mystery-panel.hidden { display: none; }
+
+.mystery-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mystery-head span {
+  flex: 0 0 auto;
+  color: #d8b6ff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.mystery-head strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.15;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mystery-progress {
+  height: 5px;
+  margin-top: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.11);
+}
+
+.mystery-progress > i {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6fe3d2, #d8b6ff, #f0c75e);
+  transition: width 160ms linear;
+}
+
+.mystery-panel small,
+.mystery-panel em {
+  display: block;
+  overflow: hidden;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mystery-panel.complete {
+  border-color: rgba(216, 182, 255, 0.72);
+  box-shadow: 0 0 0 2px rgba(216, 182, 255, 0.16), 0 12px 32px var(--shadow);
+}
+
 .top-right {
   position: absolute;
   right: max(12px, env(safe-area-inset-right));
@@ -1117,6 +1189,11 @@ canvas:focus { outline: none; }
   padding: 10px 12px 12px;
 }
 
+.story-panel {
+  border-top: 1px solid var(--line);
+  padding: 10px 12px 12px;
+}
+
 .achievement-head {
   display: flex;
   justify-content: space-between;
@@ -1134,6 +1211,14 @@ canvas:focus { outline: none; }
 
 .achievement-list {
   max-height: 180px;
+  display: grid;
+  gap: 6px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.story-list {
+  max-height: 230px;
   display: grid;
   gap: 6px;
   overflow: auto;
@@ -1176,6 +1261,45 @@ canvas:focus { outline: none; }
   color: var(--muted);
   font-size: 10px;
   line-height: 1.2;
+}
+
+.story-row {
+  padding: 8px;
+  border: 1px solid rgba(216, 182, 255, 0.16);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.story-row b {
+  display: block;
+  color: #d8b6ff;
+  font-size: 12px;
+  line-height: 1.15;
+}
+
+.story-row small {
+  display: block;
+  margin-top: 2px;
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.story-row p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.32;
+}
+
+.story-row.locked b {
+  color: rgba(247, 235, 208, 0.62);
+}
+
+.story-row.locked p {
+  color: rgba(191, 178, 151, 0.62);
 }
 
 .achievement-row.locked {
@@ -1323,11 +1447,19 @@ canvas:focus { outline: none; }
     width: min(190px, calc(100vw - 24px));
     padding: 7px;
   }
+  .mystery-panel {
+    width: min(190px, calc(100vw - 24px));
+    padding: 7px;
+  }
   .objective-head {
     display: grid;
     gap: 3px;
   }
   .biome-head {
+    display: grid;
+    gap: 3px;
+  }
+  .mystery-head {
     display: grid;
     gap: 3px;
   }
@@ -1339,13 +1471,20 @@ canvas:focus { outline: none; }
     font-size: 12px;
     text-align: left;
   }
+  .mystery-head strong {
+    font-size: 12px;
+    text-align: left;
+  }
   .objective-panel small,
   .objective-panel em,
   .biome-panel small,
-  .biome-panel em {
+  .biome-panel em,
+  .mystery-panel small,
+  .mystery-panel em {
     font-size: 10px;
   }
   .biome-panel em { display: none; }
+  .mystery-panel em { display: none; }
   .hotbar { grid-auto-columns: 50px; }
   .slot { width: 50px; height: 50px; }
   .craft-drawer {
