@@ -46,6 +46,10 @@
       this.enemyClock = 0;
       this.activeMobIds = new Set();
       this.pendingMobSpawns = new Map();
+      this.noiseEvents = [];
+      this.noiseSeq = 1;
+      this.nextNoiseEventAt = 0;
+      this.lastNoiseToastAt = 0;
       this.lastDay = Math.floor(this.sim.time / DAY_LENGTH) + 1;
       this.lastHudUpdate = 0;
       this.lastMapUpdate = 0;
@@ -493,6 +497,7 @@
         this.attack();
       }
 
+      this.updateNoiseEvents();
       this.updateEnemies(dt);
       this.updateCaveEvents(dt);
       this.updateLampBattery(dt);
@@ -1023,6 +1028,11 @@
       this.peakFallVy = 0;
       if (peak > 320) {
         this.emitDust(this.player.x, this.player.y + 15, peak > 700 ? 7 : 4);
+        this.emitNoise("landing", this.player.x, this.player.y + 12, {
+          radius: TILE * (peak > 700 ? 8.5 : 5.5),
+          intensity: peak > 700 ? 1.2 : 0.55,
+          ttl: 3600
+        });
         this.tweens.add({
           targets: this.player,
           scaleY: 0.84,
@@ -1068,6 +1078,38 @@
         this.triggerObserverMoment("pain");
       }
       if (this.sim.health <= 0) this.failDescent(cause);
+    }
+
+    emitNoise(kind, x = this.player?.x || 0, y = this.player?.y || 0, options = {}) {
+      if (!ML.MobSensors?.emitNoise) return null;
+      const muffled = this.sim.noiseMuffle && options.source !== "enemy";
+      const tuned = muffled
+        ? Object.assign({}, options, {
+          radius: (options.radius || TILE * 7) * 0.62,
+          intensity: (options.intensity ?? 1) * 0.58
+        })
+        : options;
+      return ML.MobSensors.emitNoise(this, kind, x, y, tuned);
+    }
+
+    updateNoiseEvents() {
+      const now = this.time.now || 0;
+      ML.MobSensors?.prune?.(this, now);
+      const pressure = ML.MobSensors?.pressure?.(this, now) || 0;
+      this.noisePressure = pressure;
+      if (pressure < 2.8 || this.depthMeters() < 18 || this.caveEvent || this.hasActiveBoss()) return;
+      if (now < this.nextNoiseEventAt) return;
+      this.nextNoiseEventAt = now + 46000;
+      this.sim.stats.noiseLures = (this.sim.stats.noiseLures || 0) + 1;
+      this.floatText(this.player.x - 28, this.player.y - 46, "TOO LOUD", "#d8b6ff");
+      if (now - this.lastNoiseToastAt > 9000) {
+        this.lastNoiseToastAt = now;
+        ML.showToast("The rock carries your noise. Something changes route.", 2600);
+      }
+      if (!this.startCaveEvent("swarm")) {
+        this.spawnEventSwarm();
+      }
+      this.checkAchievements();
     }
 
     updateSurvivalRegen(dt, onFloor, inLava) {
@@ -1141,14 +1183,8 @@
     // ---- Pointer helpers -----------------------------------------------------
 
     targetTile(pointer) {
-      const x = Math.floor(pointer.worldX / TILE);
-      const y = Math.floor(pointer.worldY / TILE);
-      const dx = x * TILE + TILE / 2 - this.player.x;
-      const dy = y * TILE + TILE / 2 - this.player.y;
-      if (Math.sqrt(dx * dx + dy * dy) > TILE * INTERACT_RANGE_TILES) return null;
-      if (x < 0 || y < 0 || x >= this.worldWidthTiles() || y >= this.worldHeightTiles()) return null;
-      if (!this.hasSightToTile(x, y)) return null;
-      return { x, y, tile: this.sim.tileAt(x, y) };
+      const result = ML.ActionRules.targetTile(this.sim, this.player, pointer.worldX, pointer.worldY, INTERACT_RANGE_TILES);
+      return result.ok ? { x: result.x, y: result.y, tile: result.tile, distance: result.distanceTiles } : null;
     }
 
     playerTilePoint() {
@@ -1159,34 +1195,20 @@
     }
 
     hasSightToTile(x, y) {
-      return this.hasSightBetweenTiles(this.playerTilePoint(), { x: x + 0.5, y: y + 0.5 });
+      return ML.ActionRules.hasLineOfSight(this.sim, this.playerTilePoint(), { x: x + 0.5, y: y + 0.5 });
     }
 
     hasSightBetweenWorld(ax, ay, bx, by) {
-      return this.hasSightBetweenTiles({ x: ax / TILE, y: ay / TILE }, { x: bx / TILE, y: by / TILE });
+      return ML.ActionRules.hasWorldLineOfSight(this.sim, ax, ay, bx, by);
     }
 
     hasSightToEnemy(enemy) {
       if (!enemy?.active) return false;
-      return this.hasSightBetweenWorld(this.player.x, this.player.y, enemy.x, enemy.y);
+      return ML.ActionRules.hasWorldLineOfSight(this.sim, this.player.x, this.player.y, enemy.x, enemy.y);
     }
 
     hasSightBetweenTiles(from, to) {
-      const distance = Math.hypot(to.x - from.x, to.y - from.y);
-      const steps = Math.max(2, Math.ceil(distance * 5));
-      const fromX = Math.floor(from.x);
-      const fromY = Math.floor(from.y);
-      const toX = Math.floor(to.x);
-      const toY = Math.floor(to.y);
-      for (let i = 1; i < steps; i += 1) {
-        const t = i / steps;
-        const tx = Math.floor(from.x + (to.x - from.x) * t);
-        const ty = Math.floor(from.y + (to.y - from.y) * t);
-        if ((tx === fromX && ty === fromY) || (tx === toX && ty === toY)) continue;
-        const tile = this.sim.tileAt(tx, ty);
-        if (tile !== AIR && BLOCKS[tile]?.solid && tile !== Tile.PLATFORM) return false;
-      }
-      return true;
+      return ML.ActionRules.hasLineOfSight(this.sim, from, to);
     }
 
     nearestTileObject(predicate, radius = INTERACT_RANGE_TILES) {
@@ -1579,8 +1601,9 @@
         this.mineTarget = null;
         return;
       }
-      const block = BLOCKS[target.tile];
-      if (!block || target.tile === Tile.BEDROCK || target.tile === Tile.LAVA) {
+      const rule = ML.ActionRules.canMineTile(this.sim, this.player, { ok: true, ...target }, this.sim.pickLevel);
+      const block = rule.block || BLOCKS[target.tile];
+      if (!rule.ok && (rule.reason === "unknown" || rule.reason === "bedrock" || rule.reason === "lava")) {
         this.targetLabel = block ? block.name : "Unknown";
         if (target.tile === Tile.BEDROCK && this.openAbyssSeam(target)) {
           this.mineTarget = null;
@@ -1591,7 +1614,7 @@
         this.mineTarget = null;
         return;
       }
-      if (block.camp) {
+      if (!rule.ok && rule.reason === "camp") {
         this.targetLabel = block.name;
         this.setAction("Camp point", 420);
         if (this.time.now - this.lastCampHintAt > 1500) {
@@ -1601,7 +1624,7 @@
         this.mineTarget = null;
         return;
       }
-      if (block.tier > this.sim.pickLevel) {
+      if (!rule.ok && rule.reason === "tier") {
         this.targetLabel = block.name;
         ML.showToast(`${block.name} needs ${PICKS[block.tier]?.name || "a better pick"}.`);
         ML.audio.play("denied");
@@ -1625,6 +1648,11 @@
         this.swingPickaxe(240);
         ML.audio.play("dig");
         this.emitBlockBurst(target.x, target.y, BLOCK_TINTS[target.tile] || 0xffffff, 2);
+        this.emitNoise("mining", target.x * TILE + TILE / 2, target.y * TILE + TILE / 2, {
+          radius: TILE * 6.5,
+          intensity: 0.48,
+          ttl: 3200
+        });
       }
       this.drawMiningTarget(target, this.mineProgress);
 
@@ -1757,6 +1785,13 @@
       }
 
       this.sim.stats.mined += 1;
+      if (!opts.batch) {
+        this.emitNoise("break", x * TILE + TILE / 2, y * TILE + TILE / 2, {
+          radius: TILE * 7.5,
+          intensity: 0.86,
+          ttl: 4200
+        });
+      }
       this.checkContract();
       this.checkAchievements();
       this.emitBlockBurst(x, y, BLOCK_TINTS[tile] || 0xffffff, opts.batch ? 3 : 6);
@@ -1776,6 +1811,11 @@
       this.emitBlockBurst(x, y, BLOCK_TINTS[Tile.CHEST] || 0xcaa258, 7);
       ML.minimap.paintTile(this.sim, x, y);
       this.setAction("Open cache", 900);
+      this.emitNoise("cache", x * TILE + TILE / 2, y * TILE + TILE / 2, {
+        radius: TILE * 4.5,
+        intensity: 0.42,
+        ttl: 2800
+      });
       this.lootChest(x, y);
       ML.renderAll(this.sim);
       this.saveGame();
@@ -1934,6 +1974,11 @@
     explode(cx, cy, radius) {
       this.cameras.main.shake(200, 0.011);
       ML.audio.play("explode");
+      this.emitNoise("blast", cx * TILE + TILE / 2, cy * TILE + TILE / 2, {
+        radius: TILE * (radius * 4.2),
+        intensity: 2.45,
+        ttl: 6200
+      });
       this.emitBlockBurst(cx, cy, 0xff9038, 14, 220);
       this.emitDust(cx * TILE + TILE / 2, cy * TILE + TILE / 2, 8);
 
@@ -1955,15 +2000,13 @@
       // The blast hurts everything close to it.
       const blastX = cx * TILE + TILE / 2;
       const blastY = cy * TILE + TILE / 2;
-      if (Phaser.Math.Distance.Between(this.player.x, this.player.y, blastX, blastY) < radius * TILE * 1.25
-        && this.hasSightBetweenWorld(blastX, blastY, this.player.x, this.player.y)) {
+      if (ML.ActionRules.canRadialAffect(this.sim, blastX, blastY, this.player.x, this.player.y, radius * TILE * 1.25).ok) {
         this.applyDamage(12, "blast");
         this.floatText(this.player.x - 10, this.player.y - 30, "-12", "#f08561");
       }
       this.enemies.getChildren().forEach((enemy) => {
         if (!enemy.active) return;
-        if (Phaser.Math.Distance.Between(enemy.x, enemy.y, blastX, blastY) < radius * TILE * 1.4) {
-          if (!this.hasSightBetweenWorld(blastX, blastY, enemy.x, enemy.y)) return;
+        if (ML.ActionRules.canRadialAffect(this.sim, blastX, blastY, enemy.x, enemy.y, radius * TILE * 1.4).ok) {
           this.damageEnemy(enemy, 6, blastX);
         }
       });
@@ -1981,6 +2024,11 @@
       this.nextAttackAt = now + 360;
       this.setAction("Attack", 700);
       this.swingPickaxe(360);
+      this.emitNoise("swing", this.player.x, this.player.y, {
+        radius: TILE * 4.5,
+        intensity: 0.34,
+        ttl: 2200
+      });
 
       const targets = this.findAttackTargets(pointer);
       this.sim.energy = clamp(this.sim.energy - (targets.length ? 6 : 3), 0, this.sim.maxEnergy);
@@ -2007,14 +2055,8 @@
       const aimed = pointer ? this.findEnemyAtPointer(pointer) : null;
       this.enemies.getChildren().forEach((enemy) => {
         if (!enemy.active) return;
-        if (!this.hasSightToEnemy(enemy)) return;
-        const dx = enemy.x - this.player.x;
-        const dy = Math.abs(enemy.y - this.player.y);
-        const distance = Math.hypot(dx, enemy.y - this.player.y);
-        const inFacingArc = Math.sign(dx || facing) === facing && dy <= 58 && distance <= 120;
-        const closeBody = distance <= 66;
-        const isAimed = aimed === enemy && distance <= 130;
-        if (inFacingArc || closeBody || isAimed) targets.push(enemy);
+        const rule = ML.ActionRules.canAttackEnemy(this.sim, this.player, enemy, { facing, aimed: aimed === enemy });
+        if (rule.ok) targets.push(enemy);
       });
       return targets;
     }
@@ -2037,6 +2079,11 @@
       });
       this.floatText(enemy.x - 10, enemy.y - 18, crit ? `CRIT -${damage}` : `-${damage}`, crit ? "#ffb347" : "#f5d77a");
       ML.audio.play("enemyHit");
+      this.emitNoise("hit", enemy.x, enemy.y, {
+        radius: TILE * 6,
+        intensity: crit ? 0.98 : 0.68,
+        ttl: 3400
+      });
 
       if (enemy.hp <= 0) {
         this.killEnemy(enemy);
@@ -2114,42 +2161,51 @@
 
     enemyInstinct(enemy, now = this.time.now) {
       if (enemy.nextThinkAt && now < enemy.nextThinkAt && enemy.intent) return enemy.intent;
-      const cfg = ENEMIES[enemy.kind] || {};
+      const sensor = ML.MobSensors?.sense?.(this, enemy, now) || null;
+      const cfg = sensor?.cfg || ENEMIES[enemy.kind] || {};
       const ai = cfg.ai || {};
-      const dx = this.player.x - enemy.x;
-      const dy = this.player.y - enemy.y;
-      const distance = Math.max(1, Math.hypot(dx, dy));
-      const dir = Math.sign(dx) || 1;
-      const localLight = this.lightLevelAt(enemy.x, enemy.y);
+      const dx = sensor?.dx ?? (this.player.x - enemy.x);
+      const dy = sensor?.dy ?? (this.player.y - enemy.y);
+      const distance = sensor?.targetDistance ?? Math.max(1, Math.hypot(dx, dy));
+      const playerDistance = sensor?.playerDistance ?? Math.max(1, Math.hypot(this.player.x - enemy.x, this.player.y - enemy.y));
+      const dir = sensor?.dir ?? (Math.sign(dx) || 1);
+      const localLight = sensor?.localLight ?? this.lightLevelAt(enemy.x, enemy.y);
       const hpRatio = clamp((enemy.hp || 1) / Math.max(1, enemy.maxHp || 1), 0, 1);
       const playerWeak = (this.sim.health / Math.max(1, this.sim.maxHealth) < 0.34)
         || (this.sim.energy / Math.max(1, this.sim.maxEnergy) < 0.24)
         || (this.shadowPressure || 0) > 58;
       const observed = this.isEnemyObserved(enemy);
+      const aware = Boolean(sensor?.canSeePlayer || sensor?.heardNoise || sensor?.hasMemory || cfg.boss || enemy.elite);
       let allies = 0;
       for (const other of this.enemies.getChildren()) {
         if (!other.active || other === enemy || other.kind !== enemy.kind) continue;
         if (Phaser.Math.Distance.Between(other.x, other.y, enemy.x, enemy.y) < 150) allies += 1;
       }
 
-      let mode = "press";
-      if (cfg.boss) {
-        mode = distance > 260 ? "guard" : playerWeak ? "pressure" : "press";
-      } else if (observed && !playerWeak && distance > 82 && distance < 360 && ["stalker", "ambusher", "guardian", "harrier"].includes(ai.mind)) {
+      let mode = aware ? "press" : "wait";
+      if (!aware) {
+        mode = ai.mind === "guardian" ? "guard" : "wait";
+      } else if (!sensor?.canSeePlayer && sensor?.heardNoise) {
+        mode = ai.mind === "ambusher" ? "wait" : "stalk";
+      } else if (!sensor?.canSeePlayer && sensor?.hasMemory) {
+        mode = "stalk";
+      } else if (cfg.boss) {
+        mode = playerDistance > 260 ? "guard" : playerWeak ? "pressure" : "press";
+      } else if (observed && !playerWeak && playerDistance > 82 && playerDistance < 360 && ["stalker", "ambusher", "guardian", "harrier"].includes(ai.mind)) {
         mode = "watch";
       } else if (hpRatio < 0.38 && (ai.courage || 0.5) < 0.75 && localLight > 0.34) {
         mode = "retreat";
       } else if (localLight > (0.48 + (ai.courage || 0.5) * 0.22) && (ai.lightFear || 0) > 0.28) {
         mode = "circle";
-      } else if (ai.mind === "ambusher" && distance > 125 && !playerWeak) {
+      } else if (ai.mind === "ambusher" && playerDistance > 125 && !playerWeak) {
         mode = "wait";
-      } else if (ai.mind === "guardian" && distance > 230) {
+      } else if (ai.mind === "guardian" && playerDistance > 230) {
         mode = "guard";
       } else if (playerWeak || allies >= 2 || enemy.elite || enemy.event) {
         mode = "pressure";
-      } else if (ai.mind === "stalker" && distance > 170) {
+      } else if (ai.mind === "stalker" && playerDistance > 170) {
         mode = "stalk";
-      } else if (ai.mind === "skittish" && (distance < 78 || localLight > 0.52)) {
+      } else if (ai.mind === "skittish" && (playerDistance < 78 || localLight > 0.52)) {
         mode = "retreat";
       }
 
@@ -2161,13 +2217,32 @@
         : mode === "watch" ? 0
         : mode === "retreat" ? 1.05
         : 1;
-      enemy.intent = { mode, dx, dy, dir, distance, localLight, hpRatio, playerWeak, allies, observed, speedMult };
+      enemy.intent = {
+        mode,
+        dx,
+        dy,
+        dir,
+        distance,
+        playerDistance,
+        localLight,
+        hpRatio,
+        playerWeak,
+        allies,
+        observed,
+        speedMult,
+        sensorReason: sensor?.reason || "direct",
+        canSeePlayer: Boolean(sensor?.canSeePlayer),
+        heardNoise: Boolean(sensor?.heardNoise),
+        targetX: sensor?.targetX ?? this.player.x,
+        targetY: sensor?.targetY ?? this.player.y
+      };
       enemy.nextThinkAt = now + Phaser.Math.Between(240, 420);
       if (enemy.lastIntentMode !== mode && now > (enemy.intentToastAt || 0)) {
         enemy.intentToastAt = now + 4200;
         enemy.lastIntentMode = mode;
-        if (mode === "pressure" && distance < 260) this.floatText(enemy.x - 18, enemy.y - 26, "HUNTS", "#f0c75e");
-        if (mode === "retreat" && distance < 220) this.floatText(enemy.x - 16, enemy.y - 24, "FLEES", "#9efff0");
+        if (mode === "stalk" && sensor?.heardNoise && playerDistance < 320) this.floatText(enemy.x - 18, enemy.y - 24, "HEARS", "#d8b6ff");
+        if (mode === "pressure" && playerDistance < 260) this.floatText(enemy.x - 18, enemy.y - 26, "HUNTS", "#f0c75e");
+        if (mode === "retreat" && playerDistance < 220) this.floatText(enemy.x - 16, enemy.y - 24, "FLEES", "#9efff0");
         if (mode === "watch") {
           this.floatText(enemy.x - 24, enemy.y - 28, "SEES", "#d8b6ff");
           this.triggerObserverMoment("mobStare", { enemy });
@@ -2198,11 +2273,19 @@
           enemy.setFlipX(intent.dx < 0);
           continue;
         }
+        if (intent.mode === "wait" && !ENEMIES[enemy.kind]?.boss) {
+          enemy.setVelocityX(0);
+          if (ENEMIES[enemy.kind]?.fly) enemy.setVelocityY(Math.sin(now / 180 + enemy.bobSeed) * 18);
+          enemy.setFlipX((intent.targetX ?? this.player.x) < enemy.x);
+          continue;
+        }
         switch (enemy.kind) {
           case "bat": {
             const orbit = intent.mode === "circle" ? Math.sin(now / 260 + enemy.bobSeed) * 90 : 0;
-            const dx = intent.mode === "retreat" ? -intent.dx + orbit : this.player.x + orbit - enemy.x;
-            const dy = intent.mode === "retreat" ? -intent.dy - 28 : this.player.y - 6 - enemy.y;
+            const targetX = intent.targetX ?? this.player.x;
+            const targetY = intent.targetY ?? this.player.y;
+            const dx = intent.mode === "retreat" ? -intent.dx + orbit : targetX + orbit - enemy.x;
+            const dy = intent.mode === "retreat" ? -intent.dy - 28 : targetY - 6 - enemy.y;
             const dist = Math.max(20, Math.hypot(dx, dy));
             enemy.setVelocityX((dx / dist) * speed);
             enemy.setVelocityY((dy / dist) * speed * 0.8 + Math.sin(now / 170 + enemy.bobSeed) * 46);
@@ -2285,9 +2368,14 @@
       this.cameras.main.shake(120, 0.006);
       this.emitDust(enemy.x, enemy.y + 20, 8);
       ML.audio.play("roar");
+      this.emitNoise("stomp", enemy.x, enemy.y, {
+        radius: TILE * 10,
+        intensity: 1.8,
+        ttl: 5200,
+        source: "enemy"
+      });
       this.floatText(enemy.x - 14, enemy.y - 38, "STOMP", "#ffb36a");
-      const distance = Phaser.Math.Distance.Between(enemy.x, enemy.y, this.player.x, this.player.y);
-      if (distance < 145 && this.hasSightBetweenWorld(enemy.x, enemy.y, this.player.x, this.player.y)) {
+      if (ML.ActionRules.canRadialAffect(this.sim, enemy.x, enemy.y, this.player.x, this.player.y, 145).ok) {
         const damage = this.sim.ward ? 5 : 8;
         this.applyDamage(damage, enemy.kind);
         this.player.setVelocityY(-260);

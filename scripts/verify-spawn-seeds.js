@@ -99,6 +99,11 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     sim.addItem("crystal", 2);
     sim.addItem("coin", 24);
     const recallCraft = sim.craft(recallRecipe);
+    const echoRecipe = window.ML.RECIPES.find((recipe) => recipe.id === "echoPadding");
+    sim.addItem("silk", 2);
+    sim.addItem("gel", 4);
+    sim.addItem("mushroom", 2);
+    const echoCraft = sim.craft(echoRecipe);
     const campService = window.ML.CAMP_SERVICES.find((service) => service.id === "torchCache");
     const restService = window.ML.CAMP_SERVICES.find((service) => service.id === "rest");
     sim.addItem("coin", 8);
@@ -148,6 +153,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     sim.inventory.crystal = 1;
     sim.stats.events = 3;
     sim.stats.enemies = 10;
+    sim.stats.noiseLures = 1;
     sim.stats.worldExpansions = 2;
     sim.stats.observerAnomalies = 4;
     sim.stats.heroThoughts = 1;
@@ -368,8 +374,36 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       const healthBeforeOpenShockwave = scene.sim.health;
       scene.bossShockwave(enemy);
       const healthAfterOpenShockwave = scene.sim.health;
+
+      buildArena(Tile.BEDROCK);
+      enemy.memory = {};
+      scene.noiseEvents = [];
+      scene.sim.noiseMuffle = false;
+      const noiseBefore = scene.noiseEvents.length;
+      const emittedNoise = scene.emitNoise?.("testNoise", scene.player.x, scene.player.y, {
+        radius: TILE * 9,
+        intensity: 1.8,
+        ttl: 5000
+      });
+      const noiseSensor = window.ML.MobSensors?.sense?.(scene, enemy, (scene.time?.now || 0) + 20);
+      const noisePressure = window.ML.MobSensors?.pressure?.(scene, (scene.time?.now || 0) + 20) || 0;
+      scene.noiseEvents = [];
+      scene.sim.noiseMuffle = true;
+      const muffledNoise = scene.emitNoise?.("testNoise", scene.player.x, scene.player.y, {
+        radius: TILE * 9,
+        intensity: 1.8,
+        ttl: 5000
+      });
+      const muffledPressure = window.ML.MobSensors?.pressure?.(scene, (scene.time?.now || 0) + 20) || 0;
+      scene.sim.noiseMuffle = false;
       combatLosCheck = {
         runtime: true,
+        actionRulesRuntime: typeof window.ML.ActionRules?.canAttackEnemy === "function"
+          && typeof window.ML.ActionRules?.targetTile === "function"
+          && typeof window.ML.ActionRules?.canRadialAffect === "function",
+        mobSensorsRuntime: typeof window.ML.MobSensors?.sense === "function"
+          && typeof window.ML.MobSensors?.emitNoise === "function"
+          && typeof window.ML.MobSensors?.pressure === "function",
         wallBlocksEnemyPointer: blockedPointer === null,
         wallAttackTargets: blockedTargets.length,
         wallAttackDamage: hpBeforeBlockedAttack - hpAfterBlockedAttack,
@@ -382,7 +416,15 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
         wallBlastDamage: hpBeforeBlockedBlast - hpAfterBlockedBlast,
         openBlastDamage: hpBeforeOpenBlast - hpAfterOpenBlast,
         wallShockwaveDamage: healthBeforeBlockedShockwave - healthAfterBlockedShockwave,
-        openShockwaveDamage: healthBeforeOpenShockwave - healthAfterOpenShockwave
+        openShockwaveDamage: healthBeforeOpenShockwave - healthAfterOpenShockwave,
+        noiseEventsAdded: scene.noiseEvents.length - noiseBefore,
+        noiseHeardBehindWall: Boolean(noiseSensor?.heardNoise),
+        noiseSeenBehindWall: Boolean(noiseSensor?.canSeePlayer),
+        noiseMemoryReason: noiseSensor?.reason || null,
+        noisePressure,
+        emittedNoise: Boolean(emittedNoise),
+        muffledNoise: Boolean(muffledNoise),
+        muffledPressure
       };
       enemy.destroy();
       scene.player.setPosition(previousPlayer.x, previousPlayer.y);
@@ -517,6 +559,8 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       sceneDiscoveryStatDelta: sceneDiscoveryAfter - sceneDiscoveryBefore,
       sceneDiscoveryTargetKind: sceneDiscoveryTarget?.kind || null,
       combatLosRuntime: Boolean(combatLosCheck?.runtime),
+      actionRulesRuntime: Boolean(combatLosCheck?.actionRulesRuntime),
+      mobSensorsRuntime: Boolean(combatLosCheck?.mobSensorsRuntime),
       wallBlocksEnemyPointer: Boolean(combatLosCheck?.wallBlocksEnemyPointer),
       wallAttackTargets: combatLosCheck?.wallAttackTargets ?? -1,
       wallAttackDamage: combatLosCheck?.wallAttackDamage ?? -1,
@@ -530,6 +574,14 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       openBlastDamage: combatLosCheck?.openBlastDamage ?? 0,
       wallShockwaveDamage: combatLosCheck?.wallShockwaveDamage ?? -1,
       openShockwaveDamage: combatLosCheck?.openShockwaveDamage ?? 0,
+      noiseEventsAdded: combatLosCheck?.noiseEventsAdded ?? 0,
+      noiseHeardBehindWall: Boolean(combatLosCheck?.noiseHeardBehindWall),
+      noiseSeenBehindWall: Boolean(combatLosCheck?.noiseSeenBehindWall),
+      noiseMemoryReason: combatLosCheck?.noiseMemoryReason || null,
+      noisePressure: combatLosCheck?.noisePressure || 0,
+      emittedNoise: Boolean(combatLosCheck?.emittedNoise),
+      muffledNoise: Boolean(combatLosCheck?.muffledNoise),
+      muffledPressure: combatLosCheck?.muffledPressure || 0,
       watcherTraceDelta: traceAfter - traceBefore,
       watcherTraceActive: Boolean(trace),
       watcherSpotDistance: watcherSpot ? Math.round(Math.hypot(watcherSpot.x - scene.player.x, watcherSpot.y - scene.player.y)) : 0,
@@ -553,6 +605,8 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       craftable: craftable.length,
       craftResult,
       recallCraft,
+      echoCraft,
+      echoPadding: Boolean(sim.noiseMuffle),
       recallCharm: sim.recallCharm,
       campResult,
       restResult,
@@ -636,7 +690,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
   await browser.close();
 
   const progressionFailed = progressionCheck.recipes < 34
-    || progressionCheck.achievements < 47
+    || progressionCheck.achievements < 49
     || progressionCheck.contracts < 5
     || progressionCheck.caveEvents < 4
     || progressionCheck.eventVariantCount < 4
@@ -656,6 +710,8 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.storyPhaseIndex < 4
     || progressionCheck.loreDecoded < 10
     || !progressionCheck.loreGoalDone
+    || !progressionCheck.echoCraft?.ok
+    || !progressionCheck.echoPadding
     || !progressionCheck.watcherTexture
     || !progressionCheck.watcherTraceTexture
     || !progressionCheck.mobWakeTexture
@@ -736,6 +792,8 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.sceneDiscoveryStatDelta < 1
     || progressionCheck.sceneDiscoveryTargetKind !== "surfaceDiscovery"
     || !progressionCheck.combatLosRuntime
+    || !progressionCheck.actionRulesRuntime
+    || !progressionCheck.mobSensorsRuntime
     || !progressionCheck.wallBlocksEnemyPointer
     || progressionCheck.wallAttackTargets !== 0
     || progressionCheck.wallAttackDamage !== 0
@@ -749,6 +807,15 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.openBlastDamage <= 0
     || progressionCheck.wallShockwaveDamage !== 0
     || progressionCheck.openShockwaveDamage <= 0
+    || !progressionCheck.emittedNoise
+    || progressionCheck.noiseEventsAdded < 1
+    || !progressionCheck.noiseHeardBehindWall
+    || progressionCheck.noiseSeenBehindWall
+    || progressionCheck.noiseMemoryReason !== "noise"
+    || progressionCheck.noisePressure <= 0
+    || !progressionCheck.muffledNoise
+    || progressionCheck.muffledPressure <= 0
+    || progressionCheck.muffledPressure >= progressionCheck.noisePressure
     || !progressionCheck.watcherTraceActive
     || progressionCheck.watcherTraceDelta < 1
     || progressionCheck.watcherSpotDistance < 245

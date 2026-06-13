@@ -28,6 +28,7 @@
       this.maxEnergy = this.maxEnergy || 100;
       this.ward = Boolean(this.ward);
       this.fallGuard = Boolean(this.fallGuard);
+      this.noiseMuffle = Boolean(this.noiseMuffle);
       this.speedBoost = Boolean(this.speedBoost);
       this.regenBoost = Boolean(this.regenBoost);
       this.treasureSense = Boolean(this.treasureSense);
@@ -56,6 +57,8 @@
         worldExpansions: 0,
         horizontalExpansions: 0,
         surfaceDiscoveries: 0,
+        noiseEvents: 0,
+        noiseLures: 0,
         observerAnomalies: 0,
         heroThoughts: 0,
         mobAwareness: 0,
@@ -101,6 +104,7 @@
       this.lampCharge = this.maxLampCharge();
       this.ward = false;
       this.fallGuard = false;
+      this.noiseMuffle = false;
       this.speedBoost = false;
       this.regenBoost = false;
       this.treasureSense = false;
@@ -139,6 +143,8 @@
         worldExpansions: 0,
         horizontalExpansions: 0,
         surfaceDiscoveries: 0,
+        noiseEvents: 0,
+        noiseLures: 0,
         observerAnomalies: 0,
         heroThoughts: 0,
         mobAwareness: 0,
@@ -1570,6 +1576,7 @@
         lampCharge: this.lampCharge,
         ward: this.ward,
         fallGuard: this.fallGuard,
+        noiseMuffle: this.noiseMuffle,
         speedBoost: this.speedBoost,
         regenBoost: this.regenBoost,
         treasureSense: this.treasureSense,
@@ -1690,6 +1697,7 @@
       if (recipe.boots && this.boots) return { ok: false, message: "Already built." };
       if (recipe.ward && this.ward) return { ok: false, message: "Already built." };
       if (recipe.fallGuard && this.fallGuard) return { ok: false, message: "Already built." };
+      if (recipe.noiseMuffle && this.noiseMuffle) return { ok: false, message: "Already built." };
       if (recipe.speedBoost && this.speedBoost) return { ok: false, message: "Already built." };
       if (recipe.regenBoost && this.regenBoost) return { ok: false, message: "Already built." };
       if (recipe.treasureSense && this.treasureSense) return { ok: false, message: "Already built." };
@@ -1714,6 +1722,7 @@
       if (recipe.boots) this.boots = true;
       if (recipe.ward) this.ward = true;
       if (recipe.fallGuard) this.fallGuard = true;
+      if (recipe.noiseMuffle) this.noiseMuffle = true;
       if (recipe.speedBoost) this.speedBoost = true;
       if (recipe.regenBoost) this.regenBoost = true;
       if (recipe.treasureSense) this.treasureSense = true;

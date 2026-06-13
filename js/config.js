@@ -339,6 +339,7 @@ window.ML = window.ML || {};
     { id: "minerLamp", cat: "tools", name: "Miner lamp", cost: { copper: 4, coal: 6 }, lamp: 1, note: "Wider personal light, but it drains lamp cells" },
     { id: "beaconLamp", cat: "tools", name: "Beacon lamp", cost: { gold: 6, crystal: 4 }, lamp: 2, note: "Huge light cone with a hungry battery draw" },
     { id: "reinforcedSoles", cat: "tools", name: "Reinforced soles", cost: { iron: 4, silk: 2, gel: 2 }, fallGuard: true, note: "Cuts fall damage and hard landing shock" },
+    { id: "echoPadding", cat: "tools", name: "Echo padding", cost: { silk: 2, gel: 4, mushroom: 2 }, noiseMuffle: true, note: "Softens mining, landing, and cache noise so mobs track you less through walls" },
     { id: "sprintGreaves", cat: "tools", name: "Sprint greaves", cost: { fang: 1, iron: 5, silk: 2 }, speedBoost: true, note: "Higher walk and sprint speed" },
 
     { id: "blastSatchel", cat: "relics", name: "Blast satchel", cost: { silk: 3, copper: 4, charge: 2 }, blastRadius: 0.65, note: "Charges carve a wider pocket" },
@@ -406,6 +407,7 @@ window.ML = window.ML || {};
     { id: "batteryStock", name: "Cells Packed", note: "Carry three spare lamp cells.", item: "battery", at: 3 },
     { id: "abyssEdge", name: "Abyss Edge", note: "Craft the Abyss edge.", prop: "blade", at: 4 },
     { id: "boots", name: "Second Step", note: "Craft Cave boots.", flag: "boots" },
+    { id: "quietStep", name: "Quiet Step", note: "Craft Echo padding to make the mine hear less of you.", flag: "noiseMuffle" },
     { id: "ward", name: "Darkness Warden", note: "Craft the Shadow ward.", flag: "ward" },
     { id: "titanHeart", name: "Titan Heart", note: "Raise max health to 150.", prop: "maxHealth", at: 150 },
     { id: "forgeHarness", name: "Overcharged", note: "Raise max energy to 160.", prop: "maxEnergy", at: 160 },
@@ -413,6 +415,7 @@ window.ML = window.ML || {};
     { id: "contractFive", name: "Guild Regular", note: "Complete five expedition contracts.", stat: "contracts", at: 5 },
     { id: "eventOne", name: "Living Mine", note: "Encounter your first cave event.", stat: "events", at: 1 },
     { id: "eventFive", name: "Faultline Veteran", note: "Encounter five cave events.", stat: "events", at: 5 },
+    { id: "noiseLure", name: "The Rock Heard", note: "Make enough noise for the mine to answer with movement.", stat: "noiseLures", at: 1 },
     { id: "recallOne", name: "Back to Camp", note: "Recall safely to a campfire anchor.", stat: "recalls", at: 1 },
     { id: "recallCharm", name: "Anchor Spark", note: "Craft the Recall charm.", flag: "recallCharm" },
     { id: "campFirst", name: "Camp Ledger", note: "Use a campfire service.", stat: "campUses", at: 1 },

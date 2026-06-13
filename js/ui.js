@@ -242,6 +242,7 @@
     if (sim.boots) gear.push("Cave boots");
     if (sim.speedBoost) gear.push("Greaves");
     if (sim.fallGuard) gear.push("Soles");
+    if (sim.noiseMuffle) gear.push("Echo padding");
     if (sim.ward) gear.push("Ward");
     if (sim.recallCharm) gear.push("Recall");
     ui.gearText.textContent = gear.join(" · ");
@@ -393,6 +394,7 @@
     if (recipe.boots) return !sim.boots;
     if (recipe.ward) return !sim.ward;
     if (recipe.fallGuard) return !sim.fallGuard;
+    if (recipe.noiseMuffle) return !sim.noiseMuffle;
     if (recipe.speedBoost) return !sim.speedBoost;
     if (recipe.regenBoost) return !sim.regenBoost;
     if (recipe.treasureSense) return !sim.treasureSense;
