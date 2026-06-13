@@ -723,6 +723,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       externalFangTexture: Boolean(window.ML.ExternalAssets?.itemTextureKey?.("fang", scene)),
       externalCacheOpenTexture: Boolean(window.ML.ExternalAssets?.cacheTextureKey?.("rare", true, scene)),
       externalCacheTextureCount: externalReport.cacheTextureCount || 0,
+      externalCacheAnimationFrameCount: externalReport.cacheAnimationFrameCount || 0,
       externalDerivedCssIconCount: externalReport.derivedCssIconCount || 0,
       externalSheetIconCount: externalReport.sheetIconCount || 0,
       externalSlicedIconCount,
@@ -1040,6 +1041,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || !progressionCheck.externalFangTexture
     || !progressionCheck.externalCacheOpenTexture
     || progressionCheck.externalCacheTextureCount < 8
+    || progressionCheck.externalCacheAnimationFrameCount < 4
     || progressionCheck.externalDerivedCssIconCount < 20
     || progressionCheck.externalSheetIconCount < 4
     || progressionCheck.externalSlicedIconCount < 4

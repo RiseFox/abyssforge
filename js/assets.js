@@ -71,6 +71,13 @@
     barrel: { closed: "asset-cache-barrel", open: "asset-cache-barrel-open", sourceClosed: "barrel", sourceOpen: "barrel" }
   };
 
+  const CACHE_OPEN_FRAMES = Object.freeze([
+    { key: "asset-cache-open-frame-0", rect: [0, 0, 16, 16] },
+    { key: "asset-cache-open-frame-1", rect: [16, 0, 16, 16] },
+    { key: "asset-cache-open-frame-2", rect: [0, 16, 16, 16] },
+    { key: "asset-cache-open-frame-3", rect: [16, 16, 16, 16] }
+  ]);
+
   const state = {
     requested: 0,
     loaded: new Set(),
@@ -225,6 +232,16 @@
       });
     }
 
+    for (const frame of CACHE_OPEN_FRAMES) {
+      createNormalizedTexture(scene, frame.key, "chestStrip", 32, 32, {
+        pad: 3,
+        scale: 1.28,
+        alignY: 0.66,
+        sourceRect: frame.rect,
+        shadow: true
+      });
+    }
+
     for (const item of Object.keys(ITEM_ICON_ASSETS)) {
       const spec = itemSpec(item);
       const targetKey = RUNTIME_ITEM_TEXTURES[item];
@@ -255,6 +272,12 @@
     return scene?.textures?.exists?.(key) ? key : null;
   }
 
+  function cacheOpenFrameKeys(scene = ML.sceneRef) {
+    return CACHE_OPEN_FRAMES
+      .map((frame) => frame.key)
+      .filter((key) => scene?.textures?.exists?.(key));
+  }
+
   function report(scene = ML.sceneRef) {
     const requestedKeys = Object.keys(RAW_ASSETS).map(rawKey);
     const loaded = requestedKeys.filter((key) => scene?.textures?.exists?.(key));
@@ -267,6 +290,7 @@
     const cacheTextureCount = Object.values(CACHE_TEXTURES)
       .flatMap((cache) => [cache.closed, cache.open])
       .filter((key) => scene?.textures?.exists?.(key)).length;
+    const cacheAnimationFrameCount = cacheOpenFrameKeys(scene).length;
     return {
       requested: requestedKeys.length,
       loaded: loaded.length,
@@ -275,6 +299,7 @@
       derivedCssIconCount,
       sheetIconCount,
       cacheTextureCount,
+      cacheAnimationFrameCount,
       missing: [...state.missing].filter((key) => !scene?.textures?.exists?.(key))
     };
   }
@@ -284,6 +309,7 @@
     ITEM_ICON_ASSETS,
     RUNTIME_ITEM_TEXTURES,
     CACHE_TEXTURES,
+    CACHE_OPEN_FRAMES,
     preload,
     drawRawInto,
     createNormalizedTexture,
@@ -291,6 +317,7 @@
     itemTextureKey,
     itemCssUrl,
     cacheTextureKey,
+    cacheOpenFrameKeys,
     report
   };
 })();

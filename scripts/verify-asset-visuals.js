@@ -56,6 +56,9 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
       slicedItems.map((item) => [item, window.ML.ExternalAssets.itemCssUrl(item)])
     );
     const slicedIconUnique = new Set(Object.values(slicedIconUrls).filter(Boolean)).size;
+    if (firstChest) {
+      scene.playCacheOpenFx(firstChest.x, firstChest.y, { kind: "chest", label: "Test cache" });
+    }
 
     return {
       firstChest,
@@ -63,6 +66,7 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
       visibleCacheProps: scene.visibleChestPropCount,
       firstTexture,
       recoverFxCount: recoverFx.length,
+      cacheOpenAnimation: scene.lastCacheOpenAnimation || null,
       slicedIconUrls,
       slicedIconUnique,
       externalAssets: window.ML.ExternalAssets.report(scene)
@@ -77,14 +81,16 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
 
   const failures = [];
   if ((snapshot.externalAssets?.loaded || 0) < 25) failures.push("expected 25 external assets loaded");
-  if ((snapshot.externalAssets?.normalized || 0) < 39) failures.push("expected 39 normalized runtime textures");
+  if ((snapshot.externalAssets?.normalized || 0) < 43) failures.push("expected 43 normalized runtime textures");
   if ((snapshot.externalAssets?.cacheTextureCount || 0) < 8) failures.push("expected 8 cache textures");
+  if ((snapshot.externalAssets?.cacheAnimationFrameCount || 0) < 4) failures.push("expected 4 cache animation frames");
   if ((snapshot.externalAssets?.itemTextureCount || 0) < 20) failures.push("expected expanded item textures");
   if ((snapshot.externalAssets?.derivedCssIconCount || 0) < 20) failures.push("expected derived CSS item icons");
   if ((snapshot.externalAssets?.sheetIconCount || 0) < 4) failures.push("expected sliced sheet item icons");
   if (!snapshot.firstChest) failures.push("expected at least one cache tile in the generated world");
   if ((snapshot.visibleCacheProps || 0) < 1) failures.push("expected visible cache prop overlay");
   if (!snapshot.firstTexture?.startsWith("asset-cache-")) failures.push("expected normalized cache texture in scene");
+  if ((snapshot.cacheOpenAnimation?.frameCount || 0) < 4) failures.push("expected cache opening animation to run");
   if ((snapshot.recoverFxCount || 0) < 1) failures.push("expected recover heart FX");
   if ((snapshot.slicedIconUnique || 0) < 4) failures.push("expected unique sliced lore/supply icons");
 

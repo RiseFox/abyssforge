@@ -101,6 +101,7 @@ const MAX_HUD_NODES = Number(process.env.MAX_HUD_NODES || 1200);
   if ((snapshot.canvasCount || 0) < 2) failures.push("expected game canvas and minimap canvas");
   if ((snapshot.externalAssets?.loaded || 0) < 25) failures.push("expected runtime external assets to be loaded");
   if ((snapshot.externalAssets?.cacheTextureCount || 0) < 8) failures.push("expected external cache textures to be normalized");
+  if ((snapshot.externalAssets?.cacheAnimationFrameCount || 0) < 4) failures.push("expected cache opening animation frames");
   if ((snapshot.externalAssets?.itemTextureCount || 0) < 20) failures.push("expected expanded external item texture set");
   if ((snapshot.externalAssets?.derivedCssIconCount || 0) < 20) failures.push("expected derived CSS item icons");
   if ((snapshot.externalAssets?.sheetIconCount || 0) < 4) failures.push("expected sliced sheet item icons");

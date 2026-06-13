@@ -39,7 +39,7 @@ AbyssForge primarily uses code-generated pixel textures. External assets are tre
 - License evidence: source page lists CC0.
 - Local files: `assets/external/opengameart/chest/`
 - Use case: chest-opening strip reference for richer cache/chest interactions.
-- Runtime status: candidate only; needs frame extraction and animation timing before direct in-game use.
+- Runtime status: approved for normalized 4-frame cache-opening animation in `js/assets.js` and `js/scene.js`.
 
 ## Approved Future Sources
 

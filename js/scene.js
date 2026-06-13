@@ -2004,6 +2004,11 @@
     }
 
     playCacheOpenFx(x, y, profile = null) {
+      const frameKeys = ML.ExternalAssets?.cacheOpenFrameKeys?.(this) || [];
+      if ((profile?.kind || "chest") === "chest" && frameKeys.length >= 4) {
+        this.playCacheOpenAnimationFx(x, y, profile, frameKeys);
+        return;
+      }
       const key = ML.ExternalAssets?.cacheTextureKey?.(profile?.kind || "chest", true, this);
       if (!key) return;
       const sprite = this.add.image(x * TILE + TILE / 2, y * TILE + TILE / 2, key)
@@ -2017,6 +2022,36 @@
         scale: 1.24,
         alpha: 0,
         duration: profile?.secret ? 760 : 560,
+        ease: "Sine.easeOut",
+        onComplete: () => sprite.destroy()
+      });
+    }
+
+    playCacheOpenAnimationFx(x, y, profile = null, frameKeys = []) {
+      const sprite = this.add.image(x * TILE + TILE / 2, y * TILE + TILE / 2, frameKeys[0])
+        .setDepth(42)
+        .setScale(0.98)
+        .setAlpha(0.98);
+      if (profile?.tint) sprite.setTint(profile.tint);
+      this.lastCacheOpenAnimation = {
+        x,
+        y,
+        kind: profile?.kind || "chest",
+        frameCount: frameKeys.length,
+        startedAt: this.time.now || 0
+      };
+      frameKeys.forEach((frameKey, index) => {
+        this.time.delayedCall(index * 82, () => {
+          if (sprite.active) sprite.setTexture(frameKey);
+        });
+      });
+      this.tweens.add({
+        targets: sprite,
+        y: sprite.y - 8,
+        scale: 1.26,
+        alpha: 0,
+        delay: 82 * Math.max(0, frameKeys.length - 1),
+        duration: 420,
         ease: "Sine.easeOut",
         onComplete: () => sprite.destroy()
       });
