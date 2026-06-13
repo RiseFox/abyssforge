@@ -78,7 +78,9 @@ const MAX_HUD_NODES = Number(process.env.MAX_HUD_NODES || 1200);
       topLeft: rectOf(topLeft),
       topRight: rectOf(topRight),
       hotbar: rectOf(hotbar),
-      perfChip: rectOf(perfChip)
+      perfChip: rectOf(perfChip),
+      externalAssets: window.ML.ExternalAssets?.report?.() || null,
+      assetIconCount: document.querySelectorAll(".asset-icon").length
     };
   });
 
@@ -95,6 +97,8 @@ const MAX_HUD_NODES = Number(process.env.MAX_HUD_NODES || 1200);
   if ((snapshot.hudNodes || 0) > MAX_HUD_NODES) failures.push(`hud nodes ${snapshot.hudNodes} > ${MAX_HUD_NODES}`);
   if (!snapshot.minimapHidden) failures.push("minimap should be closed by default");
   if ((snapshot.canvasCount || 0) < 2) failures.push("expected game canvas and minimap canvas");
+  if ((snapshot.externalAssets?.loaded || 0) < 18) failures.push("expected runtime external assets to be loaded");
+  if ((snapshot.assetIconCount || 0) < 1) failures.push("expected at least one external asset icon in the HUD");
 
   if (failures.length) {
     console.error(`HUD performance check failed: ${failures.join("; ")}`);

@@ -28,6 +28,7 @@ The player should always have a practical reason to continue - a better pick, a 
 | Cave events | 4 event families |
 | Enemy archetypes | 7 mob/boss types |
 | Hidden lore | 19 notes, 8 goals |
+| External asset layer | 25 packed CC0 image assets, 17 normalized runtime textures |
 
 ## Game Pillars
 
@@ -112,6 +113,7 @@ AbyssForge now uses a dedicated **WorldGen Director** instead of scattering ever
 - **Mining and placement:** blocks, ladders, platforms, torches, charges, glow caps, and usable kits.
 - **Crafting progression:** recipe visibility opens through discovery, not a full catalog dump on spawn.
 - **Backpack and quick belt:** the bottom bar is immediate access; the backpack is the larger material memory.
+- **Controlled asset pipeline:** the base style stays canvas-first, while approved CC0 sprites are packed into a local runtime bundle, normalized into item, chest, and mob textures, and checked by hash before use.
 - **Contextual loot:** surface, road, grove, lowland, village, watcher, cave, fungal, iron, crystal, abyss, and secret chest tables.
 - **Campfires:** rest, heal, recover energy, set respawn anchors, and support recall routes.
 - **Contracts:** short expedition orders provide direction and rewards.
@@ -157,12 +159,18 @@ Regenerate product README screenshots from the current build:
 npm run docs:screenshots
 ```
 
+Refresh external CC0 candidates, rebuild the local runtime bundle, and audit licenses/hashes:
+
+```bash
+npm run assets:all
+```
+
 ## Verification
 
 `npm test` runs two Playwright-backed gates:
 
-- `test:spawn` checks 300 generated seeds for spawn support, starter camp reachability, mob ecology rules, progression disclosure, chest interaction, vertical expansion, horizontal expansion, POI behavior, light/lamp behavior, lore hooks, Watcher runtime, combat line of sight, and worldgen director content.
-- `test:perf` boots the game at 1280x720 and checks browser errors, RAF FPS, average frame time, p95 frame time, HUD DOM weight, minimap default state, and canvas availability.
+- `test:spawn` checks 300 generated seeds for spawn support, starter camp reachability, mob ecology rules, progression disclosure, chest interaction, vertical expansion, horizontal expansion, POI behavior, light/lamp behavior, lore hooks, Watcher runtime, combat line of sight, worldgen director content, and external asset runtime normalization.
+- `test:perf` boots the game at 1280x720 and checks browser errors, RAF FPS, average frame time, p95 frame time, HUD DOM weight, minimap default state, canvas availability, and that the HUD has loaded external item icons.
 
 ## Project Shape
 
@@ -176,9 +184,12 @@ npm run docs:screenshots
 - `js/poi.js` - surface and underground discoveries, readable marks, and placement rules.
 - `js/camp.js` - campfire proximity, anchors, respawn, recall, and services.
 - `js/audio.js` - Web Audio SFX and situational music modes.
+- `js/asset-data.js` - generated local data-URL bundle for audited external images.
+- `js/assets.js` - external asset preload, normalization, runtime texture, and item icon bridge.
 - `js/textures.js` - generated pixel textures and sprites.
 - `js/ui.js` - DOM HUD, crafting drawer, backpack, minimap, toasts, achievements, story, and death panel.
 - `js/scene.js` - Phaser gameplay scene, movement, mining, combat, lighting, hazards, events, camera, and runtime interactions.
+- `scripts/build-external-asset-data.js` - packs audited external images into `js/asset-data.js` for local HTML and Playwright runs.
 - `scripts/verify-spawn-seeds.js` - spawn, systems, worldgen, and progression quality gate.
 - `scripts/verify-hud-performance.js` - HUD and frame-time smoke gate.
 - `scripts/capture-readme-images.js` - repeatable screenshot capture for README images.

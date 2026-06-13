@@ -621,8 +621,13 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const packVisible = Boolean(window.ML.ui?.packDrawer && !window.ML.ui.packDrawer.classList.contains("hidden"));
     const packChips = window.ML.ui?.packGrid?.children?.length || 0;
     const packSummary = window.ML.ui?.packSummary?.textContent || "";
+    const externalKitPackIcon = Boolean(window.ML.ui?.packGrid?.querySelector?.(".item-kit .mini-icon.asset-icon"));
     scene?.togglePack?.(false);
     const packClosed = Boolean(window.ML.ui?.packDrawer?.classList.contains("hidden"));
+    const externalReport = window.ML.ExternalAssets?.report?.(scene) || {};
+    const externalRuntimeKeys = ["bat", "slime", "crawler", "asset-item-coin", "asset-item-crystal", "asset-item-kit"]
+      .filter((key) => scene?.textures?.exists?.(key)).length;
+    const externalKitHotbarIcon = Boolean(document.querySelector('.slot[data-item="kit"] .slot-icon.asset-icon'));
     return {
       recipes: window.ML.RECIPES.length,
       progressionRuntime: typeof window.ML.Progression?.isItemKnown === "function" && typeof window.ML.Progression?.recipeVisible === "function",
@@ -685,6 +690,12 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       watcherTexture: Boolean(scene?.textures?.exists?.("watcher")),
       watcherTraceTexture: Boolean(scene?.textures?.exists?.("watcherTrace")),
       mobWakeTexture: Boolean(scene?.textures?.exists?.("mobWake")),
+      externalAssetDataCount: Object.keys(window.ML.EXTERNAL_ASSET_DATA || {}).length,
+      externalAssetReport: externalReport,
+      externalRuntimeKeys,
+      externalCoinTexture: Boolean(window.ML.ExternalAssets?.itemTextureKey?.("coin", scene)),
+      externalKitHotbarIcon,
+      externalKitPackIcon,
       watcherRuntime: typeof scene?.spawnWatcherSighting === "function" && typeof scene?.updateShadowPressure === "function" && typeof scene?.dismissWatcher === "function" && typeof scene?.leaveWatcherTrace === "function",
       mobWakeRuntime: typeof scene?.mobWakeInfo === "function" && typeof scene?.queueMobMaterialize === "function" && typeof scene?.updatePendingMobSpawns === "function" && typeof scene?.cancelPendingMobSpawn === "function",
       smartMobRuntime: typeof scene?.enemyInstinct === "function",
@@ -984,6 +995,14 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || !progressionCheck.watcherTexture
     || !progressionCheck.watcherTraceTexture
     || !progressionCheck.mobWakeTexture
+    || progressionCheck.externalAssetDataCount < 20
+    || (progressionCheck.externalAssetReport?.loaded || 0) < 18
+    || (progressionCheck.externalAssetReport?.normalized || 0) < 8
+    || (progressionCheck.externalAssetReport?.itemTextureCount || 0) < 8
+    || progressionCheck.externalRuntimeKeys < 5
+    || !progressionCheck.externalCoinTexture
+    || !progressionCheck.externalKitHotbarIcon
+    || !progressionCheck.externalKitPackIcon
     || !progressionCheck.watcherRuntime
     || !progressionCheck.mobWakeRuntime
     || !progressionCheck.smartMobRuntime

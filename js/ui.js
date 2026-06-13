@@ -249,6 +249,20 @@
     return parts.join(" ");
   }
 
+  function setItemIcon(el, baseClass, item, known = true) {
+    if (!el) return;
+    const assetUrl = known ? ML.ExternalAssets?.itemCssUrl?.(item) || "" : "";
+    const cls = known
+      ? `${baseClass} ${ITEM_META[item].cls}${assetUrl ? " asset-icon" : ""}`
+      : `${baseClass} icon-unknown`;
+    if (el.className !== cls) el.className = cls;
+    if (assetUrl) {
+      el.style.setProperty("--asset-icon-url", `url("${assetUrl}")`);
+    } else {
+      el.style.removeProperty("--asset-icon-url");
+    }
+  }
+
   function showToast(message, ms = 2000) {
     if (!ui.toast) return;
     ui.toast.textContent = message;
@@ -431,7 +445,7 @@
       key.textContent = String(index + 1);
 
       const icon = document.createElement("i");
-      icon.className = "slot-icon " + ITEM_META[item].cls;
+      setItemIcon(icon, "slot-icon", item, true);
 
       const count = document.createElement("span");
       count.className = "slot-count";
@@ -464,8 +478,7 @@
       if (slot.className !== cls) slot.className = cls;
       slot.style.setProperty("--item-accent", known ? itemAccent(item) : "#746f62");
       setTitle(slot, known ? `${ITEM_META[item].name}: ${amount}` : `Slot ${index + 1}: undiscovered`);
-      const iconClass = known ? `slot-icon ${ITEM_META[item].cls}` : "slot-icon icon-unknown";
-      if (icon.className !== iconClass) icon.className = iconClass;
+      setItemIcon(icon, "slot-icon", item, known);
       setText(type, known ? (ITEM_KIND[item] || "Item") : "Locked");
       setClass(slot, "selected", sim.selected === index);
       const label = known ? String(amount) : "";
@@ -677,7 +690,7 @@
     chip.className = `inv-chip ${itemStateClass(item, amount)}`;
     chip.style.setProperty("--item-accent", itemAccent(item));
     const icon = document.createElement("i");
-    icon.className = "mini-icon " + ITEM_META[item].cls;
+    setItemIcon(icon, "mini-icon", item, true);
     const label = document.createElement("span");
     const name = document.createElement("strong");
     name.textContent = ITEM_META[item].name;

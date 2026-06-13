@@ -1,4 +1,4 @@
-// AbyssForge v2 - every texture is generated on canvas at boot. No image assets.
+// AbyssForge v2 - canvas-first textures with audited external candidates.
 (() => {
   "use strict";
   const ML = window.ML;
@@ -165,6 +165,12 @@
     ctx.strokeStyle = "rgba(0,0,0,0.4)";
     ctx.lineWidth = 2;
     ctx.strokeRect(chestX + 1, 3, TILE - 2, TILE - 4);
+    ML.ExternalAssets?.drawRawInto?.(scene, ctx, "chestClosed", chestX, 0, TILE, TILE, {
+      pad: 4,
+      scale: 1.18,
+      alignY: 0.66,
+      shadow: true
+    });
 
     const campX = Tile.CAMPFIRE * TILE;
     ctx.clearRect(campX, 0, TILE, TILE);
@@ -348,6 +354,8 @@
     slc.fillRect(10, 10, 3, 3);
     slc.fillRect(17, 10, 3, 3);
     slime.refresh();
+
+    ML.ExternalAssets?.makeRuntimeTextures?.(scene);
 
     const golem = freshCanvasTexture("golem", 32, 36);
     const gc = golem.getContext();

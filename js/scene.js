@@ -32,6 +32,10 @@
       this.sim = new ML.MinerSim();
     }
 
+    preload() {
+      ML.ExternalAssets?.preload?.(this);
+    }
+
     create() {
       ML.sceneRef = this;
       // Reset per-run state here: create() runs again after scene.restart().
@@ -3345,10 +3349,11 @@
     }
 
     spawnPickupFx(tileX, tileY, item) {
-      const icon = this.add.image(tileX * TILE + 16, tileY * TILE + 10, "spark")
-        .setTint(ITEM_META[item]?.tint || 0xffffff)
-        .setScale(1.5)
+      const textureKey = ML.ExternalAssets?.itemTextureKey?.(item, this) || "spark";
+      const icon = this.add.image(tileX * TILE + 16, tileY * TILE + 10, textureKey)
+        .setScale(textureKey === "spark" ? 1.5 : 1.15)
         .setDepth(40);
+      if (textureKey === "spark") icon.setTint(ITEM_META[item]?.tint || 0xffffff);
       const sx = icon.x;
       const sy = icon.y;
       // Home in on the player's live position, not where they stood at break time.
@@ -3363,7 +3368,8 @@
             Phaser.Math.Linear(sx, this.player.x, t),
             Phaser.Math.Linear(sy, this.player.y - 8, t)
           );
-          icon.setScale(1.5 - 0.9 * t);
+          const startScale = textureKey === "spark" ? 1.5 : 1.15;
+          icon.setScale(startScale - (textureKey === "spark" ? 0.9 : 0.62) * t);
         },
         onComplete: () => {
           icon.destroy();
