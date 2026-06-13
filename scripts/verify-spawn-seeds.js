@@ -130,9 +130,14 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       horizonSteps.push({
         direction,
         surface: result?.surfaceDiscoveries || 0,
-        underground: result?.undergroundDiscoveries || 0
+        underground: result?.undergroundDiscoveries || 0,
+        setpieces: result?.surfaceSetpieces || 0,
+        region: result?.surfaceRegion || null
       });
     }
+    const directorLoot = window.ML.WorldGenDirector?.rollChestLoot?.(horizonSim, horizonSim.spawn.x, horizonSim.spawn.y, { rand: () => 0.2 }) || null;
+    const directorLootItemsValid = Boolean(directorLoot?.loot)
+      && Object.keys(directorLoot.loot).every((item) => window.ML.ITEM_META[item]);
     const terrainCheck = {
       starterMaxFlat: Math.max(...terrainSamples.map((entry) => entry.maxFlat)),
       starterSurfaceSigns: Math.max(...terrainSamples.map((entry) => entry.surfaceMarks.signs)),
@@ -140,17 +145,22 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       horizonMaxFlat: maxFlatRun(horizonSim.surface),
       firstPairSurfaceDiscoveries: horizonSteps.slice(0, 2).reduce((sum, entry) => sum + entry.surface, 0),
       horizonSurfaceDiscoveries: horizonSim.surfaceDiscoveries.filter((entry) => entry.scope !== "underground").length,
-      horizonUndergroundDiscoveries: horizonSim.surfaceDiscoveries.filter((entry) => entry.scope === "underground").length
+      horizonUndergroundDiscoveries: horizonSim.surfaceDiscoveries.filter((entry) => entry.scope === "underground").length,
+      horizonSetpieces: horizonSteps.reduce((sum, entry) => sum + entry.setpieces, 0),
+      horizonRegions: new Set(horizonSteps.map((entry) => entry.region).filter(Boolean)).size,
+      directorLootItemsValid
     };
     const fresh = new window.ML.MinerSim();
     fresh.newWorld(7919);
     const itemCatalogSize = Object.keys(window.ML.ITEM_META || {}).length;
-    const newMaterialItems = ["amber", "quartz", "ember", "voidglass", "mapScrap", "clockwork", "mirrorShard", "strangeKey"];
+    const newMaterialItems = ["amber", "quartz", "ember", "voidglass", "mapScrap", "clockwork", "mirrorShard", "strangeKey", "oldCompass", "sealedLetter", "watcherToken"];
     const newMaterialsPresent = newMaterialItems.filter((item) => window.ML.ITEM_META[item]).length;
     const surpriseLootCount = (window.ML.CHEST_SURPRISES || []).length;
     const surpriseLootItemsValid = (window.ML.CHEST_SURPRISES || []).every((entry) => entry.item && window.ML.ITEM_META[entry.item]);
     const newRecipeIds = ["amberLanterns", "emberCharges", "clockworkRegulator", "mirrorCache", "keyedRelic", "voidglassEdge", "quartzCells", "surveyCache", "emberRation"];
     const newRecipesPresent = newRecipeIds.filter((id) => window.ML.RECIPES.some((recipe) => recipe.id === id)).length;
+    const directorRecipeIds = ["compassRoute", "sealedOrder", "watcherCharm"];
+    const directorRecipesPresent = directorRecipeIds.filter((id) => window.ML.RECIPES.some((recipe) => recipe.id === id)).length;
     const newOreTiles = [window.ML.Tile.AMBER, window.ML.Tile.QUARTZ, window.ML.Tile.EMBER, window.ML.Tile.VOIDGLASS].filter((tile) => Number.isFinite(tile));
     const newOreTilesInWorld = newOreTiles.reduce((sum, tile) => sum + fresh.world.reduce((rows, row) => rows + row.filter((cell) => cell === tile).length, 0), 0);
     const starterKnownItems = window.ML.Progression?.inventoryItems?.(fresh, { includeEmpty: true }).length || itemCatalogSize;
@@ -621,8 +631,13 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       surpriseLootCount,
       surpriseLootItemsValid,
       newRecipesPresent,
+      directorRecipesPresent,
       newOreTiles: newOreTiles.length,
       newOreTilesInWorld,
+      worldgenDirector: Boolean(window.ML.WorldGenDirector?.surfaceRegionAt && window.ML.WorldGenDirector?.decorateSurfaceRegion && window.ML.WorldGenDirector?.rollChestLoot),
+      surfaceRegionCount: (window.ML.SURFACE_REGIONS || []).length,
+      chestTableCount: Object.keys(window.ML.CHEST_TABLES || {}).length,
+      directorLootItemsValid: terrainCheck.directorLootItemsValid,
       terrainStarterMaxFlat: terrainCheck.starterMaxFlat,
       terrainStarterSurfaceSigns: terrainCheck.starterSurfaceSigns,
       terrainStarterSurfaceCamps: terrainCheck.starterSurfaceCamps,
@@ -630,6 +645,8 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       terrainFirstPairSurfaceDiscoveries: terrainCheck.firstPairSurfaceDiscoveries,
       terrainHorizonSurfaceDiscoveries: terrainCheck.horizonSurfaceDiscoveries,
       terrainHorizonUndergroundDiscoveries: terrainCheck.horizonUndergroundDiscoveries,
+      terrainHorizonSetpieces: terrainCheck.horizonSetpieces,
+      terrainHorizonRegions: terrainCheck.horizonRegions,
       starterKnownItems,
       starterCraftVisible,
       starterCraftReady,
@@ -918,8 +935,13 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.surpriseLootCount < 8
     || !progressionCheck.surpriseLootItemsValid
     || progressionCheck.newRecipesPresent < 9
+    || progressionCheck.directorRecipesPresent < 3
     || progressionCheck.newOreTiles < 4
     || progressionCheck.newOreTilesInWorld < 12
+    || !progressionCheck.worldgenDirector
+    || progressionCheck.surfaceRegionCount < 6
+    || progressionCheck.chestTableCount < 10
+    || !progressionCheck.directorLootItemsValid
     || progressionCheck.terrainStarterMaxFlat > 12
     || progressionCheck.terrainStarterSurfaceSigns > 0
     || progressionCheck.terrainStarterSurfaceCamps > 1
@@ -928,6 +950,8 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.terrainHorizonSurfaceDiscoveries < 1
     || progressionCheck.terrainHorizonSurfaceDiscoveries > 3
     || progressionCheck.terrainHorizonUndergroundDiscoveries < 6
+    || progressionCheck.terrainHorizonSetpieces < 1
+    || progressionCheck.terrainHorizonRegions < 2
     || !progressionCheck.regulatorCraft?.ok
     || !progressionCheck.regulatorEfficiency
     || progressionCheck.regulatorLampAfter <= progressionCheck.plainLampAfter

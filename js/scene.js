@@ -1925,46 +1925,19 @@
     lootChest(x, y) {
       const depth = Math.max(0, y - (this.sim.surface[x] || 24));
       const secret = this.sim.secretAt(x, y);
-      const loot = { coal: 2 + Math.floor(Math.random() * 3), coin: 4 + Math.floor(Math.random() * 7) };
-      const extras = [
-        () => { loot.torch = (loot.torch || 0) + 2 + Math.floor(Math.random() * 2); },
-        () => { loot.ladder = (loot.ladder || 0) + 2 + Math.floor(Math.random() * 2); },
-        () => { loot.charge = (loot.charge || 0) + 1 + Math.floor(Math.random() * 2); },
-        () => { loot.battery = (loot.battery || 0) + 1 + (depth > 120 && Math.random() < 0.45 ? 1 : 0); },
-        () => { loot.mushroom = (loot.mushroom || 0) + 2; },
-        () => { if (Math.random() < 0.35) loot.kit = (loot.kit || 0) + 1; },
-        () => { loot.gel = (loot.gel || 0) + 2 + Math.floor(Math.random() * 3); },
-        () => { if (depth > 100) loot.gold = (loot.gold || 0) + 1 + Math.floor(Math.random() * 2); },
-        () => { if (depth > 140 && Math.random() < 0.5) loot.crystal = (loot.crystal || 0) + 1; }
-      ];
-      for (let i = 0; i < (secret ? 5 : 3); i += 1) {
-        extras[Math.floor(Math.random() * extras.length)]();
-      }
-      for (const entry of ML.CHEST_SURPRISES || []) {
-        if (depth < (entry.minDepth || 0)) continue;
-        const chance = (entry.chance || 0)
-          + (secret ? (entry.secretBonus || 0) : 0)
-          + (this.sim.lootBonus ? (entry.lootBonus || 0.025) : 0);
-        if (Math.random() >= chance) continue;
-        const min = Math.max(1, entry.min || 1);
-        const max = Math.max(min, entry.max || min);
-        const count = min + Math.floor(Math.random() * (max - min + 1));
-        loot[entry.item] = (loot[entry.item] || 0) + count;
-      }
+      const rolled = ML.WorldGenDirector?.rollChestLoot?.(this.sim, x, y, { secret, rand: Math.random }) || null;
+      const loot = rolled?.loot || { coal: 2 + Math.floor(Math.random() * 3), coin: 4 + Math.floor(Math.random() * 7) };
       if (secret) {
         this.sim.markSecretOpened(secret);
         this.checkLore("secret", { secret });
-        loot.coin = (loot.coin || 0) + 10 + secret.tier * 6;
-        loot.relic = (loot.relic || 0) + secret.tier;
-        loot.silk = (loot.silk || 0) + 1 + secret.tier;
-        loot.battery = (loot.battery || 0) + 1 + Math.floor(secret.tier / 2);
+        loot.coin = (loot.coin || 0) + 6 + secret.tier * 4;
+        loot.relic = (loot.relic || 0) + Math.max(1, secret.tier - 1);
         if (secret.tier >= 2) loot.gold = (loot.gold || 0) + 2;
         if (secret.tier >= 3) {
           loot.crystal = (loot.crystal || 0) + 2;
           loot.obsidian = (loot.obsidian || 0) + 2;
         }
       }
-      if (this.sim.lootBonus) loot.coin = (loot.coin || 0) + 6 + Math.floor(Math.random() * 8);
       const parts = [];
       for (const [item, n] of Object.entries(loot)) {
         if (!n) continue;
@@ -1973,8 +1946,9 @@
         this.spawnPickupFx(x, y, item);
       }
       ML.audio.play(secret ? "secret" : "chest");
-      this.floatText(x * TILE, y * TILE - 6, secret ? "Secret cache!" : "Supplies!", secret ? "#d8b6ff" : "#ffe49a");
-      ML.showToast(`${secret ? "Secret cache" : "Chest"}: ${parts.join(", ")}.`, 3600);
+      const label = secret ? "Secret cache" : rolled?.label || "Chest";
+      this.floatText(x * TILE, y * TILE - 6, `${label}!`, secret ? "#d8b6ff" : "#ffe49a");
+      ML.showToast(`${label}: ${parts.join(", ")}.`, 3600);
       this.sim.stats.chests += 1;
       this.checkContract();
       this.checkAchievements();
@@ -2828,6 +2802,8 @@
         const y = surfaceY + 16 + Math.floor(Math.random() * Math.max(1, height - surfaceY - 24));
         if (Math.abs(x - px) < 40 && Math.abs(y - py) < 26) continue;
         if (Math.abs(x - this.sim.shaft.x) <= 10 && y <= this.sim.shaft.y + 24) continue;
+        const budget = ML.WorldGenDirector?.spawnBudgetFor?.(this.sim, x, y, { repopulate: true }) || { density: 0.04 };
+        if (Math.random() >= Math.min(0.5, budget.density * 4.5)) continue;
         const picked = this.sim.pickMobForSpot(x, y, Math.random, { natural: true });
         if (!picked) continue;
         this.sim.addMob(x, picked.y, picked.kind);

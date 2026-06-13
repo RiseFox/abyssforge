@@ -106,13 +106,17 @@
   }
 
   function surfaceTitle(type, side) {
+    const directed = ML.WorldGenDirector?.surfaceTitle?.(type, side, null);
+    if (directed) return directed;
     const sideName = side === "left" ? "western" : "eastern";
     if (type === "waypost") return `${sideName} waypost`;
     if (type === "hamlet") return `silent ${sideName} hamlet`;
     return `${sideName} road sign`;
   }
 
-  function surfaceMessage(type, side, distance, rand) {
+  function surfaceMessage(type, side, distance, rand, region = null) {
+    const directed = ML.WorldGenDirector?.surfaceMessage?.(type, side, distance, rand, region);
+    if (directed) return directed;
     const sideName = side === "left" ? "western" : "eastern";
     if (type === "waypost") {
       return `The ${sideName} waypost still has warm ash. Someone crossed ${distance} tiles from the shaft and did not return underground.`;
@@ -135,7 +139,7 @@
     return Number.isFinite(low) && Number.isFinite(high) ? high - low : 99;
   }
 
-  function placeSurfaceSign(sim, x, type, title, message, rand = Math.random) {
+  function placeSurfaceSign(sim, x, type, title, message, rand = Math.random, region = null) {
     x = clamp(Math.floor(x), 2, Math.max(2, widthOf(sim) - 3));
     const floorY = sim.surfaceFloorY?.(x) ?? sim.surface?.[x] ?? 24;
     const y = floorY - 1;
@@ -146,7 +150,7 @@
       type,
       title,
       message,
-      label: type === "hamlet" ? "SILENT HAMLET" : type === "waypost" ? "WAYPOST" : "ROAD MARK",
+      label: ML.WorldGenDirector?.surfaceLabel?.(type, region) || (type === "hamlet" ? "SILENT HAMLET" : type === "waypost" ? "WAYPOST" : "ROAD MARK"),
       x,
       y,
       source: "surface",
@@ -154,18 +158,20 @@
     });
   }
 
-  function addSurfaceDiscovery(sim, type, x, side, rand = Math.random) {
+  function addSurfaceDiscovery(sim, type, x, side, rand = Math.random, region = null) {
     const origin = sim.shaft?.x || sim.spawn?.x || Math.floor(widthOf(sim) / 2);
     const distance = Math.max(0, Math.abs(x - origin));
     const discovery = placeSurfaceSign(
       sim,
       x,
       type,
-      surfaceTitle(type, side),
-      surfaceMessage(type, side, distance, rand),
-      rand
+      ML.WorldGenDirector?.surfaceTitle?.(type, side, region) || surfaceTitle(type, side),
+      surfaceMessage(type, side, distance, rand, region),
+      rand,
+      region
     );
     if (discovery) discovery.distance = distance;
+    if (discovery && region?.id) discovery.surfaceRegion = region.id;
     return discovery;
   }
 
@@ -209,7 +215,9 @@
     const maxX = clamp(regionEnd - 6, 3, width - 4);
     const discoveries = [];
     const span = Math.max(1, maxX - minX);
-    if (!shouldPlaceSurfaceLandmark(sim, minX, maxX, side, rand)) return discoveries;
+    const plan = ML.WorldGenDirector?.surfaceLandmarkPlan?.(sim, minX, maxX, side, rand) || null;
+    if (ML.WorldGenDirector && !plan) return discoveries;
+    if (!ML.WorldGenDirector && !shouldPlaceSurfaceLandmark(sim, minX, maxX, side, rand)) return discoveries;
     const candidates = [];
     for (let tries = 0; tries < 160; tries += 1) {
       const x = minX + Math.floor(rand() * span);
@@ -223,21 +231,23 @@
     if (!candidates.length) return discoveries;
 
     const primary = candidates[Math.floor(rand() * candidates.length)];
-    const roll = rand();
-    if (roll < 0.045 && candidates.length > 4 && primary.roughness <= 3) {
+    const structure = plan?.structure || null;
+    if (structure === "hamlet" && candidates.length > 4 && primary.roughness <= 3) {
       sim.flattenSurfaceRange?.(primary.x - 8, primary.x - 2, primary.y);
       sim.flattenSurfaceRange?.(primary.x + 2, primary.x + 8, primary.y);
       sim.buildSurfaceShelter?.(primary.x - 5, primary.y, rand);
       sim.buildSurfaceShelter?.(primary.x + 6, primary.y, rand);
       if (rand() < 0.24) setTile(sim, primary.x, primary.y - 1, Tile.CAMPFIRE);
-      discoveries.push(addSurfaceDiscovery(sim, "hamlet", primary.x - 9, side, rand));
-    } else if (roll < 0.18 && primary.roughness <= 4) {
+      discoveries.push(addSurfaceDiscovery(sim, plan?.type || "hamlet", primary.x - 9, side, rand, plan?.region));
+    } else if ((structure === "waypost" || structure === "cache") && primary.roughness <= 4) {
       sim.flattenSurfaceRange?.(primary.x - 2, primary.x + 3, primary.y);
       if (rand() < 0.14) setTile(sim, primary.x + 2, primary.y - 1, Tile.CAMPFIRE);
       setTile(sim, primary.x - 2, primary.y - 1, Tile.CHEST);
-      discoveries.push(addSurfaceDiscovery(sim, "waypost", primary.x, side, rand));
+      sim.registerChestTag?.(primary.x - 2, primary.y - 1, { type: plan?.region?.loot || "road", surfaceRegion: plan?.region?.id || null });
+      discoveries.push(addSurfaceDiscovery(sim, plan?.type || "waypost", primary.x, side, rand, plan?.region));
     } else {
-      discoveries.push(addSurfaceDiscovery(sim, "sign", primary.x, side, rand));
+      const type = plan?.type || "sign";
+      discoveries.push(addSurfaceDiscovery(sim, type, primary.x, side, rand, plan?.region));
     }
     for (const discovery of discoveries) {
       if (discovery) discovery.expansion = sim.stats?.horizontalExpansions || 0;

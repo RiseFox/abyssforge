@@ -1760,6 +1760,9 @@ canvas:focus { outline: none; }
 .icon-clockwork { background: radial-gradient(circle, #fff2a8 0 12%, #c88b2d 13% 52%, #2a1b0d 53%); }
 .icon-mirror-shard { background: linear-gradient(135deg, #f3fffb 0 32%, #86d8e4 33% 66%, #1a3840 67%); }
 .icon-strange-key { background: linear-gradient(135deg, #b48cff, #2b1740 68%); }
+.icon-old-compass { background: radial-gradient(circle at 50% 50%, #f2d98d 0 18%, #8b5f2b 19% 56%, #21180d 57%); }
+.icon-sealed-letter { background: linear-gradient(135deg, #e4d0a6 0 54%, #8a5a35 55% 58%, #3b2517 59%); }
+.icon-watcher-token { background: radial-gradient(circle at 50% 48%, #d8b6ff 0 13%, #4c3568 14% 58%, #0d0815 59%); }
 .icon-torch { background: linear-gradient(#f2c35f 0 38%, #684323 38% 100%); }
 .icon-battery { background: linear-gradient(135deg, #16302b, #071715 76%); }
 .icon-ladder { background: repeating-linear-gradient(90deg, #53351d 0 8px, #b37236 8px 13px); }
@@ -1847,6 +1850,53 @@ canvas:focus { outline: none; }
   height: 9px;
   border: 3px solid #d8b6ff;
   border-radius: 50%;
+}
+
+.icon-old-compass::before {
+  left: 7px;
+  top: 7px;
+  width: 17px;
+  height: 17px;
+  border: 2px solid rgba(255, 244, 195, 0.68);
+  border-radius: 50%;
+}
+
+.icon-old-compass::after {
+  left: 14px;
+  top: 8px;
+  width: 4px;
+  height: 16px;
+  background: #e94c3d;
+  transform: rotate(38deg);
+}
+
+.icon-sealed-letter::before {
+  left: 7px;
+  top: 9px;
+  width: 18px;
+  height: 13px;
+  border: 1px solid rgba(67, 39, 21, 0.62);
+  background:
+    linear-gradient(35deg, transparent 0 46%, rgba(67, 39, 21, 0.4) 47% 52%, transparent 53%),
+    linear-gradient(-35deg, transparent 0 46%, rgba(67, 39, 21, 0.34) 47% 52%, transparent 53%);
+}
+
+.icon-watcher-token::before {
+  left: 7px;
+  top: 11px;
+  width: 18px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #d8b6ff;
+}
+
+.icon-watcher-token::after {
+  left: 14px;
+  top: 13px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #f6f1ff;
 }
 
 /* Layered pixel-art item redraws shared by the hotbar and inventory ledger. */

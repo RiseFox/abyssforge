@@ -72,11 +72,12 @@
       this.craftedRecipes = Object.assign({}, this.craftedRecipes || {});
       this.discoveredRecipes = Object.assign({}, this.discoveredRecipes || {});
       this.campAnchors = Object.assign({}, this.campAnchors || {});
+      this.chestTags = Object.assign({}, this.chestTags || {});
       this.lastCamp = this.lastCamp && Number.isFinite(this.lastCamp.x) && Number.isFinite(this.lastCamp.y)
         ? { x: this.lastCamp.x, y: this.lastCamp.y }
         : null;
       this.inventory = Object.assign(
-        { dirt: 0, stone: 0, wood: 0, coal: 0, copper: 0, iron: 0, gold: 0, crystal: 0, obsidian: 0, amber: 0, quartz: 0, ember: 0, voidglass: 0, gel: 0, coin: 0, silk: 0, fang: 0, relic: 0, core: 0, mapScrap: 0, clockwork: 0, mirrorShard: 0, strangeKey: 0, torch: 0, battery: 0, ladder: 0, platform: 0, charge: 0, mushroom: 0, kit: 0 },
+        { dirt: 0, stone: 0, wood: 0, coal: 0, copper: 0, iron: 0, gold: 0, crystal: 0, obsidian: 0, amber: 0, quartz: 0, ember: 0, voidglass: 0, gel: 0, coin: 0, silk: 0, fang: 0, relic: 0, core: 0, mapScrap: 0, clockwork: 0, mirrorShard: 0, strangeKey: 0, oldCompass: 0, sealedLetter: 0, watcherToken: 0, torch: 0, battery: 0, ladder: 0, platform: 0, charge: 0, mushroom: 0, kit: 0 },
         this.inventory || {}
       );
       ML.Progression?.ensureKnownItems?.(this);
@@ -122,7 +123,7 @@
       this.inventory = {
         dirt: 0, stone: 0, wood: 8, coal: 2, copper: 0, iron: 0, gold: 0, crystal: 0,
         obsidian: 0, amber: 0, quartz: 0, ember: 0, voidglass: 0, gel: 0, coin: 0, silk: 0, fang: 0, relic: 0, core: 0,
-        mapScrap: 0, clockwork: 0, mirrorShard: 0, strangeKey: 0,
+        mapScrap: 0, clockwork: 0, mirrorShard: 0, strangeKey: 0, oldCompass: 0, sealedLetter: 0, watcherToken: 0,
         torch: 6, battery: 1, ladder: 8, platform: 0, charge: 0, mushroom: 0, kit: 1
       };
       this.knownItems = {};
@@ -167,6 +168,7 @@
       this.lore = ML.LoreSystem?.initialState?.() || { awakened: false, notes: {}, lastNoteId: null, completedGoals: {} };
       this.craftedRecipes = {};
       this.campAnchors = {};
+      this.chestTags = generated.chestTags || {};
       this.lastCamp = null;
       this.contractSeq = 0;
       this.contract = null;
@@ -183,6 +185,10 @@
       const rand = mulberry32(seed);
       const world = Array.from({ length: WORLD_H }, () => Array(WORLD_W).fill(AIR));
       const surface = [];
+      const chestTags = {};
+      const tagChest = (x, y, tag = {}) => {
+        chestTags[`${Math.floor(x)}:${Math.floor(y)}`] = Object.assign({}, tag);
+      };
 
       // Terrain column by column with broad landform segments and local erosion
       // instead of a flat random walk.
@@ -309,6 +315,7 @@
           if (campX === chestX || campX === lampX) campX = roomX + 2;
           if (campX === chestX || campX === lampX) campX = roomX + 1;
           world[floorY][chestX] = Tile.CHEST;
+          tagChest(chestX, floorY, { type: "secret", secretId: id, tier });
           world[floorY][lampX] = tier >= 2 ? Tile.MUSHROOM : Tile.TORCH;
           const hasCamp = !bossKind && secretCampBudget > 0 && rand() < (tier >= 3 ? 0.08 : tier >= 2 ? 0.12 : 0.16);
           if (hasCamp) {
@@ -388,6 +395,7 @@
         if (Math.abs(x - sx) < 10) continue;
         if (world[y][x] === AIR && solidAt(x, y + 1)) {
           world[y][x] = Tile.CHEST;
+          tagChest(x, y, { type: "cave", stratum: this.stratumAt?.(x, y, surface)?.id || "cave" });
           chests += 1;
         }
       }
@@ -398,7 +406,8 @@
         if (Math.abs(x - sx) <= 7) continue;
         if (x - lastTreeX < 15 + Math.floor(rand() * 9)) continue;
         const slope = Math.abs((surface[x - 2] || surface[x]) - (surface[x + 2] || surface[x]));
-        const treeChance = slope > 3 ? 0.018 : slope > 1 ? 0.035 : 0.052;
+        const bias = ML.WorldGenDirector?.terrainBias?.(this, x);
+        const treeChance = (slope > 3 ? 0.018 : slope > 1 ? 0.035 : 0.052) * (bias?.treeScale ?? 1);
         if (rand() < treeChance) {
           const ground = surface[x];
           const trunk = 3 + Math.floor(rand() * 3);
@@ -427,7 +436,7 @@
         if (y >= sy + 2) world[y][sx] = Tile.LADDER;
         if (y === sy + 7 || y === sy + 15) world[y][sx + 1] = Tile.TORCH;
       }
-      return { world, surface, spawn: { x: sx - 3, y: sy }, shaft: { x: sx, y: sy }, secrets };
+      return { world, surface, spawn: { x: sx - 3, y: sy }, shaft: { x: sx, y: sy }, secrets, chestTags };
     }
 
     worldHeight() {
@@ -654,6 +663,7 @@
       }
       const chestX = clamp(left + 2 + Math.floor(rand() * 3), left + 1, right - 1);
       this.world[floorY - 1][chestX] = Tile.CHEST;
+      this.registerChestTag?.(chestX, floorY - 1, { type: "village", source: "surfaceShelter", surfaceRegion: ML.WorldGenDirector?.surfaceRegionAt?.(this, chestX)?.id || null });
       const torchX = clamp(right - 1, left + 1, right - 1);
       if (torchX !== chestX && rand() < 0.55) this.world[floorY - 1][torchX] = Tile.TORCH;
     }
@@ -672,6 +682,15 @@
 
     surfaceDiscoveryAt(x, y) {
       return (this.surfaceDiscoveries || []).find((entry) => Math.abs(entry.x - x) <= 1 && Math.abs(entry.y - y) <= 1) || null;
+    }
+
+    registerChestTag(x, y, tag = {}) {
+      if (!this.chestTags || typeof this.chestTags !== "object") this.chestTags = {};
+      this.chestTags[`${Math.floor(x)}:${Math.floor(y)}`] = Object.assign({}, tag);
+    }
+
+    chestTagAt(x, y) {
+      return this.chestTags?.[`${Math.floor(x)}:${Math.floor(y)}`] || null;
     }
 
     shiftTileCoordinates(deltaX) {
@@ -700,6 +719,15 @@
           else shifted[key] = value;
         }
         this.campAnchors = shifted;
+      }
+      if (this.chestTags && typeof this.chestTags === "object") {
+        const shifted = {};
+        for (const [key, value] of Object.entries(this.chestTags)) {
+          const [x, y] = key.split(":").map(Number);
+          if (Number.isFinite(x) && Number.isFinite(y)) shifted[`${x + deltaX}:${y}`] = value;
+          else shifted[key] = value;
+        }
+        this.chestTags = shifted;
       }
     }
 
@@ -861,6 +889,7 @@
         const depth = this.mobDepthAt(x, y);
         if (chests < Math.max(4, Math.floor(addColumns / 20)) && rand() < 0.2) {
           this.world[y][x] = Tile.CHEST;
+          this.registerChestTag(x, y, { type: "cave", source: "horizon", side, stratum: this.stratumAt?.(x, y)?.id || null });
           chests += 1;
           continue;
         }
@@ -876,6 +905,7 @@
         if (chests >= targetChests) break;
         if (this.world[spot.y][spot.x] !== AIR || !solidAt(spot.x, spot.y + 1)) continue;
         this.world[spot.y][spot.x] = Tile.CHEST;
+        this.registerChestTag(spot.x, spot.y, { type: "cave", source: "horizon", side, stratum: this.stratumAt?.(spot.x, spot.y)?.id || null });
         chests += 1;
       }
 
@@ -896,6 +926,8 @@
         if (rand() >= (localSlope > 2 ? 0.028 : 0.052)) continue;
         const ground = this.surface[x] || 24;
         const trunk = 3 + Math.floor(rand() * 3);
+        const bias = ML.WorldGenDirector?.terrainBias?.(this, x);
+        if (bias?.treeScale !== undefined && rand() > bias.treeScale) continue;
         for (let y = ground - trunk; y < ground; y += 1) this.world[y][x] = Tile.WOOD;
         for (let ox = -2; ox <= 2; ox += 1) {
           for (let oy = -2; oy <= 1; oy += 1) {
@@ -909,6 +941,10 @@
       }
 
       const surfaceDiscoveries = this.generateSurfaceLandmarks(regionStart, regionEnd, side, rand);
+      const surfaceDecoration = ML.WorldGenDirector?.decorateSurfaceRegion?.(this, regionStart, regionEnd, side, rand)
+        || { setpieces: 0, chests: 0, camps: 0, region: null };
+      chests += surfaceDecoration.chests || 0;
+      camps += surfaceDecoration.camps || 0;
       const caveDiscoveries = this.generateUndergroundLandmarks({
         source: "horizon",
         side,
@@ -926,10 +962,12 @@
       for (let tries = 0; tries < 360 && mobAdds < mobCap; tries += 1) {
         const x = randX();
         const y = (this.surface[x] || 24) + 16 + Math.floor(rand() * Math.max(12, height - (this.surface[x] || 24) - 24));
+        const budget = ML.WorldGenDirector?.spawnBudgetFor?.(this, x, y, { horizon: true }) || { density: 0.055, eliteChance: 0.07 };
+        if (rand() >= Math.min(0.7, budget.density * 5.4)) continue;
         const picked = this.pickMobForSpot(x, y, rand, { natural: true });
         if (!picked) continue;
         const depth = picked.y - (this.surface[x] || 24);
-        this.addMob(x, picked.y, picked.kind, { elite: depth > 140 && rand() < 0.07 });
+        this.addMob(x, picked.y, picked.kind, { elite: depth > 140 && rand() < (budget.eliteChance || 0.07) });
         mobAdds += 1;
       }
       if (mobAdds < 4) {
@@ -938,7 +976,8 @@
           const picked = this.pickMobForSpot(spot.x, spot.y, rand, { natural: true });
           if (!picked) continue;
           const depth = picked.y - (this.surface[spot.x] || 24);
-          this.addMob(spot.x, picked.y, picked.kind, { elite: depth > 140 && rand() < 0.07 });
+          const budget = ML.WorldGenDirector?.spawnBudgetFor?.(this, spot.x, picked.y, { horizon: true }) || { eliteChance: 0.07 };
+          this.addMob(spot.x, picked.y, picked.kind, { elite: depth > 140 && rand() < (budget.eliteChance || 0.07) });
           mobAdds += 1;
         }
       }
@@ -964,7 +1003,9 @@
         surfaceStep: Math.abs((profile?.edgeSurface || 24) - (left ? this.surface[addColumns - 1] : this.surface[oldWidth] || 24)),
         discoveries: surfaceDiscoveries.length + caveDiscoveries.length,
         surfaceDiscoveries: surfaceDiscoveries.length,
-        undergroundDiscoveries: caveDiscoveries.length
+        undergroundDiscoveries: caveDiscoveries.length,
+        surfaceSetpieces: surfaceDecoration.setpieces || 0,
+        surfaceRegion: surfaceDecoration.region || null
       };
     }
 
@@ -1032,6 +1073,7 @@
         if (this.tileAt(x, y) !== AIR || !solidAt(x, y + 1)) continue;
         if (chests < maxChests && rand() < (stratum?.cacheChance ?? 0.32)) {
           this.world[y][x] = Tile.CHEST;
+          this.registerChestTag(x, y, { type: "cave", source: "depth", stratum: stratum?.id || null });
           chests += 1;
           continue;
         }
@@ -1069,10 +1111,12 @@
       for (let tries = 0; tries < 320 && mobAdds < mobCap; tries += 1) {
         const x = 4 + Math.floor(rand() * (width - 8));
         const y = oldHeight + 6 + Math.floor(rand() * Math.max(1, addRows - 18));
+        const budget = ML.WorldGenDirector?.spawnBudgetFor?.(this, x, y, { depth: true }) || { density: 0.08, eliteChance: stratum?.eliteChance ?? 0.08 };
+        if (rand() >= Math.min(0.78, budget.density * 5.2)) continue;
         const picked = this.pickMobForSpot(x, y, rand, { natural: true });
         if (!picked) continue;
         const depth = picked.y - (this.surface[x] || 24);
-        this.addMob(x, picked.y, picked.kind, { elite: depth > 190 && rand() < (stratum?.eliteChance ?? 0.08) });
+        this.addMob(x, picked.y, picked.kind, { elite: depth > 190 && rand() < (budget.eliteChance ?? stratum?.eliteChance ?? 0.08) });
         mobAdds += 1;
       }
 
@@ -1298,12 +1342,12 @@
           if (!solidAt(x, y + 1)) continue;
           if (Math.abs(x - this.shaft.x) <= 10 && y <= this.shaft.y + 24) continue;
           const depth = y - surfaceY;
-          const density = depth > 150 ? 0.06 : depth > 60 ? 0.045 : 0.03;
-          if (rand() >= density) continue;
+          const budget = ML.WorldGenDirector?.spawnBudgetFor?.(this, x, y, { initial: true }) || { density: depth > 150 ? 0.06 : depth > 60 ? 0.045 : 0.03, eliteChance: depth > 75 ? 0.045 : 0.02 };
+          if (rand() >= budget.density) continue;
           const picked = this.pickMobForSpot(x, y, rand, { natural: true });
           if (!picked) continue;
           const kind = picked.kind;
-          const elite = depth > 75 && rand() < (depth > 150 ? 0.08 : 0.045);
+          const elite = depth > 75 && rand() < (budget.eliteChance || 0.045);
           mobs.push({ id: this.mobSeq++, x, y: picked.y, kind, elite });
           y += 5; // keep packs from clumping in one column
         }
@@ -1604,7 +1648,7 @@
         const raw = localStorage.getItem(ML.SAVE_KEY);
         if (!raw) return null;
         const data = JSON.parse(raw);
-        if (!data || data.version !== 8 || !data.state || !Array.isArray(data.state.world)) return null;
+        if (!data || data.version !== 9 || !data.state || !Array.isArray(data.state.world)) return null;
         return data.state;
       } catch {
         return null;
@@ -1658,12 +1702,13 @@
         discoveredRecipes: this.discoveredRecipes,
         knownItems: this.knownItems,
         campAnchors: this.campAnchors,
+        chestTags: this.chestTags,
         lastCamp: this.lastCamp,
         contract: this.contract,
         contractSeq: this.contractSeq
       };
       try {
-        localStorage.setItem(ML.SAVE_KEY, JSON.stringify({ version: 8, state }));
+        localStorage.setItem(ML.SAVE_KEY, JSON.stringify({ version: 9, state }));
         return true;
       } catch {
         return false;

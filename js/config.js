@@ -151,6 +151,9 @@ window.ML = window.ML || {};
     clockwork: { name: "Clockwork seed", cls: "icon-clockwork", tint: 0xf0c75e },
     mirrorShard: { name: "Mirror shard", cls: "icon-mirror-shard", tint: 0xc9fff6 },
     strangeKey: { name: "Strange key", cls: "icon-strange-key", tint: 0xb48cff },
+    oldCompass: { name: "Old compass", cls: "icon-old-compass", tint: 0xd6b16a },
+    sealedLetter: { name: "Sealed letter", cls: "icon-sealed-letter", tint: 0xd8c4a0 },
+    watcherToken: { name: "Watcher token", cls: "icon-watcher-token", tint: 0x8a6fa8 },
     torch: { name: "Torch", cls: "icon-torch", tile: Tile.TORCH, tint: 0xf2c35f },
     battery: { name: "Lamp cell", cls: "icon-battery", tint: 0x7ee6c9 },
     ladder: { name: "Ladder", cls: "icon-ladder", tile: Tile.LADDER, tint: 0xb37236 },
@@ -390,6 +393,9 @@ window.ML = window.ML || {};
     { id: "recallCharm", cat: "relics", name: "Recall charm", cost: { relic: 1, crystal: 2, coin: 24 }, recallCharm: true, note: "Recall to camp costs less energy and recharges faster" },
     { id: "mirrorCache", cat: "relics", name: "Mirror cache", cost: { mirrorShard: 1, relic: 1, quartz: 2 }, out: { crystal: 2, coin: 16 }, note: "A chest shard that turns old reflections into supplies" },
     { id: "keyedRelic", cat: "relics", name: "Keyed relic case", cost: { strangeKey: 1, mapScrap: 2, coin: 12 }, out: { relic: 1, torch: 4 }, note: "A guild key opens a cache nobody logged" },
+    { id: "compassRoute", cat: "relics", name: "Compass route", cost: { oldCompass: 1, mapScrap: 2, coin: 8 }, out: { ladder: 12, torch: 6 }, note: "Turns a surface compass into a safer expedition route" },
+    { id: "sealedOrder", cat: "relics", name: "Sealed order", cost: { sealedLetter: 1, coin: 10 }, out: { kit: 1, battery: 2 }, note: "Cash in an old surface order for survival stock" },
+    { id: "watcherCharm", cat: "relics", name: "Watcher charm", cost: { watcherToken: 2, mirrorShard: 1, relic: 1 }, treasureSense: true, note: "Makes hidden caches easier to read on the map" },
     { id: "voidglassEdge", cat: "relics", name: "Voidglass edge", cost: { voidglass: 4, obsidian: 3, crystal: 3 }, blade: 4, note: "+7 attack damage through glass-dark plating" },
 
     { id: "fieldKit", cat: "survival", name: "Field kit", cost: { wood: 2, coal: 2, mushroom: 1 }, out: { kit: 1 }, note: "Use from the hotbar: +45 health, +45 energy" },
@@ -419,7 +425,10 @@ window.ML = window.ML || {};
     { item: "mirrorShard", minDepth: 110, chance: 0.08, secretBonus: 0.22, min: 1, max: 1, note: "a shard that reflects the HUD wrong" },
     { item: "ember", minDepth: 152, chance: 0.11, secretBonus: 0.15, min: 1, max: 2, note: "warm shale wrapped in cloth" },
     { item: "strangeKey", minDepth: 84, chance: 0.025, secretBonus: 0.18, min: 1, max: 1, note: "a key not listed on the cache tag" },
-    { item: "voidglass", minDepth: 230, chance: 0.055, secretBonus: 0.2, min: 1, max: 2, note: "glass-dark splinters from below the map" }
+    { item: "voidglass", minDepth: 230, chance: 0.055, secretBonus: 0.2, min: 1, max: 2, note: "glass-dark splinters from below the map" },
+    { item: "oldCompass", minDepth: 0, chance: 0.06, secretBonus: 0.08, min: 1, max: 1, note: "a compass that points away from the shaft" },
+    { item: "sealedLetter", minDepth: 0, chance: 0.045, secretBonus: 0.09, min: 1, max: 1, note: "sealed orders from a surface team" },
+    { item: "watcherToken", minDepth: 130, chance: 0.035, secretBonus: 0.16, min: 1, max: 1, note: "a token pressed with an eye-mark" }
   ];
 
   const CRAFT_CATS = [
@@ -448,6 +457,9 @@ window.ML = window.ML || {};
     { id: "voidglassFound", name: "Below The Map", note: "Recover voidglass from the repeating shelf.", item: "voidglass", at: 1 },
     { id: "mapScrapFound", name: "Unfiled Route", note: "Find a map scrap in a cache.", item: "mapScrap", at: 1 },
     { id: "clockworkFound", name: "Something Ticks", note: "Find a clockwork seed where supplies should be.", item: "clockwork", at: 1 },
+    { id: "compassFound", name: "Needle Lies", note: "Find an old compass from a surface route.", item: "oldCompass", at: 1 },
+    { id: "sealedLetterFound", name: "Orders Still Sealed", note: "Find a letter nobody delivered.", item: "sealedLetter", at: 1 },
+    { id: "watcherTokenFound", name: "Marked By The Watcher", note: "Recover a token that should not exist.", item: "watcherToken", at: 1 },
     { id: "mirrorShardFound", name: "Wrong Reflection", note: "Find a mirror shard that reflects the mine strangely.", item: "mirrorShard", at: 1 },
     { id: "strangeKeyFound", name: "Wrong Key", note: "Find a cache key nobody logged.", item: "strangeKey", at: 1 },
     { id: "firstCraft", name: "Workbench Hands", note: "Craft your first recipe.", stat: "crafted", at: 1 },
@@ -808,7 +820,7 @@ window.ML = window.ML || {};
     AIR,
     DAY_LENGTH,
     INTERACT_RANGE_TILES: 3.05,
-    SAVE_KEY: "abyssforge.save.v8",
+    SAVE_KEY: "abyssforge.save.v9",
     MUTE_KEY: "abyssforge.muted",
     Tile,
     BLOCKS,
