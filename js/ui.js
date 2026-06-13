@@ -200,7 +200,8 @@
 
   function inventorySignature(sim, options = {}) {
     const keys = inventoryItemKeys(sim, options);
-    return keys.map((item) => `${item}:${sim.inventory[item] || 0}`).join("|");
+    const knownSig = ML.Progression?.signature ? ML.Progression.signature(sim) : "";
+    return `${knownSig}|${keys.map((item) => `${item}:${sim.inventory[item] || 0}`).join("|")}`;
   }
 
   function recipeStateSignature(sim) {
@@ -220,7 +221,8 @@
       sim.recallCharm ? 1 : 0,
       sim.maxHealth || 100,
       sim.maxEnergy || 100,
-      sim.blastRadius || 0
+      sim.blastRadius || 0,
+      ML.Progression?.signature ? ML.Progression.signature(sim) : ""
     ].join("|");
   }
 
@@ -431,28 +433,36 @@
       type.textContent = ITEM_KIND[item] || "Item";
 
       slot.append(key, icon, type, count);
+      let use = null;
       if (ITEM_META[item].consumable) {
-        const use = document.createElement("span");
+        use = document.createElement("span");
         use.className = "slot-use";
         use.textContent = "USE";
         slot.appendChild(use);
       }
       ui.hotbar.appendChild(slot);
-      return { slot, count };
+      return { slot, icon, type, count, use };
     });
   }
 
   function renderHotbar(sim) {
     if (!hotbarEls) buildHotbar(sim);
     HOTBAR.forEach((item, index) => {
-      const { slot, count } = hotbarEls[index];
-      const amount = sim.inventory[item] || 0;
-      const cls = `slot ${itemStateClass(item, amount)}`;
+      const { slot, icon, type, count, use } = hotbarEls[index];
+      const known = ML.Progression?.isItemKnown ? ML.Progression.isItemKnown(sim, item) : true;
+      const amount = known ? sim.inventory[item] || 0 : 0;
+      const cls = known ? `slot ${itemStateClass(item, amount)}` : "slot undiscovered locked";
       if (slot.className !== cls) slot.className = cls;
+      slot.style.setProperty("--item-accent", known ? itemAccent(item) : "#746f62");
+      setTitle(slot, known ? `${ITEM_META[item].name}: ${amount}` : `Slot ${index + 1}: undiscovered`);
+      const iconClass = known ? `slot-icon ${ITEM_META[item].cls}` : "slot-icon icon-unknown";
+      if (icon.className !== iconClass) icon.className = iconClass;
+      setText(type, known ? (ITEM_KIND[item] || "Item") : "Locked");
       setClass(slot, "selected", sim.selected === index);
-      const label = String(amount);
+      const label = known ? String(amount) : "";
       if (count.textContent !== label) count.textContent = label;
-      setClass(count, "zero", amount <= 0);
+      setClass(count, "zero", known && amount <= 0);
+      setClass(use, "hidden", !known || !ITEM_META[item].consumable);
     });
   }
 
@@ -465,6 +475,7 @@
   }
 
   function recipeVisible(sim, recipe) {
+    if (ML.Progression?.recipeVisible && !ML.Progression.recipeVisible(sim, recipe)) return false;
     if (recipe.upgrade) return sim.pickLevel < recipe.upgrade;
     if (recipe.blade) return sim.blade < recipe.blade;
     if (recipe.lamp) return sim.lamp < recipe.lamp;
@@ -643,6 +654,7 @@
   }
 
   function inventoryItemKeys(sim, options = {}) {
+    if (ML.Progression?.inventoryItems) return ML.Progression.inventoryItems(sim, options);
     const includeEmpty = Boolean(options.includeEmpty);
     const includeHotbarEmpty = Boolean(options.includeHotbarEmpty);
     return Object.keys(ITEM_META).filter((item) =>
@@ -688,10 +700,12 @@
     if (renderCache.pack === sig) return;
     renderCache.pack = sig;
     renderInventoryGrid(ui.packGrid, sim, { includeEmpty: true });
-    setText(ui.packSummary, `${used}/${total} stacks · ${itemCount} items`);
+    setText(ui.packSummary, `${used}/${total} known stacks · ${itemCount} items`);
     setWidth(ui.packFill, Math.round(used / total * 100));
     if (ui.packHint) {
-      setText(ui.packHint, `Quick belt: ${ITEM_META[selected]?.name || selected}. Press 1-9 for tools, blocks, lights, and consumables.`);
+      const selectedKnown = ML.Progression?.isItemKnown ? ML.Progression.isItemKnown(sim, selected) : true;
+      const selectedName = selectedKnown ? ITEM_META[selected]?.name || selected : "undiscovered slot";
+      setText(ui.packHint, `Quick belt: ${selectedName}. New materials and tools appear here after the mine teaches them.`);
     }
   }
 

@@ -69,6 +69,7 @@
       this.achievements = Object.assign({}, this.achievements || {});
       ML.LoreSystem?.ensure?.(this);
       this.craftedRecipes = Object.assign({}, this.craftedRecipes || {});
+      this.discoveredRecipes = Object.assign({}, this.discoveredRecipes || {});
       this.campAnchors = Object.assign({}, this.campAnchors || {});
       this.lastCamp = this.lastCamp && Number.isFinite(this.lastCamp.x) && Number.isFinite(this.lastCamp.y)
         ? { x: this.lastCamp.x, y: this.lastCamp.y }
@@ -77,6 +78,7 @@
         { dirt: 0, stone: 0, wood: 0, coal: 0, copper: 0, iron: 0, gold: 0, crystal: 0, obsidian: 0, gel: 0, coin: 0, silk: 0, fang: 0, relic: 0, core: 0, torch: 0, battery: 0, ladder: 0, platform: 0, charge: 0, mushroom: 0, kit: 0 },
         this.inventory || {}
       );
+      ML.Progression?.ensureKnownItems?.(this);
       if (!Array.isArray(this.secrets)) this.secrets = [];
       if (!Array.isArray(this.surfaceDiscoveries)) this.surfaceDiscoveries = [];
       if (!Array.isArray(this.lights)) this.rebuildLights();
@@ -120,6 +122,9 @@
         obsidian: 0, gel: 0, coin: 0, silk: 0, fang: 0, relic: 0, core: 0,
         torch: 6, battery: 1, ladder: 8, platform: 0, charge: 0, mushroom: 0, kit: 1
       };
+      this.knownItems = {};
+      this.discoveredRecipes = {};
+      ML.Progression?.ensureKnownItems?.(this);
       const generated = this.generateWorld(seed);
       this.world = generated.world;
       this.surface = generated.surface;
@@ -1512,7 +1517,7 @@
         const raw = localStorage.getItem(ML.SAVE_KEY);
         if (!raw) return null;
         const data = JSON.parse(raw);
-        if (!data || data.version !== 5 || !data.state || !Array.isArray(data.state.world)) return null;
+        if (!data || data.version !== 6 || !data.state || !Array.isArray(data.state.world)) return null;
         return data.state;
       } catch {
         return null;
@@ -1562,13 +1567,15 @@
         achievements: this.achievements,
         lore: this.lore,
         craftedRecipes: this.craftedRecipes,
+        discoveredRecipes: this.discoveredRecipes,
+        knownItems: this.knownItems,
         campAnchors: this.campAnchors,
         lastCamp: this.lastCamp,
         contract: this.contract,
         contractSeq: this.contractSeq
       };
       try {
-        localStorage.setItem(ML.SAVE_KEY, JSON.stringify({ version: 5, state }));
+        localStorage.setItem(ML.SAVE_KEY, JSON.stringify({ version: 6, state }));
         return true;
       } catch {
         return false;
@@ -1587,6 +1594,7 @@
 
     addItem(item, count) {
       this.inventory[item] = (this.inventory[item] || 0) + count;
+      if (count > 0) ML.Progression?.rememberItem?.(this, item);
     }
 
     removeItem(item, count) {
@@ -1674,6 +1682,7 @@
       if (recipe.out) {
         for (const [item, count] of Object.entries(recipe.out)) this.addItem(item, count);
       }
+      ML.Progression?.rememberRecipe?.(this, recipe);
       if (recipe.upgrade) this.pickLevel = recipe.upgrade;
       if (recipe.blade) this.blade = recipe.blade;
       if (recipe.lamp) {

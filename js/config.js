@@ -746,7 +746,7 @@ window.ML = window.ML || {};
     AIR,
     DAY_LENGTH,
     INTERACT_RANGE_TILES: 3.05,
-    SAVE_KEY: "abyssforge.save.v5",
+    SAVE_KEY: "abyssforge.save.v6",
     MUTE_KEY: "abyssforge.muted",
     Tile,
     BLOCKS,

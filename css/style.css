@@ -721,6 +721,28 @@ canvas:focus { outline: none; }
   opacity: 0.68;
 }
 
+.slot.undiscovered {
+  opacity: 0.58;
+  border-style: dashed;
+  border-color: rgba(244, 234, 210, 0.2);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015)),
+    repeating-linear-gradient(135deg, rgba(244, 234, 210, 0.045) 0 2px, transparent 2px 7px),
+    rgba(255, 255, 255, 0.028);
+}
+
+.slot.undiscovered::before {
+  opacity: 0.24;
+}
+
+.slot.undiscovered .slot-count {
+  display: none;
+}
+
+.slot.undiscovered .slot-type {
+  color: rgba(244, 234, 210, 0.48);
+}
+
 .slot.has-items:hover {
   transform: translateY(-2px);
   border-color: color-mix(in srgb, var(--item-accent, #e1a84d) 70%, #f7ebd0);
@@ -828,6 +850,37 @@ canvas:focus { outline: none; }
   font-size: 8px;
   font-weight: 700;
   letter-spacing: 0.4px;
+}
+
+.slot-use.hidden {
+  display: none;
+}
+
+.icon-unknown {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(244, 234, 210, 0.16), transparent 56%),
+    linear-gradient(135deg, #2a2824, #0c0b0a);
+}
+
+.icon-unknown::before {
+  content: "?";
+  position: static;
+  color: rgba(244, 234, 210, 0.64);
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.icon-unknown::after {
+  content: "";
+  left: 7px;
+  right: 7px;
+  bottom: 7px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(244, 234, 210, 0.18);
 }
 
 @keyframes selectedSlotPulse {

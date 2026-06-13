@@ -77,6 +77,7 @@ Opening bedrock seams extends the world downward and moves the next generated ab
 - Mining, block placement, ladders, torches, platforms, charges, and hotbar use.
 - Pickaxe combat against crawlers, slimes, bats, golems, and hidden bosses.
 - Expanded crafting across tools, blocks, survival items, and relic upgrades.
+- Progressive discovery for inventory, hotbar slots, and recipes: the starter UI no longer reveals the full item catalog before the player mines, crafts, fights, opens caches, or reaches deeper strata.
 - Campfire rest points with warm light, services, safe respawn anchors, and recall support.
 - Secret vault rooms with chests, rare relic materials, boss rooms, and deeper camp points.
 - Endless-style horizontal exploration that opens fresh side regions with cave routes, loot caches, camp points, surface signs, wayposts, abandoned hamlets, underground survey stations, old pump rooms, quiet shrines, trees, lava shelves, and region-appropriate mobs.
@@ -127,6 +128,7 @@ npm test
 - `index.html` - Phaser host page and HUD markup.
 - `css/style.css` - pixel-art UI, panels, hotbar, drawers, and responsive layout.
 - `js/config.js` - shared constants, items, recipes, strata profiles, contracts, achievements, enemies, and events.
+- `js/progression.js` - item knowledge, hotbar disclosure, recipe gates, and discovery signatures used by the HUD and tests.
 - `js/sim.js` - pure world simulation, generation, strata selection, saves, inventory, crafting, contracts, mobs, and spawn repair.
 - `js/biomes.js` - biome definitions, detection, lore, and gameplay properties.
 - `js/poi.js` - procedural surface and underground points of interest, readable field marks, and discovery placement rules.

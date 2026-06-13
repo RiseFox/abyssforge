@@ -91,6 +91,22 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const sim = new window.ML.MinerSim();
     sim.newWorld(7919);
     const { WORLD_H, WORLD_W } = window.ML;
+    const fresh = new window.ML.MinerSim();
+    fresh.newWorld(7919);
+    const itemCatalogSize = Object.keys(window.ML.ITEM_META || {}).length;
+    const starterKnownItems = window.ML.Progression?.inventoryItems?.(fresh, { includeEmpty: true }).length || itemCatalogSize;
+    const starterCraftVisible = window.ML.RECIPES.filter((recipe) => window.ML.recipeVisible(fresh, recipe)).length;
+    const starterCraftReady = window.ML.craftableRecipes(fresh).length;
+    const starterLockedHotbar = window.ML.HOTBAR.filter((item) => !window.ML.Progression?.isItemKnown?.(fresh, item)).length;
+    const starterStoneHidden = !window.ML.Progression?.isItemKnown?.(fresh, "stone");
+    const starterCoreHidden = !window.ML.Progression?.isItemKnown?.(fresh, "core");
+    const copperBeforePickup = Boolean(window.ML.Progression?.isItemKnown?.(fresh, "copper"));
+    fresh.addItem("copper", 1);
+    const copperKnownAfterPickup = Boolean(window.ML.Progression?.isItemKnown?.(fresh, "copper"));
+    const platformRecipeForFresh = window.ML.RECIPES.find((recipe) => recipe.id === "platform");
+    const platformKnownBeforeCraft = Boolean(window.ML.Progression?.isItemKnown?.(fresh, "platform"));
+    const platformCraftForFresh = fresh.craft(platformRecipeForFresh);
+    const platformKnownAfterCraft = Boolean(window.ML.Progression?.isItemKnown?.(fresh, "platform"));
     const craftable = window.ML.craftableRecipes(sim);
     const platformRecipe = window.ML.RECIPES.find((recipe) => recipe.id === "platform");
     const craftResult = sim.craft(platformRecipe);
@@ -499,6 +515,19 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const packClosed = Boolean(window.ML.ui?.packDrawer?.classList.contains("hidden"));
     return {
       recipes: window.ML.RECIPES.length,
+      progressionRuntime: typeof window.ML.Progression?.isItemKnown === "function" && typeof window.ML.Progression?.recipeVisible === "function",
+      itemCatalogSize,
+      starterKnownItems,
+      starterCraftVisible,
+      starterCraftReady,
+      starterLockedHotbar,
+      starterStoneHidden,
+      starterCoreHidden,
+      copperBeforePickup,
+      copperKnownAfterPickup,
+      platformKnownBeforeCraft,
+      platformKnownAfterCraft,
+      platformCraftForFresh,
       tileSize: window.ML.TILE,
       achievements: window.ML.ACHIEVEMENTS.length,
       contracts: window.ML.CONTRACTS.length,
@@ -767,6 +796,19 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.biomes < 8
     || progressionCheck.strataProfiles < 5
     || progressionCheck.storyPhases < 7
+    || !progressionCheck.progressionRuntime
+    || progressionCheck.starterKnownItems >= progressionCheck.itemCatalogSize
+    || progressionCheck.starterKnownItems > 8
+    || progressionCheck.starterCraftVisible >= progressionCheck.recipes
+    || progressionCheck.starterCraftReady < 3
+    || progressionCheck.starterLockedHotbar < 3
+    || !progressionCheck.starterStoneHidden
+    || !progressionCheck.starterCoreHidden
+    || progressionCheck.copperBeforePickup
+    || !progressionCheck.copperKnownAfterPickup
+    || progressionCheck.platformKnownBeforeCraft
+    || !progressionCheck.platformKnownAfterCraft
+    || !progressionCheck.platformCraftForFresh?.ok
     || !progressionCheck.biomeSystem
     || !progressionCheck.stratumSystem
     || progressionCheck.enemyAiProfiles < 7
@@ -914,8 +956,8 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.shadowPeaks < 1
     || !progressionCheck.packVisible
     || !progressionCheck.packClosed
-    || progressionCheck.packChips < 10
-    || !progressionCheck.packSummary.includes("stacks")
+    || progressionCheck.packChips < progressionCheck.starterKnownItems
+    || !progressionCheck.packSummary.includes("known stacks")
     || progressionCheck.campServices < 5
     || !progressionCheck.campSystem
     || progressionCheck.craftable < 3
