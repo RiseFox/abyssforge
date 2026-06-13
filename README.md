@@ -55,9 +55,24 @@ Biomes are runtime systems, not only labels. The current biome affects ambient l
 
 ![AbyssForge biome intel](docs/images/abyssforge-biome-intel.png)
 
+## Strata Progression
+
+Depth is no longer a single hardcoded ore ladder. AbyssForge now uses data-driven strata profiles that change generation and play rules as the mine opens downward. A stratum controls ore weights, cave size, lava pressure, cache density, camp rarity, mob caps, elite chance, cave-event weights, and mining fatigue.
+
+| Stratum | Starts Near | Expedition Meaning |
+| --- | ---: | --- |
+| Rootline Drift | 0 m | Forgiving starter rock with roots, coal, copper, safe routes, and more camps. |
+| Iron Fault | 72 m | Ore-rich pressure shelves with longer mining pulls and more tremor events. |
+| Crystal Vein | 138 m | Valuable glow chambers with stronger detours, swarms, crystals, and soft recovery signals. |
+| Obsidian Abyss | 220 m | Lava-glass danger with fewer camps, heavier mobs, richer caches, and severe darkness. |
+| Voidglass Shelf | 330 m | Strange repeating lower shelves where safe light is scarce and the mine stops behaving naturally. |
+
+Opening bedrock seams extends the world and moves the next generated abyss section into the active stratum instead of repeating the same cave recipe forever.
+
 ## Current Features
 
 - Seeded procedural world with a quality-gated spawn area.
+- Data-driven strata profiles for ore distribution, cave shape, lava, caches, camps, mob pressure, elite chance, cave events, and mining fatigue.
 - Stable starter shaft, no-air spawn checks, and a protected first drop bridge.
 - Mining, block placement, ladders, torches, platforms, charges, and hotbar use.
 - Pickaxe combat against crawlers, slimes, bats, golems, and hidden bosses.
@@ -104,8 +119,8 @@ npm test
 
 - `index.html` - Phaser host page and HUD markup.
 - `css/style.css` - pixel-art UI, panels, hotbar, drawers, and responsive layout.
-- `js/config.js` - shared constants, items, recipes, contracts, achievements, enemies, and events.
-- `js/sim.js` - pure world simulation, generation, saves, inventory, crafting, contracts, mobs, and spawn repair.
+- `js/config.js` - shared constants, items, recipes, strata profiles, contracts, achievements, enemies, and events.
+- `js/sim.js` - pure world simulation, generation, strata selection, saves, inventory, crafting, contracts, mobs, and spawn repair.
 - `js/biomes.js` - biome definitions, detection, lore, and gameplay properties.
 - `js/camp.js` - campfire proximity, anchor, respawn, and service logic.
 - `js/audio.js` - Web Audio SFX and situational music modes.

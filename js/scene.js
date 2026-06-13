@@ -71,6 +71,7 @@
       this.lastLampSwapAt = 0;
       this.lastCampHintAt = 0;
       this.lastBiomeId = null;
+      this.lastStratumId = null;
       this.lastBiomeToastAt = 0;
       this.shadowPressure = clamp(this.sim.shadowPressure || 0, 0, 100);
       this.lastShadowWarnAt = 0;
@@ -597,6 +598,11 @@
       return ML.BiomeSystem?.current?.(this.sim, this.player) || ML.BIOMES?.surface || null;
     }
 
+    currentStratum() {
+      if (!this.player || !this.sim?.stratumAt) return null;
+      return this.sim.stratumAt(Math.floor(this.player.x / TILE), Math.floor(this.player.y / TILE));
+    }
+
     biomeName() {
       return this.currentBiome()?.name || "Surface";
     }
@@ -902,6 +908,15 @@
 
     checkBiomeTransition() {
       const biome = this.currentBiome();
+      const stratum = this.currentStratum();
+      if (stratum && stratum.id !== this.lastStratumId) {
+        const previousStratum = this.lastStratumId;
+        this.lastStratumId = stratum.id;
+        if (previousStratum && this.depthMeters() > 18) {
+          this.setAction(stratum.tone || "New stratum", 1200);
+          ML.showToast(`${stratum.name}: ${stratum.note}`, 3600);
+        }
+      }
       if (!biome || biome.id === this.lastBiomeId) return;
       const previous = this.lastBiomeId;
       this.lastBiomeId = biome.id;
@@ -1304,8 +1319,9 @@
 
       let stamina = 0.55 + this.sim.energy / 220;
       if (this.sim.energy < 5) stamina *= 0.55;
-      this.mineProgress += (delta / 1000) * PICKS[this.sim.pickLevel].speed * stamina / block.hardness;
-      this.sim.energy = clamp(this.sim.energy - (delta / 1000) * 9.5, 0, this.sim.maxEnergy);
+      const fatigue = this.currentStratum()?.miningFatigue || 1;
+      this.mineProgress += (delta / 1000) * PICKS[this.sim.pickLevel].speed * stamina / (block.hardness * fatigue);
+      this.sim.energy = clamp(this.sim.energy - (delta / 1000) * 9.5 * fatigue, 0, this.sim.maxEnergy);
       this.targetLabel = block.name;
       this.setAction("Mining", 220);
       if (this.time.now > this.pickSwingUntil - 80) {
@@ -1367,7 +1383,7 @@
       this.setAction("World opens", 1600);
       this.checkAchievements();
       ML.audio.play("rumble");
-      ML.showToast(`The bedrock seam splits. New strata opened: ${result.from}m-${result.to}m.`, 3600);
+      ML.showToast(`${result.stratumName || "New stratum"} opened: ${result.from}m-${result.to}m.`, 4200);
       return true;
     }
 
@@ -2165,17 +2181,21 @@
 
     scheduleNextCaveEvent(initial = false) {
       const depth = this.player ? this.depthMeters() : 0;
+      const stratum = this.currentStratum();
       const base = initial ? 26000 : 52000;
       const depthDiscount = Math.min(17000, depth * 115);
-      this.nextCaveEventAt = this.time.now + Math.max(16000, base + Math.random() * 24000 - depthDiscount);
+      const pace = stratum?.eventPace || 1;
+      this.nextCaveEventAt = this.time.now + Math.max(14000, (base + Math.random() * 24000 - depthDiscount) * pace);
     }
 
     chooseCaveEvent() {
       const depth = this.depthMeters();
+      const stratum = this.currentStratum();
+      const weighted = this.sim.weightedPick?.(stratum?.events, Math.random);
+      if (weighted) return weighted;
       const pool = ["oreSurge", "lanternDraft"];
-      if (depth > 24) pool.push("swarm", "swarm");
+      if (depth > 24) pool.push("swarm");
       if (depth > 58) pool.push("tremor");
-      if (depth > 135) pool.push("tremor", "swarm");
       return pool[Math.floor(Math.random() * pool.length)];
     }
 

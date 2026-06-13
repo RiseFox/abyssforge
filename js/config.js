@@ -160,6 +160,151 @@ window.ML = window.ML || {};
     { name: "Beacon lamp", radius: 265, glow: 0.62, capacity: 210, drain: 1.85 }
   ];
 
+  const STRATA_PROFILES = [
+    {
+      id: "rootline",
+      name: "Rootline Drift",
+      tone: "Soft routes",
+      note: "Loose roots and old survey cuts make this layer forgiving, but poor in rare metal.",
+      minDepth: 0,
+      deepAt: 172,
+      miningFatigue: 1,
+      caveWorms: 0.92,
+      caveSteps: 0.86,
+      lavaChance: 0.012,
+      lavaSpread: 0.34,
+      cacheChance: 0.28,
+      maxChests: 6,
+      campChance: 0.16,
+      maxCamps: 2,
+      mushroomChance: 0.2,
+      ladderChance: 0.3,
+      mobCap: 18,
+      eliteChance: 0.03,
+      eventPace: 1.08,
+      events: { oreSurge: 3, lanternDraft: 3, swarm: 1 },
+      ores: [
+        { tile: Tile.COAL, minDepth: 10, chance: 0.042 },
+        { tile: Tile.COPPER, minDepth: 32, chance: 0.022 },
+        { tile: Tile.IRON, minDepth: 72, chance: 0.01 }
+      ]
+    },
+    {
+      id: "ironfault",
+      name: "Iron Fault",
+      tone: "Metal pressure",
+      note: "The rock folds into ore-rich shelves, with tremors and longer mining pulls.",
+      minDepth: 72,
+      deepAt: 162,
+      miningFatigue: 1.08,
+      caveWorms: 1.05,
+      caveSteps: 0.95,
+      lavaChance: 0.026,
+      lavaSpread: 0.48,
+      cacheChance: 0.3,
+      maxChests: 7,
+      campChance: 0.13,
+      maxCamps: 2,
+      mushroomChance: 0.16,
+      ladderChance: 0.24,
+      mobCap: 22,
+      eliteChance: 0.05,
+      eventPace: 0.92,
+      events: { oreSurge: 2, tremor: 3, swarm: 2, lanternDraft: 1 },
+      ores: [
+        { tile: Tile.COAL, minDepth: 22, chance: 0.032 },
+        { tile: Tile.COPPER, minDepth: 52, chance: 0.028 },
+        { tile: Tile.IRON, minDepth: 78, chance: 0.025 },
+        { tile: Tile.GOLD, minDepth: 118, chance: 0.009 }
+      ]
+    },
+    {
+      id: "crystalvein",
+      name: "Crystal Vein",
+      tone: "Signal hum",
+      note: "Crystal chambers glow softly and reward detours, while bats and swarms read the noise.",
+      minDepth: 138,
+      deepAt: 148,
+      miningFatigue: 1.12,
+      caveWorms: 1.18,
+      caveSteps: 1.12,
+      lavaChance: 0.03,
+      lavaSpread: 0.42,
+      cacheChance: 0.34,
+      maxChests: 8,
+      campChance: 0.11,
+      maxCamps: 2,
+      mushroomChance: 0.27,
+      ladderChance: 0.2,
+      mobCap: 24,
+      eliteChance: 0.07,
+      eventPace: 0.86,
+      events: { lanternDraft: 3, oreSurge: 2, swarm: 3, tremor: 1 },
+      ores: [
+        { tile: Tile.IRON, minDepth: 96, chance: 0.018 },
+        { tile: Tile.GOLD, minDepth: 130, chance: 0.017 },
+        { tile: Tile.CRYSTAL, minDepth: 150, chance: 0.014 },
+        { tile: Tile.OBSIDIAN, minDepth: 210, chance: 0.006 }
+      ]
+    },
+    {
+      id: "obsidianabyss",
+      name: "Obsidian Abyss",
+      tone: "Severe dark",
+      note: "Lava glass replaces mercy here: fewer safe camps, heavier mobs, and richer secret caches.",
+      minDepth: 220,
+      deepAt: 128,
+      miningFatigue: 1.22,
+      caveWorms: 0.98,
+      caveSteps: 1.22,
+      lavaChance: 0.058,
+      lavaSpread: 0.62,
+      cacheChance: 0.38,
+      maxChests: 8,
+      campChance: 0.08,
+      maxCamps: 1,
+      mushroomChance: 0.12,
+      ladderChance: 0.15,
+      mobCap: 26,
+      eliteChance: 0.1,
+      eventPace: 0.76,
+      events: { tremor: 3, swarm: 4, oreSurge: 1, lanternDraft: 1 },
+      ores: [
+        { tile: Tile.GOLD, minDepth: 160, chance: 0.014 },
+        { tile: Tile.CRYSTAL, minDepth: 190, chance: 0.012 },
+        { tile: Tile.OBSIDIAN, minDepth: 215, chance: 0.05 }
+      ]
+    },
+    {
+      id: "voidglass",
+      name: "Voidglass Shelf",
+      tone: "False floor",
+      note: "The mine starts repeating itself wrong: pockets stretch wide, caches are tempting, and safe light is scarce.",
+      minDepth: 330,
+      deepAt: 110,
+      miningFatigue: 1.34,
+      caveWorms: 1.32,
+      caveSteps: 1.32,
+      lavaChance: 0.07,
+      lavaSpread: 0.7,
+      cacheChance: 0.42,
+      maxChests: 9,
+      campChance: 0.06,
+      maxCamps: 1,
+      mushroomChance: 0.09,
+      ladderChance: 0.12,
+      mobCap: 30,
+      eliteChance: 0.14,
+      eventPace: 0.68,
+      events: { swarm: 5, tremor: 4, oreSurge: 1, lanternDraft: 1 },
+      ores: [
+        { tile: Tile.CRYSTAL, minDepth: 210, chance: 0.012 },
+        { tile: Tile.OBSIDIAN, minDepth: 235, chance: 0.06 },
+        { tile: Tile.GOLD, minDepth: 260, chance: 0.016 }
+      ]
+    }
+  ];
+
   const RECIPES = [
     { id: "torch", cat: "blocks", name: "Torch bundle", cost: { wood: 1, coal: 1 }, out: { torch: 4 }, note: "Local light for deeper tunnels" },
     { id: "gelTorch", cat: "blocks", name: "Gel torches", cost: { wood: 1, gel: 2 }, out: { torch: 5 }, note: "Classic slime-gel torch recipe" },
@@ -270,6 +415,7 @@ window.ML = window.ML || {};
     { id: "campAnchor", name: "Warm Anchor", note: "Set your first campfire anchor.", stat: "camps", at: 1 },
     { id: "campNetwork", name: "Wayfire Network", note: "Activate three campfire anchors.", stat: "camps", at: 3 },
     { id: "worldBelow", name: "No Bottom", note: "Split the lower bedrock seam and open another stratum.", stat: "worldExpansions", at: 1 },
+    { id: "voidglass", name: "False Floor", note: "Open two abyss seams and reach the stranger repeating shelves.", stat: "worldExpansions", at: 2 },
     { id: "firstFieldNote", name: "It Does Not Fit", note: "Decode your first hidden field note.", loreNotes: 1 },
     { id: "loreHunter", name: "Between the Contracts", note: "Decode five hidden field notes.", loreNotes: 5 },
     { id: "firstWatcher", name: "Watched From the Dark", note: "Notice the hidden observer beyond your light.", stat: "watcherSightings", at: 1 },
@@ -349,6 +495,19 @@ window.ML = window.ML || {};
       minContracts: 3,
       reward: { relic: 1, silk: 2, coin: 18 },
       rewardEvery: { coin: 6 }
+    },
+    {
+      id: "seamSurvey",
+      name: "Seam survey",
+      type: "worldExpansions",
+      label: "Open abyss seams",
+      unit: "seams",
+      base: 1,
+      growth: 0,
+      minContracts: 4,
+      minDepth: 180,
+      reward: { battery: 2, torch: 4, coin: 18 },
+      rewardEvery: { coin: 6, crystal: 1 }
     }
   ];
 
@@ -489,6 +648,7 @@ window.ML = window.ML || {};
     PICKS,
     BLADES,
     LAMPS,
+    STRATA_PROFILES,
     RECIPES,
     CRAFT_CATS,
     CAMP_SERVICES,

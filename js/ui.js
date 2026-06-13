@@ -209,8 +209,9 @@
     const day = scene ? scene.dayNumber() : 1;
     const phase = scene ? scene.phaseName() : "Day";
     const biome = scene?.currentBiome ? scene.currentBiome() : ML.BiomeSystem?.current?.(sim, { x: px, y: py });
-    ui.worldLabel.textContent = `Seed ${sim.seed} · Day ${day} · ${phase}${biome?.name ? ` · ${biome.name}` : ""}`;
-    renderBiome(biome);
+    const stratum = scene?.currentStratum ? scene.currentStratum() : sim.stratumAt?.(tileX, Math.floor(py / TILE));
+    ui.worldLabel.textContent = `Seed ${sim.seed} · Day ${day} · ${phase}${biome?.name ? ` · ${biome.name}` : ""}${stratum?.name ? ` · ${stratum.name}` : ""}`;
+    renderBiome(biome, stratum);
     const pickName = PICKS[sim.pickLevel]?.name || "Pickaxe";
     ui.pickText.textContent = pickName;
     ui.pickHudText.textContent = pickName;
@@ -230,11 +231,12 @@
     ui.campToggle?.classList.toggle("camp-ready", Boolean(scene?.nearCamp?.()));
   }
 
-  function renderBiome(biome) {
+  function renderBiome(biome, stratum = null) {
     if (!ui.biomePanel || !biome || !ui.biomeName || !ui.biomeEffects || !ui.biomeLore) return;
     ui.biomeName.textContent = biome.name;
-    ui.biomeEffects.textContent = ML.BiomeSystem?.effectText?.(biome) || biome.tone || "";
-    ui.biomeLore.textContent = biome.lore || "";
+    const biomeEffects = ML.BiomeSystem?.effectText?.(biome) || biome.tone || "";
+    ui.biomeEffects.textContent = stratum?.tone ? `${biomeEffects} · ${stratum.tone}` : biomeEffects;
+    ui.biomeLore.textContent = stratum?.note ? `${biome.lore || ""} ${stratum.note}`.trim() : (biome.lore || "");
     ui.biomePanel.style.borderColor = biome.accent || "";
     ui.biomePanel.style.boxShadow = `0 0 0 1px ${biome.accent || "rgba(236, 205, 135, 0.24)"}22, 0 12px 32px var(--shadow)`;
   }

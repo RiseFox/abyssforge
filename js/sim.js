@@ -132,17 +132,7 @@
           } else if (y < surface[x] + 5) {
             world[y][x] = Tile.DIRT;
           } else {
-            const depth = y - surface[x];
-            let tile = y > 178 ? Tile.DEEP : Tile.STONE;
-            const roll = rand();
-            if (depth > 10 && roll < 0.04) tile = Tile.COAL;
-            else if (depth > 32 && roll > 0.95 && roll <= 0.972) tile = Tile.COPPER;
-            else if (depth > 72 && roll > 0.972 && roll <= 0.984) tile = Tile.IRON;
-            else if (depth > 105 && roll > 0.984 && roll <= 0.991) tile = Tile.GOLD;
-            else if (depth > 140 && roll > 0.991 && roll <= 0.9965) tile = Tile.CRYSTAL;
-            else if (depth > 185 && roll > 0.9965) tile = Tile.OBSIDIAN;
-            if (y >= WORLD_H - 16 && y < WORLD_H - 4 && rand() < 0.14) tile = Tile.OBSIDIAN;
-            world[y][x] = tile;
+            world[y][x] = this.deepTileFor(x, y, rand, surface);
           }
         }
       }
@@ -333,18 +323,51 @@
       return y >= this.worldHeight() - 7 && x > 1 && x < WORLD_W - 2;
     }
 
-    deepTileFor(x, y, rand) {
-      const surfaceY = this.surface[x] || 24;
+    depthAtTile(x, y, surfaceOverride = this.surface) {
+      const tx = clamp(Math.floor(x), 0, WORLD_W - 1);
+      return Math.max(0, Math.floor(y) - (surfaceOverride?.[tx] || 24));
+    }
+
+    stratumForDepth(depth = 0) {
+      const profiles = ML.STRATA_PROFILES || [];
+      if (!profiles.length) return null;
+      let active = profiles[0];
+      for (const profile of profiles) {
+        if (depth >= (profile.minDepth || 0)) active = profile;
+      }
+      return active;
+    }
+
+    stratumAt(x, y, surfaceOverride = this.surface) {
+      return this.stratumForDepth(this.depthAtTile(x, y, surfaceOverride));
+    }
+
+    weightedPick(weights, rand = Math.random) {
+      const entries = Object.entries(weights || {}).filter(([, weight]) => weight > 0);
+      const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
+      if (total <= 0) return null;
+      let roll = rand() * total;
+      for (const [id, weight] of entries) {
+        roll -= weight;
+        if (roll <= 0) return id;
+      }
+      return entries[entries.length - 1]?.[0] || null;
+    }
+
+    deepTileFor(x, y, rand, surfaceOverride = this.surface) {
+      const surfaceY = surfaceOverride?.[x] || 24;
       const depth = y - surfaceY;
-      const roll = rand();
-      let tile = depth > 210 ? Tile.DEEP : Tile.STONE;
-      if (depth > 42 && roll < 0.035) tile = Tile.COAL;
-      else if (depth > 70 && roll > 0.948 && roll <= 0.972) tile = Tile.COPPER;
-      else if (depth > 105 && roll > 0.972 && roll <= 0.986) tile = Tile.IRON;
-      else if (depth > 150 && roll > 0.986 && roll <= 0.994) tile = Tile.GOLD;
-      else if (depth > 190 && roll > 0.994 && roll <= 0.998) tile = Tile.CRYSTAL;
-      else if (depth > 225 && roll > 0.998) tile = Tile.OBSIDIAN;
-      if (depth > 245 && rand() < 0.11) tile = Tile.OBSIDIAN;
+      const profile = this.stratumForDepth(depth);
+      let tile = depth > (profile?.deepAt ?? 210) ? Tile.DEEP : Tile.STONE;
+      const ores = profile?.ores || [];
+      for (let i = ores.length - 1; i >= 0; i -= 1) {
+        const ore = ores[i];
+        if (depth < (ore.minDepth || 0)) continue;
+        if (rand() < (ore.chance || 0)) {
+          tile = ore.tile;
+          break;
+        }
+      }
       return tile;
     }
 
@@ -368,6 +391,12 @@
       const seedMix = (this.seed ^ (oldHeight * 1103515245) ^ (entryX * 2654435761)) >>> 0;
       const rand = mulberry32(seedMix);
       entryX = clamp(Math.floor(entryX), 5, WORLD_W - 6);
+      const stratum = this.stratumAt(entryX, oldHeight) || this.stratumForDepth(oldHeight);
+      const caveWorms = Math.max(18, Math.round(42 * (stratum?.caveWorms || 1)));
+      const caveStepScale = stratum?.caveSteps || 1;
+      const maxChests = stratum?.maxChests ?? 7;
+      const maxCamps = stratum?.maxCamps ?? 2;
+      const mobCap = stratum?.mobCap ?? 24;
 
       for (let y = Math.max(0, oldHeight - 8); y < oldHeight; y += 1) {
         for (let x = 0; x < WORLD_W; x += 1) {
@@ -389,14 +418,14 @@
         riftX = clamp(riftX + Math.floor(rand() * 3) - 1, 6, WORLD_W - 7);
         const radius = rand() < 0.28 ? 2 : 1;
         this.carveAirCircle(riftX, y, radius, oldHeight - 12, newHeight - 6);
-        if (rand() < 0.24) this.world[y][clamp(riftX + (rand() < 0.5 ? -2 : 2), 2, WORLD_W - 3)] = Tile.LADDER;
+        if (rand() < (stratum?.ladderChance ?? 0.24)) this.world[y][clamp(riftX + (rand() < 0.5 ? -2 : 2), 2, WORLD_W - 3)] = Tile.LADDER;
       }
 
-      for (let c = 0; c < 42; c += 1) {
+      for (let c = 0; c < caveWorms; c += 1) {
         let x = 6 + Math.floor(rand() * (WORLD_W - 12));
         let y = oldHeight + 4 + Math.floor(rand() * Math.max(1, addRows - 18));
         let radius = rand() < 0.68 ? 1 : 2;
-        const steps = 18 + Math.floor(rand() * 58);
+        const steps = Math.round((18 + Math.floor(rand() * 58)) * caveStepScale);
         for (let i = 0; i < steps; i += 1) {
           this.carveAirCircle(x, y, radius, oldHeight - 6, newHeight - 6);
           x = clamp(x + Math.floor(rand() * 3) - 1, 4, WORLD_W - 5);
@@ -415,43 +444,43 @@
         const x = 5 + Math.floor(rand() * (WORLD_W - 10));
         const y = oldHeight + 4 + Math.floor(rand() * Math.max(1, addRows - 16));
         if (this.tileAt(x, y) !== AIR || !solidAt(x, y + 1)) continue;
-        if (chests < 7 && rand() < 0.32) {
+        if (chests < maxChests && rand() < (stratum?.cacheChance ?? 0.32)) {
           this.world[y][x] = Tile.CHEST;
           chests += 1;
           continue;
         }
-        if (camps < 2 && rand() < 0.13) {
+        if (camps < maxCamps && rand() < (stratum?.campChance ?? 0.13)) {
           this.world[y][x] = Tile.CAMPFIRE;
           camps += 1;
           continue;
         }
-        if (rand() < 0.2) this.world[y][x] = Tile.MUSHROOM;
+        if (rand() < (stratum?.mushroomChance ?? 0.2)) this.world[y][x] = Tile.MUSHROOM;
       }
 
       for (let y = oldHeight + 8; y < newHeight - 8; y += 1) {
         for (let x = 4; x < WORLD_W - 4; x += 1) {
-          if (this.world[y][x] === AIR && solidAt(x, y + 1) && rand() < 0.045) {
+          if (this.world[y][x] === AIR && solidAt(x, y + 1) && rand() < (stratum?.lavaChance ?? 0.045)) {
             this.world[y][x] = Tile.LAVA;
-            if (this.world[y][x + 1] === AIR && solidAt(x + 1, y + 1) && rand() < 0.55) this.world[y][x + 1] = Tile.LAVA;
+            if (this.world[y][x + 1] === AIR && solidAt(x + 1, y + 1) && rand() < (stratum?.lavaSpread ?? 0.55)) this.world[y][x + 1] = Tile.LAVA;
           }
         }
       }
 
       let mobAdds = 0;
-      for (let tries = 0; tries < 260 && mobAdds < 24; tries += 1) {
+      for (let tries = 0; tries < 320 && mobAdds < mobCap; tries += 1) {
         const x = 4 + Math.floor(rand() * (WORLD_W - 8));
         const y = oldHeight + 6 + Math.floor(rand() * Math.max(1, addRows - 18));
         const picked = this.pickMobForSpot(x, y, rand, { natural: true });
         if (!picked) continue;
         const depth = picked.y - (this.surface[x] || 24);
-        this.addMob(x, picked.y, picked.kind, { elite: depth > 190 && rand() < 0.08 });
+        this.addMob(x, picked.y, picked.kind, { elite: depth > 190 && rand() < (stratum?.eliteChance ?? 0.08) });
         mobAdds += 1;
       }
 
       this.rebuildLights();
       this.mobBaseline = Math.max(this.mobBaseline || 0, (this.mobs || []).length);
       this.stats.worldExpansions = (this.stats.worldExpansions || 0) + 1;
-      return { from: oldHeight, to: newHeight, rows: addRows, entryX, chests, camps, mobs: mobAdds };
+      return { from: oldHeight, to: newHeight, rows: addRows, entryX, chests, camps, mobs: mobAdds, stratumId: stratum?.id, stratumName: stratum?.name };
     }
 
     // Mobs are part of the world, decided at generation time like ores: they

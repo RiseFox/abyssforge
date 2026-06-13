@@ -12,6 +12,8 @@ Players who want a fast browser 2D mining and crafting survival loop with Terrar
 
 AbyssForge is a playable pixel-art cave descent game. Success means the player can spawn safely, dig downward, fight mobs, find secrets, craft upgrades, recover at camp points, and understand why each danger or reward happened.
 
+The mine should not feel like one repeated wall of stone. Depth needs readable progression: early routes are forgiving, mid layers trade safety for ore, late layers pressure light and recovery, and abyss seams should open new rules rather than just adding more rows.
+
 ## Brand Personality
 
 Tactile, dangerous, readable. The game should feel like a compact underground expedition, not a decorative landing page or a static tech demo.
@@ -24,6 +26,7 @@ Avoid generic SaaS dashboards, oversized marketing heroes, soft decorative gradi
 
 - World objects should carry mechanics: lights, campfires, chests, ladders, and hazards must be visible, usable, and testable.
 - Safety-critical rules should be explicit: spawn support, range limits, recovery points, and boss locks must never rely on hidden assumptions.
+- Depth systems should be data-driven: strata, mob ecology, cave events, rewards, and hazards should be tunable as content, not scattered magic numbers.
 - Motion should explain state: hits, recovery, light flicker, pickups, and drawer transitions should communicate cause and feedback.
 - Pixel art should remain code-native and consistent unless a raster asset clearly improves gameplay.
 - UI should support repeated play: dense enough for survival information, but stable and readable at desktop and small-screen sizes.

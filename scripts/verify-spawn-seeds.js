@@ -153,7 +153,8 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const biomeIds = new Set();
     const sampleBiome = (x, y) => {
       const tx = Math.max(0, Math.min(WORLD_W - 1, Math.floor(x)));
-      const ty = Math.max(0, Math.min(WORLD_H - 1, Math.floor(y)));
+      const height = sim.worldHeight?.() || sim.world?.length || WORLD_H;
+      const ty = Math.max(0, Math.min(height - 1, Math.floor(y)));
       const biome = window.ML.BiomeSystem?.biomeAt?.(sim, tx, ty);
       if (!biome) return;
       biomeIds.add(biome.id);
@@ -186,6 +187,16 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const secondExtension = sim.extendDepth?.(seamX, 48);
     const heightAfterSecond = sim.worldHeight?.() || sim.world.length;
     const secondSeamOpened = sim.tileAt(seamX, heightAfter - 3) !== window.ML.Tile.BEDROCK;
+    const stratumIds = new Set();
+    const stratumSamples = [];
+    [24, 96, 168, 252, 350].forEach((depth, index) => {
+      const x = Math.max(3, Math.min(WORLD_W - 4, 18 + index * 29));
+      const y = (sim.surface[x] || 24) + depth;
+      const stratum = sim.stratumAt?.(x, y);
+      if (!stratum) return;
+      stratumIds.add(stratum.id);
+      stratumSamples.push({ x, y, id: stratum.id, name: stratum.name, fatigue: stratum.miningFatigue });
+    });
     scene?.togglePack?.(true);
     const packVisible = Boolean(window.ML.ui?.packDrawer && !window.ML.ui.packDrawer.classList.contains("hidden"));
     const packChips = window.ML.ui?.packGrid?.children?.length || 0;
@@ -198,7 +209,9 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       contracts: window.ML.CONTRACTS.length,
       caveEvents: Object.keys(window.ML.CAVE_EVENTS || {}).length,
       biomes: Object.keys(window.ML.BIOMES || {}).length,
+      strataProfiles: (window.ML.STRATA_PROFILES || []).length,
       biomeSystem: Boolean(window.ML.BiomeSystem?.biomeAt && window.ML.BiomeSystem?.current),
+      stratumSystem: typeof sim.stratumAt === "function" && typeof sim.stratumForDepth === "function" && typeof sim.weightedPick === "function",
       loreNotes: Object.keys(window.ML.LORE_NOTES || {}).length,
       loreGoals: Object.keys(window.ML.HIDDEN_GOALS || {}).length,
       loreSystem,
@@ -225,10 +238,12 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       extensionRows: extension?.rows || 0,
       extensionChests: extension?.chests || 0,
       extensionMobs: extension?.mobs || 0,
+      extensionStratum: extension?.stratumId || null,
       seamOpened,
       heightAfterSecond,
       secondExtensionRows: secondExtension?.rows || 0,
       secondExtensionMobs: secondExtension?.mobs || 0,
+      secondExtensionStratum: secondExtension?.stratumId || null,
       secondSeamOpened,
       worldExpansions: sim.stats.worldExpansions || 0,
       watcherTraceDelta: traceAfter - traceBefore,
@@ -247,6 +262,8 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       packSummary,
       sampleBiomeCount: biomeIds.size,
       biomeSamples,
+      sampleStratumCount: stratumIds.size,
+      stratumSamples,
       campServices: window.ML.CAMP_SERVICES.length,
       campSystem: Boolean(window.ML.CampSystem?.isNearCamp),
       craftable: craftable.length,
@@ -339,8 +356,11 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.contracts < 5
     || progressionCheck.caveEvents < 4
     || progressionCheck.biomes < 8
+    || progressionCheck.strataProfiles < 5
     || !progressionCheck.biomeSystem
+    || !progressionCheck.stratumSystem
     || progressionCheck.sampleBiomeCount < 6
+    || progressionCheck.sampleStratumCount < 4
     || progressionCheck.loreNotes < 13
     || progressionCheck.loreGoals < 7
     || !progressionCheck.loreSystem
@@ -364,10 +384,13 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.heightAfter <= progressionCheck.heightBefore
     || progressionCheck.extensionRows < 48
     || progressionCheck.extensionMobs < 1
+    || !progressionCheck.extensionStratum
     || !progressionCheck.seamOpened
     || progressionCheck.heightAfterSecond <= progressionCheck.heightAfter
     || progressionCheck.secondExtensionRows < 48
     || progressionCheck.secondExtensionMobs < 1
+    || !progressionCheck.secondExtensionStratum
+    || progressionCheck.secondExtensionStratum === progressionCheck.extensionStratum
     || !progressionCheck.secondSeamOpened
     || progressionCheck.worldExpansions < 2
     || !progressionCheck.watcherTraceActive

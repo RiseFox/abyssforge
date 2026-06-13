@@ -1,6 +1,9 @@
 node_modules/
 output/
 backup/
+artifacts/
+test-results/
+playwright-report/
 .claude/
 
 *.zip
