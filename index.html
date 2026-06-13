@@ -101,6 +101,9 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3 17.5 3.5l3 3-2.8 2.8"/><path d="m3.7 20.3 8.8-8.8"/><path d="m13.5 5.5 5 5"/><path d="M5 5h4v4H5z"/><path d="M15 15h4v4h-4z"/></svg>
           <span id="craftBadge" class="craft-badge hidden">0</span>
         </button>
+        <button id="packToggle" class="icon-button" type="button" title="Backpack (B)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7V6a5 5 0 0 1 10 0v1"/><path d="M5 7h14l1 13H4z"/><path d="M8 12h8"/><path d="M8 16h5"/></svg>
+        </button>
         <button id="mapToggle" class="icon-button" type="button" title="Map (M)">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14"/><path d="M15 6v14"/></svg>
         </button>
@@ -187,6 +190,7 @@
           <div class="help-row"><span><kbd>Space</kbd></span><span>Jump. Double jump with Cave boots</span></div>
           <div class="help-row"><span><kbd>LMB</kbd></span><span>Mine blocks or hit an enemy under the cursor</span></div>
           <div class="help-row"><span><kbd>E</kbd></span><span>Open nearby chests, secret caches, or campfires. If nothing is close, open crafting</span></div>
+          <div class="help-row"><span><kbd>B</kbd><kbd>I</kbd></span><span>Open the backpack. The bottom bar is only your quick belt</span></div>
           <div class="help-row"><span><kbd>RMB</kbd></span><span>Place the selected item. Field kits are used; glow caps plant onto open air, otherwise eaten</span></div>
           <div class="help-row"><span><kbd>1</kbd>-<kbd>9</kbd></span><span>Select hotbar slot (mouse wheel works too)</span></div>
           <div class="help-row"><span><kbd>F</kbd></span><span>Swing at enemies in front of you</span></div>
@@ -228,6 +232,26 @@
         <div class="drawer-body">
           <div id="inventoryGrid" class="inventory-grid"></div>
           <div id="recipes" class="recipes"></div>
+        </div>
+      </aside>
+
+      <aside id="packDrawer" class="pack-drawer hidden">
+        <div class="drawer-head">
+          <div>
+            <strong>Backpack</strong>
+            <span id="packSummary">0 stacks</span>
+          </div>
+          <button id="closePack" class="icon-button" type="button" title="Close">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg>
+          </button>
+        </div>
+        <div class="pack-meter" aria-hidden="true"><i id="packFill"></i></div>
+        <div class="drawer-body pack-body">
+          <div class="pack-note">
+            <strong>Stored materials</strong>
+            <span id="packHint">Hotbar slots 1-9 stay ready while everything else lives here.</span>
+          </div>
+          <div id="packGrid" class="inventory-grid pack-grid"></div>
         </div>
       </aside>
 

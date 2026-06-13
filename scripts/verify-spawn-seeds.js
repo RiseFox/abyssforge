@@ -125,6 +125,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     sim.stats.camps = 3;
     sim.stats.bosses = 2;
     sim.stats.watcherSightings = 3;
+    sim.stats.watcherTraces = 1;
     sim.stats.shadowPeaks = 1;
     sim.pickLevel = 6;
     sim.lamp = 2;
@@ -153,6 +154,16 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     for (const secret of sim.secrets || []) {
       sampleBiome(secret.x + Math.floor(secret.w / 2), secret.y + Math.floor(secret.h / 2));
     }
+    const traceBefore = scene?.watcherTraceMarks?.length || 0;
+    const trace = scene?.leaveWatcherTrace?.(scene.player.x + 280, scene.player.y, "test");
+    const traceAfter = scene?.watcherTraceMarks?.length || 0;
+    const watcherSpot = scene?.findWatcherSpot?.({ force: true });
+    scene?.togglePack?.(true);
+    const packVisible = Boolean(window.ML.ui?.packDrawer && !window.ML.ui.packDrawer.classList.contains("hidden"));
+    const packChips = window.ML.ui?.packGrid?.children?.length || 0;
+    const packSummary = window.ML.ui?.packSummary?.textContent || "";
+    scene?.togglePack?.(false);
+    const packClosed = Boolean(window.ML.ui?.packDrawer?.classList.contains("hidden"));
     return {
       recipes: window.ML.RECIPES.length,
       achievements: window.ML.ACHIEVEMENTS.length,
@@ -167,10 +178,19 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       loreDecoded: loreIntel.noteCount || 0,
       loreGoalDone: Boolean(loreIntel.done),
       watcherTexture: Boolean(scene?.textures?.exists?.("watcher")),
-      watcherRuntime: typeof scene?.spawnWatcherSighting === "function" && typeof scene?.updateShadowPressure === "function",
+      watcherTraceTexture: Boolean(scene?.textures?.exists?.("watcherTrace")),
+      watcherRuntime: typeof scene?.spawnWatcherSighting === "function" && typeof scene?.updateShadowPressure === "function" && typeof scene?.dismissWatcher === "function" && typeof scene?.leaveWatcherTrace === "function",
+      watcherTraceDelta: traceAfter - traceBefore,
+      watcherTraceActive: Boolean(trace),
+      watcherSpotDistance: watcherSpot ? Math.round(Math.hypot(watcherSpot.x - scene.player.x, watcherSpot.y - scene.player.y)) : 0,
       shadowPressure: sim.shadowPressure,
       watcherSightings: sim.stats.watcherSightings,
+      watcherTraces: sim.stats.watcherTraces,
       shadowPeaks: sim.stats.shadowPeaks,
+      packVisible,
+      packClosed,
+      packChips,
+      packSummary,
       sampleBiomeCount: biomeIds.size,
       biomeSamples,
       campServices: window.ML.CAMP_SERVICES.length,
@@ -274,9 +294,18 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.loreDecoded < 10
     || !progressionCheck.loreGoalDone
     || !progressionCheck.watcherTexture
+    || !progressionCheck.watcherTraceTexture
     || !progressionCheck.watcherRuntime
+    || !progressionCheck.watcherTraceActive
+    || progressionCheck.watcherTraceDelta < 1
+    || progressionCheck.watcherSpotDistance < 245
     || progressionCheck.watcherSightings < 3
+    || progressionCheck.watcherTraces < 1
     || progressionCheck.shadowPeaks < 1
+    || !progressionCheck.packVisible
+    || !progressionCheck.packClosed
+    || progressionCheck.packChips < 10
+    || !progressionCheck.packSummary.includes("stacks")
     || progressionCheck.campServices < 5
     || !progressionCheck.campSystem
     || progressionCheck.craftable < 3

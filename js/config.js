@@ -267,6 +267,7 @@ window.ML = window.ML || {};
     { id: "firstFieldNote", name: "It Does Not Fit", note: "Decode your first hidden field note.", loreNotes: 1 },
     { id: "loreHunter", name: "Between the Contracts", note: "Decode five hidden field notes.", loreNotes: 5 },
     { id: "firstWatcher", name: "Watched From the Dark", note: "Notice the hidden observer beyond your light.", stat: "watcherSightings", at: 1 },
+    { id: "watcherTrace", name: "Cold Footprint", note: "Find what the shadow leaves behind.", stat: "watcherTraces", at: 1 },
     { id: "watcherTrail", name: "The Silent Guide", note: "Survive three shadow watcher sightings.", stat: "watcherSightings", at: 3 },
     { id: "forgeTruth", name: "The Forge Remembered", note: "Assemble the final truth of the abyss forge.", loreGoal: "truth" }
   ];

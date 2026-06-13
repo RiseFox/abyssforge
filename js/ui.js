@@ -46,6 +46,11 @@
     craftTabs: document.getElementById("craftTabs"),
     inventoryGrid: document.getElementById("inventoryGrid"),
     recipes: document.getElementById("recipes"),
+    packDrawer: document.getElementById("packDrawer"),
+    packGrid: document.getElementById("packGrid"),
+    packSummary: document.getElementById("packSummary"),
+    packFill: document.getElementById("packFill"),
+    packHint: document.getElementById("packHint"),
     helpToggle: document.getElementById("helpToggle"),
     campToggle: document.getElementById("campToggle"),
     closeCamp: document.getElementById("closeCamp"),
@@ -55,6 +60,8 @@
     craftReady: document.getElementById("craftReady"),
     craftReadyText: document.getElementById("craftReadyText"),
     closeCraft: document.getElementById("closeCraft"),
+    packToggle: document.getElementById("packToggle"),
+    closePack: document.getElementById("closePack"),
     mapToggle: document.getElementById("mapToggle"),
     muteToggle: document.getElementById("muteToggle"),
     muteIcon: document.getElementById("muteIcon"),
@@ -416,7 +423,7 @@
 
   function renderInteraction(scene = ML.sceneRef) {
     if (!ui.interactPrompt) return;
-    const target = (!scene?.pausedByUI && !scene?.dead && !scene?.craftOpen && !scene?.campOpen && !scene?.helpOpen)
+    const target = (!scene?.pausedByUI && !scene?.dead && !scene?.craftOpen && !scene?.campOpen && !scene?.helpOpen && !scene?.packOpen)
       ? scene.interactionTarget?.()
       : null;
     ui.interactPrompt.classList.toggle("hidden", !target);
@@ -426,6 +433,56 @@
     ui.interactName.textContent = target.name || "Object";
     ui.interactHint.textContent = target.hint || "Nearby";
     ui.interactPrompt.title = `${target.key || "E"}: ${target.action || "Use"} ${target.name || "object"}`;
+  }
+
+  function inventoryItemKeys(sim, options = {}) {
+    const includeEmpty = Boolean(options.includeEmpty);
+    const includeHotbarEmpty = Boolean(options.includeHotbarEmpty);
+    return Object.keys(ITEM_META).filter((item) =>
+      includeEmpty || (sim.inventory[item] || 0) > 0 || (includeHotbarEmpty && HOTBAR.includes(item))
+    );
+  }
+
+  function buildInventoryChip(item, amount) {
+    const chip = document.createElement("div");
+    chip.className = `inv-chip ${itemStateClass(item, amount)}`;
+    chip.style.setProperty("--item-accent", itemAccent(item));
+    const icon = document.createElement("i");
+    icon.className = "mini-icon " + ITEM_META[item].cls;
+    const label = document.createElement("span");
+    const name = document.createElement("strong");
+    name.textContent = ITEM_META[item].name;
+    const kind = document.createElement("small");
+    kind.textContent = ITEM_KIND[item] || "Item";
+    label.append(name, kind);
+    const qty = document.createElement("b");
+    qty.textContent = `x${amount}`;
+    chip.append(icon, label, qty);
+    return chip;
+  }
+
+  function renderInventoryGrid(container, sim, options = {}) {
+    if (!container) return;
+    container.textContent = "";
+    for (const item of inventoryItemKeys(sim, options)) {
+      container.appendChild(buildInventoryChip(item, sim.inventory[item] || 0));
+    }
+  }
+
+  function renderPack(sim) {
+    const scene = ML.sceneRef;
+    if (!scene || !scene.packOpen || !ui.packGrid) return;
+    const keys = inventoryItemKeys(sim, { includeEmpty: true });
+    const used = keys.filter((item) => (sim.inventory[item] || 0) > 0).length;
+    const total = Math.max(1, keys.length);
+    const itemCount = keys.reduce((sum, item) => sum + (sim.inventory[item] || 0), 0);
+    renderInventoryGrid(ui.packGrid, sim, { includeEmpty: true });
+    if (ui.packSummary) ui.packSummary.textContent = `${used}/${total} stacks · ${itemCount} items`;
+    if (ui.packFill) ui.packFill.style.width = `${Math.round(used / total * 100)}%`;
+    if (ui.packHint) {
+      const selected = HOTBAR[sim.selected] || HOTBAR[0];
+      ui.packHint.textContent = `Quick belt: ${ITEM_META[selected]?.name || selected}. Press 1-9 for tools, blocks, lights, and consumables.`;
+    }
   }
 
   function renderCraft(sim) {
@@ -446,26 +503,7 @@
       ui.craftTabs.appendChild(btn);
     });
 
-    ui.inventoryGrid.textContent = "";
-    for (const item of Object.keys(ITEM_META)) {
-      const amount = sim.inventory[item] || 0;
-      if (!amount && !HOTBAR.includes(item)) continue;
-      const chip = document.createElement("div");
-      chip.className = `inv-chip ${itemStateClass(item, amount)}`;
-      chip.style.setProperty("--item-accent", itemAccent(item));
-      const icon = document.createElement("i");
-      icon.className = "mini-icon " + ITEM_META[item].cls;
-      const label = document.createElement("span");
-      const name = document.createElement("strong");
-      name.textContent = ITEM_META[item].name;
-      const kind = document.createElement("small");
-      kind.textContent = ITEM_KIND[item] || "Item";
-      label.append(name, kind);
-      const qty = document.createElement("b");
-      qty.textContent = `x${amount}`;
-      chip.append(icon, label, qty);
-      ui.inventoryGrid.appendChild(chip);
-    }
+    renderInventoryGrid(ui.inventoryGrid, sim, { includeHotbarEmpty: true });
 
     ui.recipes.textContent = "";
     RECIPES.filter((r) => r.cat === craftTab && recipeVisible(sim, r)).forEach((recipe) => {
@@ -622,6 +660,7 @@
     renderStory(sim);
     renderCamp(sim);
     renderCraft(sim);
+    renderPack(sim);
   }
 
   function achievementMet(sim, achievement) {
@@ -776,6 +815,7 @@
       ML.sceneRef?.toggleCraft(false);
       ML.sceneRef?.toggleHelp(false);
       ML.sceneRef?.toggleCamp(false);
+      ML.sceneRef?.togglePack(false);
       minimap.render(ML.sceneRef);
     }
   }
@@ -845,6 +885,8 @@
     ui.craftToggle.addEventListener("click", () => activeScene().toggleCraft());
     ui.craftReady?.addEventListener("click", () => activeScene().toggleCraft(true));
     ui.closeCraft.addEventListener("click", () => activeScene().toggleCraft(false));
+    ui.packToggle?.addEventListener("click", () => activeScene().togglePack());
+    ui.closePack?.addEventListener("click", () => activeScene().togglePack(false));
     ui.mapToggle.addEventListener("click", () => toggleMinimap());
     ui.closeMap.addEventListener("click", () => toggleMinimap(false));
     ui.muteToggle.addEventListener("click", () => {
@@ -937,6 +979,7 @@
     renderRecall,
     renderInteraction,
     renderCamp,
+    renderPack,
     renderMystery,
     renderStory,
     renderAll,

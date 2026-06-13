@@ -40,6 +40,7 @@
       this.craftOpen = false;
       this.campOpen = false;
       this.helpOpen = false;
+      this.packOpen = false;
       this.mineTarget = null;
       this.mineProgress = 0;
       this.enemyClock = 0;
@@ -72,6 +73,8 @@
       this.lastShadowWarnAt = 0;
       this.nextWatcherAt = 9000;
       this.watcherUntil = 0;
+      this.watcherState = null;
+      this.watcherTraceMarks = [];
       this.caveEvent = null;
       this.nextCaveEventAt = 0;
       this.eventPulseAt = 0;
@@ -138,7 +141,7 @@
       this.tileFx = this.add.graphics().setDepth(9);
       this.watcher = this.add.image(this.player.x, this.player.y, "watcher")
         .setOrigin(0.5, 1)
-        .setDepth(8)
+        .setDepth(82)
         .setVisible(false)
         .setAlpha(0);
 
@@ -172,6 +175,8 @@
 
       this.input.keyboard.on("keydown-E", () => this.interactOrCraft());
       this.input.keyboard.on("keydown-C", () => this.toggleCamp());
+      this.input.keyboard.on("keydown-B", () => this.togglePack());
+      this.input.keyboard.on("keydown-I", () => this.togglePack());
       this.input.keyboard.on("keydown-M", () => ML.toggleMinimap());
       this.input.keyboard.on("keydown-ESC", () => this.setPaused(!this.pausedByUI));
       this.input.keyboard.on("keydown-F", () => this.attack());
@@ -187,7 +192,7 @@
       this.prepareGameInputFocus();
 
       this.input.on("wheel", (_pointer, _objects, _dx, dy) => {
-        if (this.craftOpen || this.campOpen || this.helpOpen) return;
+        if (this.craftOpen || this.campOpen || this.helpOpen || this.packOpen) return;
         this.sim.selected = (this.sim.selected + (dy > 0 ? 1 : -1) + HOTBAR.length) % HOTBAR.length;
         ML.renderHotbar(this.sim);
       });
@@ -220,6 +225,7 @@
       ML.ui.craftDrawer.classList.add("hidden");
       ML.ui.campDrawer?.classList.add("hidden");
       ML.ui.helpDrawer.classList.add("hidden");
+      ML.ui.packDrawer?.classList.add("hidden");
       this.scheduleNextCaveEvent(true);
       this.refreshMobActivation();
       ML.renderAll(this.sim);
@@ -588,6 +594,31 @@
       return clamp(best, 0, 1);
     }
 
+    lightLevelAt(x, y) {
+      const tx = clamp(Math.floor(x / TILE), 0, WORLD_W - 1);
+      const surfaceY = this.sim.surface[tx] || 24;
+      const depth = Math.max(0, Math.floor(y / TILE - surfaceY));
+      const biome = ML.BiomeSystem?.biomeAt?.(this.sim, tx, Math.floor(y / TILE)) || this.currentBiome();
+      const depthFalloff = clamp(1 - depth / 46, 0, 1);
+      let best = clamp(Math.max(biome?.ambientFloor ?? 0.08, depthFalloff * this.surfaceBrightness()), biome?.ambientFloor ?? 0.08, 1);
+      if (this.sim.ward) best = Math.max(best, 0.18);
+      if (this.caveEvent?.id === "lanternDraft") best = Math.max(best, 0.38);
+
+      const lampRadius = LAMPS[this.sim.lamp].radius / TILE;
+      const playerDistance = Math.hypot(x / TILE - this.player.x / TILE, y / TILE - this.player.y / TILE);
+      if (playerDistance < lampRadius) {
+        best = Math.max(best, (1 - playerDistance / lampRadius) * Math.max(0.28, LAMPS[this.sim.lamp].glow));
+      }
+
+      for (const light of this.sim.lights) {
+        const r = BLOCKS[light.t]?.light || 0;
+        if (!r) continue;
+        const d = Math.hypot(light.x + 0.5 - x / TILE, light.y + 0.5 - y / TILE);
+        if (d < r + 1) best = Math.max(best, 1 - d / (r + 1));
+      }
+      return clamp(best, 0, 1);
+    }
+
     drawAnimatedTileFx() {
       if (!this.tileFx) return;
       const fx = this.tileFx;
@@ -937,6 +968,10 @@
       }
       if (this.campOpen) {
         this.toggleCamp(false);
+        return true;
+      }
+      if (this.packOpen) {
+        this.togglePack(false);
         return true;
       }
       if (this.interact()) return true;
@@ -2112,53 +2147,192 @@
       this.updateWatcherSprite(dt, light);
     }
 
-    findWatcherSpot() {
+    findWatcherSpot(options = {}) {
       const px = Math.floor(this.player.x / TILE);
       const py = Math.floor(this.player.y / TILE);
-      const firstSide = this.player.flipX ? 1 : -1;
-      const sides = [firstSide, -firstSide];
-      const distances = [7, 9, 11, 5];
-      const yOffsets = [0, -2, 2, -4, 4, 6];
+      const facing = this.player.flipX ? -1 : 1;
+      const sides = [-facing, facing];
+      const distances = options.force ? [8, 10, 12, 14, 16] : [10, 12, 14, 16, 18];
+      const yOffsets = [-5, -3, -1, 1, 3, 5, 7];
+      const cam = this.cameras.main;
+      const left = cam.scrollX;
+      const top = cam.scrollY;
+      const right = left + cam.width;
+      const bottom = top + cam.height;
+      const screenPenalty = (wx, wy) => {
+        const sx = wx - left;
+        const sy = wy - top;
+        let penalty = 0;
+        if (sx < Math.min(350, cam.width * 0.32) && sy < cam.height - 118) penalty += 520;
+        if (sy > cam.height - 116) penalty += 560;
+        if (sx > cam.width - Math.min(330, cam.width * 0.28) && sy < 430) penalty += 360;
+        return penalty;
+      };
+      const candidates = [];
 
       for (const distance of distances) {
         for (const side of sides) {
           const x = clamp(px + side * distance, 2, WORLD_W - 3);
           for (const offset of yOffsets) {
-            const startY = clamp(py + offset, 4, WORLD_H - 6);
-            for (let y = startY; y < Math.min(WORLD_H - 4, startY + 7); y += 1) {
+            const startY = clamp(py + offset, 4, WORLD_H - 7);
+            const endY = Math.min(WORLD_H - 4, startY + 9);
+            for (let y = startY; y < endY; y += 1) {
               const tile = this.sim.tileAt(x, y);
-              if (tile !== AIR && BLOCKS[tile]?.solid && this.sim.hasHeadClearance(x, y)) {
-                return { x: x * TILE + TILE / 2, y: y * TILE, side };
-              }
+              if (tile === AIR || !BLOCKS[tile]?.solid || !this.sim.hasHeadClearance(x, y)) continue;
+              const wx = x * TILE + TILE / 2;
+              const wy = y * TILE;
+              const distancePx = Phaser.Math.Distance.Between(wx, wy, this.player.x, this.player.y);
+              const maxDistance = options.force ? 640 : Math.max(360, Math.min(640, cam.width * 0.72));
+              if (distancePx < 245 || distancePx > maxDistance) continue;
+              const inView = wx > left + 24 && wx < right - 24 && wy > top + 28 && wy < bottom - 28;
+              if (!inView) continue;
+              const localLight = this.lightLevelAt(wx, wy);
+              if (!options.force && localLight > 0.42) continue;
+              const edgeDistance = Math.min(wx - left, right - wx, wy - top, bottom - wy);
+              const facingWatcher = Math.sign(wx - this.player.x || facing) === facing;
+              const uiPenalty = screenPenalty(wx, wy);
+              const hiddenScore = edgeDistance + uiPenalty + (facingWatcher ? 120 : 0) + localLight * 260 + Math.random() * 40 - distancePx * 0.04;
+              candidates.push({ x: wx, y: wy, side, score: hiddenScore, light: localLight, distance: distancePx, uiPenalty });
+              break;
             }
           }
         }
       }
-      return null;
+
+      if (!candidates.length) {
+        const minTileX = clamp(Math.floor((left + 24) / TILE), 2, WORLD_W - 3);
+        const maxTileX = clamp(Math.ceil((right - 24) / TILE), 2, WORLD_W - 3);
+        const minTileY = clamp(Math.floor((top + 28) / TILE), 4, WORLD_H - 7);
+        const maxTileY = clamp(Math.ceil((bottom - 28) / TILE), 4, WORLD_H - 4);
+        for (let y = minTileY; y <= maxTileY; y += 1) {
+          for (let x = minTileX; x <= maxTileX; x += 1) {
+            if (Math.abs(x - px) < 8 && Math.abs(y - py) < 5) continue;
+            const tile = this.sim.tileAt(x, y);
+            if (tile === AIR || !BLOCKS[tile]?.solid || !this.sim.hasHeadClearance(x, y)) continue;
+            const wx = x * TILE + TILE / 2;
+            const wy = y * TILE;
+            const distancePx = Phaser.Math.Distance.Between(wx, wy, this.player.x, this.player.y);
+            const maxDistance = options.force ? 760 : Math.max(420, Math.min(760, cam.width * 0.82));
+            if (distancePx < 245 || distancePx > maxDistance) continue;
+            const localLight = this.lightLevelAt(wx, wy);
+            if (!options.force && localLight > 0.44) continue;
+            const edgeDistance = Math.min(wx - left, right - wx, wy - top, bottom - wy);
+            const facingWatcher = Math.sign(wx - this.player.x || facing) === facing;
+            const uiPenalty = screenPenalty(wx, wy);
+            const score = edgeDistance + uiPenalty + (facingWatcher ? 110 : 0) + localLight * 240 + Math.random() * 28 - distancePx * 0.03;
+            candidates.push({ x: wx, y: wy, side: wx < this.player.x ? -1 : 1, score, light: localLight, distance: distancePx, uiPenalty });
+          }
+        }
+      }
+
+      const visibleCandidates = candidates.filter((candidate) => candidate.uiPenalty < 500);
+      const pool = visibleCandidates.length ? visibleCandidates : candidates;
+      pool.sort((a, b) => a.score - b.score);
+      return pool[0] || null;
     }
 
-    spawnWatcherSighting() {
-      const spot = this.findWatcherSpot();
+    leaveWatcherTrace(x, y, reason = "trail") {
+      if (!this.add || !this.textures.exists("watcherTrace")) return null;
+      const trace = this.add.image(x, y, "watcherTrace")
+        .setOrigin(0.5, 1)
+        .setDepth(81)
+        .setAlpha(0)
+        .setScale(reason === "noticed" ? 1.08 : 0.92);
+      trace.setTint(reason === "bright" ? 0xffd56a : reason === "camp" ? 0x76d66f : 0xd8b6ff);
+      this.watcherTraceMarks.push(trace);
+      while (this.watcherTraceMarks.length > 8) {
+        const old = this.watcherTraceMarks.shift();
+        old?.destroy();
+      }
+      this.sim.stats.watcherTraces = (this.sim.stats.watcherTraces || 0) + 1;
+      this.checkAchievements();
+      this.tweens.add({
+        targets: trace,
+        alpha: { from: 0, to: 0.62 },
+        y: y - 2,
+        duration: 280,
+        ease: "Sine.easeOut"
+      });
+      this.tweens.add({
+        targets: trace,
+        alpha: 0,
+        y: y - 12,
+        delay: 7600,
+        duration: 900,
+        ease: "Sine.easeIn",
+        onComplete: () => {
+          this.watcherTraceMarks = this.watcherTraceMarks.filter((mark) => mark !== trace);
+          trace.destroy();
+        }
+      });
+      return trace;
+    }
+
+    dismissWatcher(reason = "fade") {
+      if (!this.watcher?.visible) return false;
+      const state = this.watcherState || {};
+      if (state.dismissing) return false;
+      state.dismissing = true;
+      this.watcherState = state;
+      const wx = this.watcher.x;
+      const wy = this.watcher.y;
+      if (reason !== "timeout" || (this.shadowPressure || 0) > 46) {
+        this.leaveWatcherTrace(wx, wy, reason);
+      }
+      this.tweens.killTweensOf(this.watcher);
+      this.tweens.add({
+        targets: this.watcher,
+        alpha: 0,
+        y: wy - (reason === "noticed" ? 18 : 10),
+        duration: reason === "bright" ? 180 : 360,
+        ease: "Sine.easeIn",
+        onComplete: () => {
+          this.watcher?.setVisible(false);
+          if (this.watcherState === state) this.watcherState = null;
+        }
+      });
+      return true;
+    }
+
+    spawnWatcherSighting(options = {}) {
+      if (!options.force && this.nearCamp()) return false;
+      const spot = this.findWatcherSpot(options);
       const now = this.time.now;
-      this.nextWatcherAt = now + Phaser.Math.Between(16000, 28000);
+      this.nextWatcherAt = now + (options.force ? 3000 : Phaser.Math.Between(18000, 34000));
       if (!spot || !this.watcher) return false;
 
+      const firstSighting = (this.sim.stats.watcherSightings || 0) === 0;
+      const noticed = options.silent ? false : (firstSighting || (this.shadowPressure || 0) > 82 || Math.random() < 0.24);
+      const lifetime = options.force ? 5200 : Phaser.Math.Between(5200, 9000);
+      this.tweens.killTweensOf(this.watcher);
+      this.watcherState = {
+        homeX: spot.x,
+        homeY: spot.y,
+        appearedAt: now,
+        vanishAt: now + lifetime,
+        side: spot.side,
+        noticed,
+        noticedToast: noticed,
+        pulse: Math.random() * Math.PI * 2
+      };
       this.watcher.setPosition(spot.x, spot.y)
         .setFlipX(spot.x < this.player.x)
         .setVisible(true)
         .setAlpha(0);
-      this.watcherUntil = now + Phaser.Math.Between(3800, 6200);
+      this.watcherUntil = this.watcherState.vanishAt;
       this.sim.stats.watcherSightings = (this.sim.stats.watcherSightings || 0) + 1;
       this.checkLore("watcher", { watcher: true });
       this.checkAchievements();
-      this.setAction("Watched", 1200);
-      this.floatText(this.player.x - 38, this.player.y - 48, "SOMETHING WATCHES", "#d8b6ff");
-      ML.audio.play("secret");
-      ML.showToast("A silhouette watches from where the lamp cannot reach.", 3000);
+      this.setAction(noticed ? "Watched" : "Uneasy", noticed ? 1200 : 800);
+      if (noticed) {
+        this.floatText(this.player.x - 34, this.player.y - 48, "SOMETHING WATCHES", "#d8b6ff");
+        ML.audio.play("secret");
+        ML.showToast("A silhouette watches from the edge of your light.", 2800);
+      }
       this.tweens.add({
         targets: this.watcher,
-        alpha: 0.68,
-        duration: 420,
+        alpha: noticed ? 0.48 : 0.32,
+        duration: noticed ? 520 : 760,
         ease: "Sine.easeOut"
       });
       return true;
@@ -2167,27 +2341,39 @@
     updateWatcherSprite(dt, light) {
       if (!this.watcher?.visible) return;
       const now = this.time.now;
-      if (now > this.watcherUntil || light > 0.54 || this.nearCamp()) {
-        this.tweens.killTweensOf(this.watcher);
-        this.tweens.add({
-          targets: this.watcher,
-          alpha: 0,
-          y: this.watcher.y - 10,
-          duration: 420,
-          ease: "Sine.easeIn",
-          onComplete: () => this.watcher?.setVisible(false)
-        });
+      const state = this.watcherState;
+      if (!state) {
+        this.dismissWatcher("timeout");
+        return;
+      }
+      const localLight = Math.max(this.lightLevelAt(this.watcher.x, this.watcher.y), light * 0.35);
+      const distance = Phaser.Math.Distance.Between(this.watcher.x, this.watcher.y, this.player.x, this.player.y);
+      const facing = this.player.flipX ? -1 : 1;
+      const dx = this.watcher.x - this.player.x;
+      const dy = this.watcher.y - this.player.y;
+      const lookedAt = Math.sign(dx || facing) === facing && Math.abs(dx) < 390 && Math.abs(dy) < 180;
+      const close = distance < 150;
+
+      if (now > state.vanishAt || this.nearCamp()) {
+        this.dismissWatcher(this.nearCamp() ? "camp" : "timeout");
+        return;
+      }
+      if (localLight > 0.55 || close || (lookedAt && now - state.appearedAt > 700)) {
+        if ((close || lookedAt) && !state.noticedToast) {
+          state.noticedToast = true;
+          this.floatText(this.player.x - 18, this.player.y - 44, "TRACE", "#d8b6ff");
+        }
+        this.dismissWatcher(close || lookedAt ? "noticed" : "bright");
         return;
       }
 
-      const side = this.watcher.x < this.player.x ? -1 : 1;
-      const desiredX = this.player.x + side * clamp(180 + (this.shadowPressure || 0), 170, 270);
-      const desiredY = this.player.y + 20 + Math.sin(now / 420) * 7;
-      this.watcher.x = Phaser.Math.Linear(this.watcher.x, desiredX, clamp(dt * 0.55, 0, 1));
-      this.watcher.y = Phaser.Math.Linear(this.watcher.y, desiredY, clamp(dt * 0.35, 0, 1));
+      const wobble = Math.sin(now / 820 + state.pulse);
+      this.watcher.x = Phaser.Math.Linear(this.watcher.x, state.homeX + wobble * 3, clamp(dt * 2.6, 0, 1));
+      this.watcher.y = Phaser.Math.Linear(this.watcher.y, state.homeY + Math.sin(now / 1180 + state.pulse) * 2, clamp(dt * 2.3, 0, 1));
       this.watcher.setFlipX(this.watcher.x < this.player.x);
-      const targetAlpha = clamp((this.shadowPressure - 30) / 80, 0.22, 0.72);
-      this.watcher.setAlpha(Phaser.Math.Linear(this.watcher.alpha, targetAlpha, clamp(dt * 1.2, 0, 1)));
+      const darknessAlpha = clamp((this.shadowPressure - 24) / 130, 0.18, state.noticed ? 0.5 : 0.38);
+      const targetAlpha = clamp(darknessAlpha * (1 - localLight * 0.42), 0.12, 0.52);
+      this.watcher.setAlpha(Phaser.Math.Linear(this.watcher.alpha, targetAlpha, clamp(dt * 1.7, 0, 1)));
     }
 
     // ---- Hazards -----------------------------------------------------------------
@@ -2355,6 +2541,7 @@
       if (this.campOpen) {
         this.toggleCraft(false);
         this.toggleHelp(false);
+        this.togglePack(false);
         ML.toggleMinimap(false);
         ML.renderCamp(this.sim);
       }
@@ -2398,8 +2585,23 @@
       if (this.craftOpen) {
         this.toggleCamp(false);
         this.toggleHelp(false);
+        this.togglePack(false);
         ML.toggleMinimap(false);
         ML.renderCraft(this.sim);
+      }
+      ML.renderInteraction?.(this);
+    }
+
+    togglePack(force) {
+      this.packOpen = typeof force === "boolean" ? force : !this.packOpen;
+      ML.ui.packDrawer?.classList.toggle("hidden", !this.packOpen);
+      ML.ui.packToggle?.classList.toggle("active", this.packOpen);
+      if (this.packOpen) {
+        this.toggleCamp(false);
+        this.toggleCraft(false);
+        this.toggleHelp(false);
+        ML.toggleMinimap(false);
+        ML.renderPack?.(this.sim);
       }
       ML.renderInteraction?.(this);
     }
@@ -2410,6 +2612,7 @@
       if (this.helpOpen) {
         this.toggleCamp(false);
         this.toggleCraft(false);
+        this.togglePack(false);
         ML.toggleMinimap(false);
       }
     }
@@ -2424,6 +2627,7 @@
         this.toggleCamp(false);
         this.toggleCraft(false);
         this.toggleHelp(false);
+        this.togglePack(false);
         ML.toggleMinimap(false);
         ML.ui.pauseMenu?.classList.remove("hidden");
       } else {
@@ -2442,6 +2646,9 @@
       this.sim.health = 0;
       this.physics.world.pause();
       this.toggleCamp(false);
+      this.toggleCraft(false);
+      this.toggleHelp(false);
+      this.togglePack(false);
       ML.ui.pauseMenu?.classList.add("hidden");
       for (const item of ["coal", "copper", "iron", "gold", "crystal", "obsidian"]) {
         this.sim.inventory[item] = Math.floor((this.sim.inventory[item] || 0) * 0.72);
@@ -2463,6 +2670,9 @@
       ML.ui.pauseIcon.innerHTML = '<path d="M8 5v14"/><path d="M16 5v14"/>';
       ML.hideDeath();
       this.toggleCamp(false);
+      this.toggleCraft(false);
+      this.toggleHelp(false);
+      this.togglePack(false);
       ML.ui.pauseMenu?.classList.add("hidden");
       this.physics.world.resume();
       this.sim.health = this.sim.maxHealth;
@@ -2487,6 +2697,9 @@
       this.sim.newWorld();
       ML.hideDeath();
       this.toggleCamp(false);
+      this.toggleCraft(false);
+      this.toggleHelp(false);
+      this.togglePack(false);
       ML.ui.pauseMenu?.classList.add("hidden");
       this.scene.restart();
     }

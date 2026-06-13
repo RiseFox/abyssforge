@@ -547,6 +547,12 @@ canvas:focus { outline: none; }
   box-shadow: 0 0 0 2px rgba(240, 168, 77, 0.18), 0 12px 32px var(--shadow);
 }
 
+.icon-button.active {
+  border-color: rgba(216, 182, 255, 0.72);
+  background: rgba(31, 24, 42, 0.94);
+  box-shadow: 0 0 0 2px rgba(216, 182, 255, 0.18), 0 12px 32px var(--shadow);
+}
+
 .craft-badge {
   position: absolute;
   right: -5px;
@@ -1050,7 +1056,8 @@ canvas:focus { outline: none; }
 .achievement-toast.hidden { display: none; }
 
 .camp-drawer,
-.craft-drawer {
+.craft-drawer,
+.pack-drawer {
   position: absolute;
   right: max(12px, env(safe-area-inset-right));
   top: calc(max(12px, env(safe-area-inset-top)) + 50px);
@@ -1066,11 +1073,17 @@ canvas:focus { outline: none; }
   overflow: hidden;
 }
 
+.pack-drawer {
+  width: min(460px, calc(100vw - 24px));
+}
+
 .camp-drawer.hidden,
-.craft-drawer.hidden { display: none; }
+.craft-drawer.hidden,
+.pack-drawer.hidden { display: none; }
 
 .camp-drawer:not(.hidden),
 .craft-drawer:not(.hidden),
+.pack-drawer:not(.hidden),
 .help-drawer:not(.hidden) {
   animation: drawerEnter 180ms ease-out;
 }
@@ -1216,6 +1229,53 @@ canvas:focus { outline: none; }
   min-height: 0;
   overflow: auto;
   padding: 12px;
+}
+
+.pack-meter {
+  height: 5px;
+  margin: 10px 12px 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.pack-meter > i {
+  display: block;
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #76d66f, #e1a84d, #d8b6ff);
+  transition: width 180ms ease;
+}
+
+.pack-body {
+  padding-top: 10px;
+}
+
+.pack-note {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+  padding: 9px 10px;
+  border: 1px solid rgba(236, 205, 135, 0.14);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.pack-note strong {
+  font-size: 12px;
+  line-height: 1.1;
+}
+
+.pack-note span {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.pack-grid {
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  margin-bottom: 0;
 }
 
 .inventory-grid {
@@ -2048,7 +2108,8 @@ canvas:focus { outline: none; }
   .mystery-panel em { display: none; }
   .hotbar { grid-auto-columns: 50px; }
   .slot { width: 50px; height: 50px; }
-  .craft-drawer {
+  .craft-drawer,
+  .pack-drawer {
     left: 12px;
     right: 12px;
     top: 74px;

@@ -390,6 +390,22 @@
     sh.fillRect(8, 20, 18, 2);
     watcher.refresh();
 
+    const watcherTrace = freshCanvasTexture("watcherTrace", 24, 20);
+    const wt = watcherTrace.getContext();
+    wt.clearRect(0, 0, 24, 20);
+    wt.fillStyle = "rgba(0,0,0,0.22)";
+    wt.fillRect(4, 16, 16, 2);
+    wt.fillStyle = "rgba(216,182,255,0.3)";
+    wt.fillRect(10, 5, 4, 10);
+    wt.fillRect(7, 10, 10, 2);
+    wt.fillStyle = "#d8b6ff";
+    wt.fillRect(11, 3, 2, 2);
+    wt.fillRect(9, 8, 2, 2);
+    wt.fillRect(14, 12, 2, 2);
+    wt.fillStyle = "rgba(97,224,208,0.48)";
+    wt.fillRect(6, 15, 12, 1);
+    watcherTrace.refresh();
+
     // ---- Particles + light mask -------------------------------------------
     const spark = freshCanvasTexture("spark", 7, 7);
     const sc = spark.getContext();
