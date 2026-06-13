@@ -1,7 +1,7 @@
 {
   "name": "abyssforge",
   "version": "0.1.0",
-  "description": "A browser-based 2D mining, crafting, and survival game inspired by Terraria-style exploration.",
+  "description": "A browser-based 2D expedition sandbox about mining, crafting, procedural horizons, light survival, and hidden meta-lore.",
   "main": "index.html",
   "scripts": {
     "assets:all": "npm run assets:fetch && npm run assets:build-runtime && npm run assets:audit",
@@ -19,7 +19,10 @@
     "mining",
     "crafting",
     "survival",
-    "pixel-art"
+    "pixel-art",
+    "procedural-generation",
+    "metroidvania",
+    "sandbox"
   ],
   "author": "RiseFox",
   "license": "MIT",

@@ -1,18 +1,26 @@
 # AbyssForge
 
-**AbyssForge** is a browser-based 2D mining, crafting, survival, and exploration game about a ruined guild expedition, a living mine, and a surface that refuses to stay mapped.
+## About
 
-At first it looks like a compact Minecraft/Terraria-like mining game: dig down, place ladders, craft better tools, manage light, and bring loot back to camp. The longer you play, the more the game shifts. The map expands sideways and downward, campfires become waypoints, strange cache marks begin to repeat, mobs start reacting to more than proximity, and a hidden Watcher appears at the edge of your light without attacking.
+**AbyssForge** is a browser-based 2D expedition sandbox: a mining, crafting, survival, and exploration game that begins like a readable Terraria/Minecraft-style descent and gradually turns into a stranger story about a mine that remembers who is playing.
+
+The first promise is immediate control. You spawn on verified ground, dig into the world, build ladders and platforms, place torches, fight with the pickaxe, open chests, craft better gear, sort the backpack, rest at campfires, and decide whether the next route is worth the risk. The game is built for short playable loops, but every loop should leave a new reason to return.
+
+The second promise is that the world is not a fixed rectangle. AbyssForge expands downward into new strata and sideways into procedural surface country, using edge-aware generation so horizons stitch onto the existing terrain instead of ending at a hard wall. Depth changes ore weight, cave shape, mob pressure, recovery, music, and light behavior; horizontal travel can uncover roads, dead groves, lowlands, villages, signs, secret caches, and Watcher-marked fields.
+
+The third promise is discovery. Recipes, materials, backpack categories, strange loot, contracts, achievements, lore notes, and hidden objectives open through play instead of being dumped at spawn. What starts as resource work becomes a mystery about the old forge network, repeated cache marks, boss-locked seams, and a silent figure that appears at the edge of light without attacking.
+
+Technically, AbyssForge is a plain HTML/Phaser game with a DOM HUD, deterministic world simulation, data-driven progression, generated pixel textures, an audited CC0 asset bridge, and Playwright quality gates for spawn safety, world expansion, combat line of sight, mob ecology, HUD performance, and runtime asset loading.
 
 ![AbyssForge surface camp](docs/images/abyssforge-surface-camp.png)
 
-## Why It Exists
+## Design Promise
 
 AbyssForge is built around one product promise:
 
 **Every trip should answer one question and create the next one.**
 
-The player should always have a practical reason to continue - a better pick, a safer descent route, a camp to claim, a contract to finish, a chest to open, a biome to survive, or a horizon to push past. Under that readable survival loop sits a slower mystery about why the old forge network was built and why something in the mine seems aware of the player.
+The player should always have a practical reason to continue: a better pick, a safer descent route, a camp to claim, a contract to finish, a chest to open, a biome to survive, a strange signal to understand, or a horizon to push past. Under that readable survival loop sits a slower meta-layer: the miner, the mobs, the Watcher, and parts of the interface begin to imply that the game world understands observation.
 
 ## Current Build Snapshot
 
@@ -196,4 +204,4 @@ npm run assets:all
 
 ## Direction
 
-AbyssForge is moving toward a deeper expedition game: more meaningful side-country, rarer and smarter surface events, richer underground secrets, clearer biome identity, more reactive enemies, and a story that starts as mining work but gradually reveals that the miner, the mobs, and the Watcher all understand the player's presence in different ways.
+AbyssForge is moving toward a deeper expedition game where procedural content is paced, discoverable, and mechanically justified. The next major direction is richer side-country, rarer surface events, more biome-specific materials, smarter enemy group behavior, boss-gated secrets, stronger camp networks, and a hidden story that keeps the first-hour mining fantasy intact while slowly revealing that the miner, the mobs, and the Watcher understand the player's presence in different ways.
