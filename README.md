@@ -1,46 +1,100 @@
 # AbyssForge
 
-**AbyssForge** is a browser-based 2D mining, crafting, survival, and descent game about turning a ruined surface camp into a lifeline through a hostile living mine.
+**AbyssForge** is a browser-based 2D mining, crafting, survival, and exploration game about a ruined guild expedition, a living mine, and a surface that refuses to stay mapped.
 
-You start with a weak pick, a few torches, and a campfire beside the first shaft. Every trip downward changes the run: new resources unlock tools, campfires become anchors, biome pressure changes recovery and light rules, secrets hide bosses, and the mine pushes back with events, mobs, darkness, and contracts.
+At first it looks like a compact Minecraft/Terraria-like mining game: dig down, place ladders, craft better tools, manage light, and bring loot back to camp. The longer you play, the more the game shifts. The map expands sideways and downward, campfires become waypoints, strange cache marks begin to repeat, mobs start reacting to more than proximity, and a hidden Watcher appears at the edge of your light without attacking.
 
 ![AbyssForge surface camp](docs/images/abyssforge-surface-camp.png)
 
-## Game Fantasy
+## Why It Exists
 
-The old lift network under the Guild is broken. Below it, the mine is not just deeper rock - it is a layered machine of roots, ore faults, glow hollows, crystal veins, and obsidian heat. The horizon is unstable too: when an expedition reaches an old map edge, new side-country tears open with fresh caverns, caches, camps, and threats. Campfires are the only reliable marks of human control. Light buys time. Crafting buys options. Going deeper and farther buys answers.
+AbyssForge is built around one product promise:
 
-The long-term goal is to recover enough relic technology to reach the Warden's forge and survive what the first expedition woke up.
+**Every trip should answer one question and create the next one.**
 
-## Hidden Purpose
+The player should always have a practical reason to continue - a better pick, a safer descent route, a camp to claim, a contract to finish, a chest to open, a biome to survive, or a horizon to push past. Under that readable survival loop sits a slower mystery about why the old forge network was built and why something in the mine seems aware of the player.
 
-At first, AbyssForge plays like a direct mining game: dig, craft, light the route, and survive. The deeper structure is deliberately hidden. Reaching suspicious depths, opening secret caches, activating campfire waypoints, entering strange biomes, crafting relic systems, and defeating vault bosses decode field notes that slowly reframe the run.
+## Current Build Snapshot
 
-The hidden thread asks the player to rebuild the old wayfire network, decode cache marks, assemble abyss gear, break two sealed bosses, and eventually learn what the forge was actually built to do.
+| System | Current Scope |
+| --- | ---: |
+| Item catalog | 33 items |
+| Crafting recipes | 65 recipes |
+| Achievements | 63 achievements |
+| Runtime biomes | 8 biomes |
+| Depth strata | 5 strata |
+| Surface regions | 6 region types |
+| Chest loot tables | 12 contextual tables |
+| Cave events | 4 event families |
+| Enemy archetypes | 7 mob/boss types |
+| Hidden lore | 19 notes, 8 goals |
 
-![AbyssForge hidden field notes](docs/images/abyssforge-hidden-lore.png)
+## Game Pillars
 
-## Darkness And The Watcher
+### 1. Mine, Build, Return
 
-Light now has a second failure state. Before the deep dark starts killing the player, low light builds **Shadow pressure**: energy drains faster, the darkness thickens, field notes can unlock, and a hidden NPC called **the Watcher** may appear at the edge of the lamp radius.
+The first layer is tactile and immediate. The player mines blocks, places ladders and platforms, drops torches, opens chests, fights with a pickaxe, and returns to camp when the route becomes unsafe. The hotbar is only the quick belt; the full backpack opens as the expedition learns new materials.
 
-The Watcher does not attack. It follows from outside safe light, retreats from campfires and strong lamps, and quietly ties into the old wayfire lore. Repeated sightings reveal that it is less a monster than a leftover witness to the forge network.
+![AbyssForge backpack and discovered materials](docs/images/abyssforge-backpack-workshop.png)
 
-## Core Loop
+### 2. Light Is A Resource
 
-- Mine blocks, ore seams, amber knots, quartz veins, ember shale, voidglass seams, mushrooms, and hidden caches.
-- Craft picks, battery-fed lamps, weapons, movement gear, charms, bridges, charges, and survival kits.
-- Build ladders, platforms, torches, and safer descent routes.
-- Rest at campfires to heal, recover energy, set respawn anchors, and resupply.
-- Complete expedition contracts for supplies and coin.
-- Discover secret rooms with chests, camp points, relics, and bosses.
-- Push through deeper biomes where darkness, recovery, and music change with the terrain.
-- Manage lamp cells, torches, and Shadow pressure when light runs low, then learn why something follows beyond the lamp.
-- Decode hidden field notes that reveal the Warden, the wayfires, and the true purpose of the abyss forge.
+Torches, campfires, glow caps, and battery-fed lamps all matter. The lamp no longer behaves like a permanent upgrade: it has charge, battery refill logic, standby behavior near external light, and failure states in deep darkness. Low light builds **Shadow pressure** before it becomes lethal, which gives the player time to react and makes dark zones feel mechanically different instead of only darker.
 
-## Biomes With Properties
+### 3. The World Expands
 
-Biomes are runtime systems, not only labels. The current biome affects ambient light, recovery rate, energy pressure, darkness damage, situational music, and the HUD intel panel.
+The world is not supposed to stop at a hard edge. Reaching the left or right horizon opens a new side region that reads the existing edge columns, continues terrain, carries cave openings forward, and adds surface or underground points of interest based on procedural rules.
+
+![AbyssForge horizontal world expansion](docs/images/abyssforge-horizon-regions.png)
+
+### 4. Biomes Change Rules
+
+Biomes are runtime systems, not decorative names. They affect light floors, recovery, energy pressure, darkness damage, enemy pressure, music, and HUD intel.
+
+![AbyssForge biome intel](docs/images/abyssforge-biome-intel.png)
+
+### 5. The Mine Watches Back
+
+The hidden story is intentionally not frontloaded. Field notes unlock through suspicious depths, secret caches, strange biomes, campfire anchors, boss progress, and Watcher sightings. The Watcher does not attack. It appears at the edge of vision, retreats from strong light and camps, leaves traces, and slowly reframes the mine as something built for more than ore.
+
+![AbyssForge hidden Watcher lore](docs/images/abyssforge-hidden-lore.png)
+
+## Player Journey
+
+1. **Secure the first shaft.** Learn movement, mining, ladders, torches, campfire rest, and the safe starter descent.
+2. **Stabilize the route.** Gather stone, coal, copper, wood, mushrooms, gel, coins, and basic loot while crafting better survival options.
+3. **Build anchors.** Find or create campfire footholds, set respawn anchors, and use camp services to recover and resupply.
+4. **Push the strata.** Open deeper seams where ore weights, cave shape, lava pressure, mobs, and cache rarity shift.
+5. **Read the wrong details.** Open secret caches, find repeated symbols, trigger field notes, and notice that some messages are not written to the miner.
+6. **Cross the map edge.** Explore left and right into new surface regions, old roads, dead groves, villages, watcher fields, and side-country caves.
+7. **Assemble the truth.** Craft relic systems, defeat hidden bosses, rebuild the wayfire network, and learn what the abyss forge was built to preserve.
+
+## World Generation
+
+AbyssForge now uses a dedicated **WorldGen Director** instead of scattering every landmark and loot rule through the simulation. It controls surface pacing, contextual chest tables, biome-aware spawn budgets, and region-specific setpieces.
+
+### Surface Regions
+
+| Region | Role | What It Adds |
+| --- | --- | --- |
+| Green Road | Early quiet travel | Sparse road signs, trees, safe terrain, basic surface caches. |
+| Broken Road | First uncertainty | Wayposts, broken platforms, old road material, route hints. |
+| Dead Grove | Suspicious forest | Lower tree density, dead trunks, amber and letter cache chances. |
+| Sunken Lowland | Soft ground | Mushrooms, gel, battery chances, lower terrain pockets. |
+| Unlit Village | Far surface reward | Abandoned shelters, richer lockboxes, strange letters, keys. |
+| Watcher Field | Late surface anomaly | Obsidian marks, watcher-token cache rolls, wrong-shadow messaging. |
+
+### Depth Strata
+
+| Stratum | Starts Near | Expedition Meaning |
+| --- | ---: | --- |
+| Rootline Drift | 0 m | Forgiving starter rock with roots, coal, copper, safe routes, and more camps. |
+| Iron Fault | 72 m | Ore-rich pressure shelves with longer mining pulls and tremor risk. |
+| Crystal Vein | 138 m | Valuable glow chambers with stronger detours, crystals, and signal lore. |
+| Obsidian Abyss | 220 m | Boss country with harsher darkness, lava heat, and rare abyss cache rolls. |
+| Voidglass Shelf | 330 m | Repeating lower shelves where the mine stops behaving naturally. |
+
+### Runtime Biomes
 
 | Biome | Identity | Gameplay Effect |
 | --- | --- | --- |
@@ -48,52 +102,26 @@ Biomes are runtime systems, not only labels. The current biome affects ambient l
 | Rootline Burrows | Soft earth | Easier recovery and early route building around roots and soil. |
 | Stone Warrens | Working mine | Stable midgame rock with balanced threats and coal routes. |
 | Fungal Hollow | Living light | Glow caps raise local light and recovery, but slime routes become common. |
-| Iron Fault | Ore pressure | Richer metal paths with lower recovery and tremor-like tension. |
-| Deepstone Pressure | Heavy dark | Stronger darkness pressure, heavier mobs, weaker natural recovery. |
+| Iron Fault | Ore pressure | Richer metal paths with lower recovery and tremor tension. |
+| Deepstone Pressure | Heavy dark | Stronger darkness pressure, heavier mobs, weaker recovery. |
 | Crystal Vein | Vault signal | Crystal glow and energy trickle mark valuable secret routes. |
 | Obsidian Abyss | Boss country | Severe darkness, lava heat, and late-game Warden territory. |
 
-![AbyssForge biome intel](docs/images/abyssforge-biome-intel.png)
+## Core Systems
 
-## Strata Progression
-
-Depth is no longer a single hardcoded ore ladder. AbyssForge now uses data-driven strata profiles that change generation and play rules as the mine opens downward. A stratum controls ore weights, cave size, lava pressure, cache density, camp rarity, mob caps, elite chance, cave-event weights, and mining fatigue.
-
-| Stratum | Starts Near | Expedition Meaning |
-| --- | ---: | --- |
-| Rootline Drift | 0 m | Forgiving starter rock with roots, coal, copper, safe routes, and more camps. |
-| Iron Fault | 72 m | Ore-rich pressure shelves with longer mining pulls and more tremor events. |
-| Crystal Vein | 138 m | Valuable glow chambers with stronger detours, swarms, crystals, and soft recovery signals. |
-| Obsidian Abyss | 220 m | Lava-glass danger with fewer camps, heavier mobs, richer caches, and severe darkness. |
-| Voidglass Shelf | 330 m | Strange repeating lower shelves where safe light is scarce and the mine stops behaving naturally. |
-
-Opening bedrock seams extends the world downward and moves the next generated abyss section into the active stratum instead of repeating the same cave recipe forever. Reaching the far left or right horizon now opens a new horizontal region instead of ending at a hard boundary. The horizon generator reads the actual edge columns first, then continues the surface slope, nearby stone and ore bands, and any cave openings into the new region while the map, minimap, mobs, caches, camp hooks, and points of interest expand around the expedition.
-
-## Current Features
-
-- Seeded procedural world with a quality-gated spawn area and edge-informed horizontal horizon expansion.
-- Data-driven strata profiles for ore distribution, cave shape, lava, caches, camps, mob pressure, elite chance, cave events, and mining fatigue.
-- Stable starter shaft, no-air spawn checks, and a protected first drop bridge.
-- Mining, block placement, ladders, torches, platforms, charges, and hotbar use.
-- Pickaxe combat against crawlers, slimes, bats, golems, and hidden bosses.
-- Expanded crafting across 62 tool, block, survival, and relic recipes, including odd cache parts that become real gear instead of vendor trash.
-- Progressive discovery for inventory, hotbar slots, and recipes: the starter UI no longer reveals the full item catalog before the player mines, crafts, fights, opens caches, or reaches deeper strata.
-- Eight surprise-cache items can appear from normal and secret chests, including map scraps, clockwork seeds, mirror shards, strange keys, and rare abyss materials.
-- Campfire rest points with warm light, services, safe respawn anchors, and recall support.
-- Secret vault rooms with chests, rare relic materials, boss rooms, and deeper camp points.
-- Endless-style horizontal exploration that opens fresh side regions with cave routes, loot caches, camp points, surface signs, wayposts, abandoned hamlets, underground survey stations, old pump rooms, quiet shrines, trees, lava shelves, and region-appropriate mobs.
-- Procedural point-of-interest registry that keeps discoveries data-driven instead of hardcoding every road sign or deep station in the core world loop.
-- Dynamic cave events: ore surge, lantern draft, depth swarm, and cave tremor.
-- Story-phase event variants: familiar cave events start as mining hazards, then slowly read like signals from a broken machine.
-- Instinct-based enemy behavior: mobs react to light, weakness, allies, distance, and their own health instead of only walking at the player.
-- Observer anomaly layer: the miner can hesitate, mobs can stare through the camera, and rare space-window tears expose the frame behind the world.
-- Situational music modes for surface, night, caves, danger, treasure, camp, deep zones, and bosses.
-- Hidden field-note system with staged long-term goals, lore reveals, and a mystery HUD that appears only after the first impossible clue.
-- Shadow pressure system with lamp-cell drain, energy pressure, stronger darkness feedback, and a non-hostile hidden Watcher NPC.
-- Living discovery feedback: unread underground points of interest pulse softly, and some active mobs can guard or study unread field marks instead of only chasing the player.
-- Cached HUD rendering and throttled idle darkness redraws keep the DOM and lightmap from doing expensive work when nothing visible changed.
-- 60 achievements, unlock toasts, craft-ready notifications, contracts, minimap, pause menu, and death recap.
-- Local Playwright smoke test covering spawn quality, progression data, camp anchors, biome variety, hidden-lore progression, and Watcher runtime hooks.
+- **Mining and placement:** blocks, ladders, platforms, torches, charges, glow caps, and usable kits.
+- **Crafting progression:** recipe visibility opens through discovery, not a full catalog dump on spawn.
+- **Backpack and quick belt:** the bottom bar is immediate access; the backpack is the larger material memory.
+- **Contextual loot:** surface, road, grove, lowland, village, watcher, cave, fungal, iron, crystal, abyss, and secret chest tables.
+- **Campfires:** rest, heal, recover energy, set respawn anchors, and support recall routes.
+- **Contracts:** short expedition orders provide direction and rewards.
+- **Achievements:** unlocks track survival, depth, crafting, exploration, secrets, lore, and anomalies.
+- **Enemy ecology:** cave mobs, surface mobs, bosses, and ambushes have spawn rules by layer, depth, biome, and sightline.
+- **Smarter mobs:** enemies react to light, noise, weakness, allies, line of sight, nearby POI, and their own health.
+- **Cave events:** ore surge, lantern draft, depth swarm, and tremor events vary with story phase.
+- **Hidden lore:** field notes, mystery panel, wayfire goals, cache marks, Warden clues, and Watcher sightings.
+- **Situational music:** surface, night, cave, danger, treasure, camp, deep, and boss moods.
+- **Performance guardrails:** cached HUD rendering, throttled lightmap redraws, and Playwright FPS/frame-time checks.
 
 ## Controls
 
@@ -105,41 +133,56 @@ Opening bedrock seams extends the world downward and moves the next generated ab
 | `Shift` | Sprint while energy allows |
 | Left mouse | Mine blocks or hit an enemy under the cursor |
 | Right mouse | Place or use the selected hotbar item |
+| `E` | Open chests, read signs, use campfires, or open crafting |
 | `F` | Swing the pickaxe at enemies in front of you |
 | `R` | Recall to the active campfire anchor |
-| `C` | Open camp services while near a campfire |
-| `E` | Open crafting |
+| `C` | Open camp services near a campfire |
+| `B` / `I` | Open the backpack |
 | `1`-`9` | Select hotbar slot |
 | `M` | Toggle map |
 | `Esc` | Pause or resume |
 
 ## Run Locally
 
-Open `index.html` directly in a browser, or serve the folder with any static file server.
+Open `index.html` directly in a browser, or install dependencies and run the verification suite:
 
 ```bash
 npm install
 npm test
 ```
 
-`npm test` launches Playwright, opens the game, verifies 300 generated starts, checks that the spawn has real support, confirms the starter camp is reachable, validates campfire anchors, vertical and horizontal world expansion, progression systems, new material and surprise-loot content, biome variety, and runs a HUD performance smoke gate for FPS, frame time, DOM weight, and default overlay state.
+Regenerate product README screenshots from the current build:
+
+```bash
+npm run docs:screenshots
+```
+
+## Verification
+
+`npm test` runs two Playwright-backed gates:
+
+- `test:spawn` checks 300 generated seeds for spawn support, starter camp reachability, mob ecology rules, progression disclosure, chest interaction, vertical expansion, horizontal expansion, POI behavior, light/lamp behavior, lore hooks, Watcher runtime, combat line of sight, and worldgen director content.
+- `test:perf` boots the game at 1280x720 and checks browser errors, RAF FPS, average frame time, p95 frame time, HUD DOM weight, minimap default state, and canvas availability.
 
 ## Project Shape
 
 - `index.html` - Phaser host page and HUD markup.
-- `css/style.css` - pixel-art UI, panels, hotbar, drawers, and responsive layout.
-- `js/config.js` - shared constants, items, recipes, strata profiles, contracts, achievements, enemies, and events.
-- `js/progression.js` - item knowledge, hotbar disclosure, recipe gates, and discovery signatures used by the HUD and tests.
-- `js/sim.js` - pure world simulation, generation, strata selection, saves, inventory, crafting, contracts, mobs, and spawn repair.
+- `css/style.css` - pixel-art UI, panels, hotbar, drawers, icons, and responsive layout.
+- `js/config.js` - constants, tiles, items, recipes, strata, contracts, achievements, enemies, and cave events.
+- `js/worldgen-director.js` - surface regions, landmark pacing, chest loot tables, and spawn budgets.
+- `js/progression.js` - item knowledge, hotbar disclosure, recipe gates, and discovery signatures.
+- `js/sim.js` - pure world simulation, generation, saves, inventory, crafting, contracts, mobs, and spawn repair.
 - `js/biomes.js` - biome definitions, detection, lore, and gameplay properties.
-- `js/poi.js` - procedural surface and underground points of interest, readable field marks, and discovery placement rules.
-- `js/camp.js` - campfire proximity, anchor, respawn, and service logic.
+- `js/poi.js` - surface and underground discoveries, readable marks, and placement rules.
+- `js/camp.js` - campfire proximity, anchors, respawn, recall, and services.
 - `js/audio.js` - Web Audio SFX and situational music modes.
 - `js/textures.js` - generated pixel textures and sprites.
-- `js/ui.js` - DOM HUD, crafting drawer, minimap, toasts, achievements, and death panel.
-- `js/scene.js` - Phaser gameplay scene, movement, mining, combat, lighting, hazards, events, and camera.
-- `scripts/verify-spawn-seeds.js` - browser smoke test and spawn/progression quality gate.
+- `js/ui.js` - DOM HUD, crafting drawer, backpack, minimap, toasts, achievements, story, and death panel.
+- `js/scene.js` - Phaser gameplay scene, movement, mining, combat, lighting, hazards, events, camera, and runtime interactions.
+- `scripts/verify-spawn-seeds.js` - spawn, systems, worldgen, and progression quality gate.
+- `scripts/verify-hud-performance.js` - HUD and frame-time smoke gate.
+- `scripts/capture-readme-images.js` - repeatable screenshot capture for README images.
 
-## Design Direction
+## Direction
 
-AbyssForge is moving toward a deeper Terraria-like expedition structure: each descent should force a route decision, each side horizon should feel like newly found territory, each biome should change the rules slightly, and every campfire should feel like a meaningful foothold in a hostile living world.
+AbyssForge is moving toward a deeper expedition game: more meaningful side-country, rarer and smarter surface events, richer underground secrets, clearer biome identity, more reactive enemies, and a story that starts as mining work but gradually reveals that the miner, the mobs, and the Watcher all understand the player's presence in different ways.
