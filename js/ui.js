@@ -164,16 +164,24 @@
     gold: "Rare",
     crystal: "Rare",
     obsidian: "Abyss",
+    amber: "Resin",
+    quartz: "Focus",
+    ember: "Heat",
+    voidglass: "Abyss",
     gel: "Drop",
     coin: "Trade",
     silk: "Boss",
     fang: "Boss",
     relic: "Relic",
-    core: "Core"
+    core: "Core",
+    mapScrap: "Cache",
+    clockwork: "Odd",
+    mirrorShard: "Odd",
+    strangeKey: "Odd"
   };
 
-  const RARE_ITEMS = new Set(["gold", "crystal", "obsidian", "silk", "fang", "relic", "core"]);
-  const VOLATILE_ITEMS = new Set(["charge", "core"]);
+  const RARE_ITEMS = new Set(["gold", "crystal", "obsidian", "voidglass", "silk", "fang", "relic", "core", "clockwork", "mirrorShard", "strangeKey"]);
+  const VOLATILE_ITEMS = new Set(["charge", "core", "ember"]);
 
   function setText(el, value) {
     if (!el) return;
@@ -307,6 +315,7 @@
     gear.push(`${cells} cell${cells === 1 ? "" : "s"}`);
     if (sim.boots) gear.push("Cave boots");
     if (sim.speedBoost) gear.push("Greaves");
+    if (sim.cellEfficiency) gear.push("Regulator");
     if (sim.fallGuard) gear.push("Soles");
     if (sim.noiseMuffle) gear.push("Echo padding");
     if (sim.ward) gear.push("Ward");
@@ -484,6 +493,7 @@
     if (recipe.fallGuard) return !sim.fallGuard;
     if (recipe.noiseMuffle) return !sim.noiseMuffle;
     if (recipe.speedBoost) return !sim.speedBoost;
+    if (recipe.cellEfficiency) return !sim.cellEfficiency;
     if (recipe.regenBoost) return !sim.regenBoost;
     if (recipe.treasureSense) return !sim.treasureSense;
     if (recipe.lootBonus) return !sim.lootBonus;

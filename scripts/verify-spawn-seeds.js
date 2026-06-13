@@ -94,6 +94,14 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const fresh = new window.ML.MinerSim();
     fresh.newWorld(7919);
     const itemCatalogSize = Object.keys(window.ML.ITEM_META || {}).length;
+    const newMaterialItems = ["amber", "quartz", "ember", "voidglass", "mapScrap", "clockwork", "mirrorShard", "strangeKey"];
+    const newMaterialsPresent = newMaterialItems.filter((item) => window.ML.ITEM_META[item]).length;
+    const surpriseLootCount = (window.ML.CHEST_SURPRISES || []).length;
+    const surpriseLootItemsValid = (window.ML.CHEST_SURPRISES || []).every((entry) => entry.item && window.ML.ITEM_META[entry.item]);
+    const newRecipeIds = ["amberLanterns", "emberCharges", "clockworkRegulator", "mirrorCache", "keyedRelic", "voidglassEdge", "quartzCells", "surveyCache", "emberRation"];
+    const newRecipesPresent = newRecipeIds.filter((id) => window.ML.RECIPES.some((recipe) => recipe.id === id)).length;
+    const newOreTiles = [window.ML.Tile.AMBER, window.ML.Tile.QUARTZ, window.ML.Tile.EMBER, window.ML.Tile.VOIDGLASS].filter((tile) => Number.isFinite(tile));
+    const newOreTilesInWorld = newOreTiles.reduce((sum, tile) => sum + fresh.world.reduce((rows, row) => rows + row.filter((cell) => cell === tile).length, 0), 0);
     const starterKnownItems = window.ML.Progression?.inventoryItems?.(fresh, { includeEmpty: true }).length || itemCatalogSize;
     const starterCraftVisible = window.ML.RECIPES.filter((recipe) => window.ML.recipeVisible(fresh, recipe)).length;
     const starterCraftReady = window.ML.craftableRecipes(fresh).length;
@@ -107,6 +115,23 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const platformKnownBeforeCraft = Boolean(window.ML.Progression?.isItemKnown?.(fresh, "platform"));
     const platformCraftForFresh = fresh.craft(platformRecipeForFresh);
     const platformKnownAfterCraft = Boolean(window.ML.Progression?.isItemKnown?.(fresh, "platform"));
+    const regulatorRecipe = window.ML.RECIPES.find((recipe) => recipe.id === "clockworkRegulator");
+    const regulatorSim = new window.ML.MinerSim();
+    regulatorSim.newWorld(3117);
+    regulatorSim.addItem("clockwork", 1);
+    regulatorSim.addItem("quartz", 3);
+    regulatorSim.addItem("copper", 2);
+    const regulatorCraft = regulatorSim.craft(regulatorRecipe);
+    regulatorSim.lamp = 1;
+    regulatorSim.refillLamp();
+    regulatorSim.drainLamp(20, 1);
+    const regulatorLampAfter = regulatorSim.lampChargeRatio();
+    const plainLampSim = new window.ML.MinerSim();
+    plainLampSim.newWorld(3117);
+    plainLampSim.lamp = 1;
+    plainLampSim.refillLamp();
+    plainLampSim.drainLamp(20, 1);
+    const plainLampAfter = plainLampSim.lampChargeRatio();
     const craftable = window.ML.craftableRecipes(sim);
     const platformRecipe = window.ML.RECIPES.find((recipe) => recipe.id === "platform");
     const craftResult = sim.craft(platformRecipe);
@@ -517,6 +542,12 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       recipes: window.ML.RECIPES.length,
       progressionRuntime: typeof window.ML.Progression?.isItemKnown === "function" && typeof window.ML.Progression?.recipeVisible === "function",
       itemCatalogSize,
+      newMaterialsPresent,
+      surpriseLootCount,
+      surpriseLootItemsValid,
+      newRecipesPresent,
+      newOreTiles: newOreTiles.length,
+      newOreTilesInWorld,
       starterKnownItems,
       starterCraftVisible,
       starterCraftReady,
@@ -528,6 +559,10 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       platformKnownBeforeCraft,
       platformKnownAfterCraft,
       platformCraftForFresh,
+      regulatorCraft,
+      regulatorEfficiency: Boolean(regulatorSim.cellEfficiency),
+      regulatorLampAfter,
+      plainLampAfter,
       tileSize: window.ML.TILE,
       achievements: window.ML.ACHIEVEMENTS.length,
       contracts: window.ML.CONTRACTS.length,
@@ -787,8 +822,8 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
 
   await browser.close();
 
-  const progressionFailed = progressionCheck.recipes < 34
-    || progressionCheck.achievements < 51
+  const progressionFailed = progressionCheck.recipes < 60
+    || progressionCheck.achievements < 60
     || progressionCheck.contracts < 5
     || progressionCheck.caveEvents < 4
     || progressionCheck.eventVariantCount < 4
@@ -797,6 +832,15 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.strataProfiles < 5
     || progressionCheck.storyPhases < 7
     || !progressionCheck.progressionRuntime
+    || progressionCheck.newMaterialsPresent < 8
+    || progressionCheck.surpriseLootCount < 8
+    || !progressionCheck.surpriseLootItemsValid
+    || progressionCheck.newRecipesPresent < 9
+    || progressionCheck.newOreTiles < 4
+    || progressionCheck.newOreTilesInWorld < 12
+    || !progressionCheck.regulatorCraft?.ok
+    || !progressionCheck.regulatorEfficiency
+    || progressionCheck.regulatorLampAfter <= progressionCheck.plainLampAfter
     || progressionCheck.starterKnownItems >= progressionCheck.itemCatalogSize
     || progressionCheck.starterKnownItems > 8
     || progressionCheck.starterCraftVisible >= progressionCheck.recipes

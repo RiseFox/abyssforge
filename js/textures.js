@@ -96,6 +96,41 @@
     ctx.lineTo(obsX + 26, 12);
     ctx.stroke();
 
+    pixelNoise(Tile.AMBER, "#6b5335", "#e1a84d", 34);
+    const amberX = Tile.AMBER * TILE;
+    ctx.fillStyle = "#f5c166";
+    ctx.fillRect(amberX + 9, 9, 5, 5);
+    ctx.fillRect(amberX + 18, 18, 4, 4);
+    ctx.fillStyle = "rgba(75,42,16,0.34)";
+    ctx.fillRect(amberX + 10, 10, 2, 2);
+
+    pixelNoise(Tile.QUARTZ, "#657271", "#d8fff7", 36);
+    const quartzX = Tile.QUARTZ * TILE;
+    ctx.fillStyle = "#f3fffb";
+    ctx.fillRect(quartzX + 8, 7, 4, 13);
+    ctx.fillRect(quartzX + 18, 12, 5, 11);
+    ctx.fillStyle = "#91d8d1";
+    ctx.fillRect(quartzX + 10, 20, 9, 3);
+
+    pixelNoise(Tile.EMBER, "#3d2d2a", "#df5d35", 30);
+    const emberX = Tile.EMBER * TILE;
+    ctx.fillStyle = "#ff8a3d";
+    ctx.fillRect(emberX + 7, 20, 5, 4);
+    ctx.fillRect(emberX + 17, 9, 4, 5);
+    ctx.fillStyle = "#ffd26a";
+    ctx.fillRect(emberX + 19, 10, 2, 2);
+
+    pixelNoise(Tile.VOIDGLASS, "#120d1f", "#5e50c8", 28);
+    const voidX = Tile.VOIDGLASS * TILE;
+    ctx.strokeStyle = "rgba(155,135,255,0.55)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(voidX + 5, 8);
+    ctx.lineTo(voidX + 27, 24);
+    ctx.moveTo(voidX + 18, 5);
+    ctx.lineTo(voidX + 9, 28);
+    ctx.stroke();
+
     const lavaX = Tile.LAVA * TILE;
     ctx.fillStyle = "#c43d14";
     ctx.fillRect(lavaX, 0, TILE, TILE);

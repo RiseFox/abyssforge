@@ -28,7 +28,7 @@ The Watcher does not attack. It follows from outside safe light, retreats from c
 
 ## Core Loop
 
-- Mine blocks, ores, mushrooms, and hidden caches.
+- Mine blocks, ore seams, amber knots, quartz veins, ember shale, voidglass seams, mushrooms, and hidden caches.
 - Craft picks, battery-fed lamps, weapons, movement gear, charms, bridges, charges, and survival kits.
 - Build ladders, platforms, torches, and safer descent routes.
 - Rest at campfires to heal, recover energy, set respawn anchors, and resupply.
@@ -76,8 +76,9 @@ Opening bedrock seams extends the world downward and moves the next generated ab
 - Stable starter shaft, no-air spawn checks, and a protected first drop bridge.
 - Mining, block placement, ladders, torches, platforms, charges, and hotbar use.
 - Pickaxe combat against crawlers, slimes, bats, golems, and hidden bosses.
-- Expanded crafting across tools, blocks, survival items, and relic upgrades.
+- Expanded crafting across 62 tool, block, survival, and relic recipes, including odd cache parts that become real gear instead of vendor trash.
 - Progressive discovery for inventory, hotbar slots, and recipes: the starter UI no longer reveals the full item catalog before the player mines, crafts, fights, opens caches, or reaches deeper strata.
+- Eight surprise-cache items can appear from normal and secret chests, including map scraps, clockwork seeds, mirror shards, strange keys, and rare abyss materials.
 - Campfire rest points with warm light, services, safe respawn anchors, and recall support.
 - Secret vault rooms with chests, rare relic materials, boss rooms, and deeper camp points.
 - Endless-style horizontal exploration that opens fresh side regions with cave routes, loot caches, camp points, surface signs, wayposts, abandoned hamlets, underground survey stations, old pump rooms, quiet shrines, trees, lava shelves, and region-appropriate mobs.
@@ -91,7 +92,7 @@ Opening bedrock seams extends the world downward and moves the next generated ab
 - Shadow pressure system with lamp-cell drain, energy pressure, stronger darkness feedback, and a non-hostile hidden Watcher NPC.
 - Living discovery feedback: unread underground points of interest pulse softly, and some active mobs can guard or study unread field marks instead of only chasing the player.
 - Cached HUD rendering and throttled idle darkness redraws keep the DOM and lightmap from doing expensive work when nothing visible changed.
-- Achievements, unlock toasts, craft-ready notifications, contracts, minimap, pause menu, and death recap.
+- 60 achievements, unlock toasts, craft-ready notifications, contracts, minimap, pause menu, and death recap.
 - Local Playwright smoke test covering spawn quality, progression data, camp anchors, biome variety, hidden-lore progression, and Watcher runtime hooks.
 
 ## Controls
@@ -121,7 +122,7 @@ npm install
 npm test
 ```
 
-`npm test` launches Playwright, opens the game, verifies 300 generated starts, checks that the spawn has real support, confirms the starter camp is reachable, validates campfire anchors, vertical and horizontal world expansion, progression systems, biome variety, and runs a HUD performance smoke gate for FPS, frame time, DOM weight, and default overlay state.
+`npm test` launches Playwright, opens the game, verifies 300 generated starts, checks that the spawn has real support, confirms the starter camp is reachable, validates campfire anchors, vertical and horizontal world expansion, progression systems, new material and surprise-loot content, biome variety, and runs a HUD performance smoke gate for FPS, frame time, DOM weight, and default overlay state.
 
 ## Project Shape
 

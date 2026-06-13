@@ -1940,6 +1940,17 @@
       for (let i = 0; i < (secret ? 5 : 3); i += 1) {
         extras[Math.floor(Math.random() * extras.length)]();
       }
+      for (const entry of ML.CHEST_SURPRISES || []) {
+        if (depth < (entry.minDepth || 0)) continue;
+        const chance = (entry.chance || 0)
+          + (secret ? (entry.secretBonus || 0) : 0)
+          + (this.sim.lootBonus ? (entry.lootBonus || 0.025) : 0);
+        if (Math.random() >= chance) continue;
+        const min = Math.max(1, entry.min || 1);
+        const max = Math.max(min, entry.max || min);
+        const count = min + Math.floor(Math.random() * (max - min + 1));
+        loot[entry.item] = (loot[entry.item] || 0) + count;
+      }
       if (secret) {
         this.sim.markSecretOpened(secret);
         this.checkLore("secret", { secret });
@@ -1958,7 +1969,7 @@
       for (const [item, n] of Object.entries(loot)) {
         if (!n) continue;
         this.sim.addItem(item, n);
-        parts.push(`${ITEM_META[item].name} +${n}`);
+        parts.push(`${ITEM_META[item]?.name || item} +${n}`);
         this.spawnPickupFx(x, y, item);
       }
       ML.audio.play(secret ? "secret" : "chest");

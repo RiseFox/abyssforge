@@ -30,6 +30,7 @@
       this.fallGuard = Boolean(this.fallGuard);
       this.noiseMuffle = Boolean(this.noiseMuffle);
       this.speedBoost = Boolean(this.speedBoost);
+      this.cellEfficiency = Boolean(this.cellEfficiency);
       this.regenBoost = Boolean(this.regenBoost);
       this.treasureSense = Boolean(this.treasureSense);
       this.lootBonus = Boolean(this.lootBonus);
@@ -75,7 +76,7 @@
         ? { x: this.lastCamp.x, y: this.lastCamp.y }
         : null;
       this.inventory = Object.assign(
-        { dirt: 0, stone: 0, wood: 0, coal: 0, copper: 0, iron: 0, gold: 0, crystal: 0, obsidian: 0, gel: 0, coin: 0, silk: 0, fang: 0, relic: 0, core: 0, torch: 0, battery: 0, ladder: 0, platform: 0, charge: 0, mushroom: 0, kit: 0 },
+        { dirt: 0, stone: 0, wood: 0, coal: 0, copper: 0, iron: 0, gold: 0, crystal: 0, obsidian: 0, amber: 0, quartz: 0, ember: 0, voidglass: 0, gel: 0, coin: 0, silk: 0, fang: 0, relic: 0, core: 0, mapScrap: 0, clockwork: 0, mirrorShard: 0, strangeKey: 0, torch: 0, battery: 0, ladder: 0, platform: 0, charge: 0, mushroom: 0, kit: 0 },
         this.inventory || {}
       );
       ML.Progression?.ensureKnownItems?.(this);
@@ -110,6 +111,7 @@
       this.fallGuard = false;
       this.noiseMuffle = false;
       this.speedBoost = false;
+      this.cellEfficiency = false;
       this.regenBoost = false;
       this.treasureSense = false;
       this.lootBonus = false;
@@ -119,7 +121,8 @@
       this.selected = 3;
       this.inventory = {
         dirt: 0, stone: 0, wood: 8, coal: 2, copper: 0, iron: 0, gold: 0, crystal: 0,
-        obsidian: 0, gel: 0, coin: 0, silk: 0, fang: 0, relic: 0, core: 0,
+        obsidian: 0, amber: 0, quartz: 0, ember: 0, voidglass: 0, gel: 0, coin: 0, silk: 0, fang: 0, relic: 0, core: 0,
+        mapScrap: 0, clockwork: 0, mirrorShard: 0, strangeKey: 0,
         torch: 6, battery: 1, ladder: 8, platform: 0, charge: 0, mushroom: 0, kit: 1
       };
       this.knownItems = {};
@@ -274,7 +277,12 @@
           world[floorY][lampX] = tier >= 2 ? Tile.MUSHROOM : Tile.TORCH;
           if (!bossKind) world[floorY][campX] = Tile.CAMPFIRE;
 
-          const ore = tier >= 3 ? Tile.CRYSTAL : tier >= 2 ? Tile.GOLD : Tile.IRON;
+          const orePool = tier >= 3
+            ? [Tile.CRYSTAL, Tile.OBSIDIAN, Tile.EMBER, Tile.VOIDGLASS]
+            : tier >= 2
+              ? [Tile.GOLD, Tile.QUARTZ, Tile.IRON]
+              : [Tile.IRON, Tile.AMBER, Tile.QUARTZ];
+          const ore = orePool[Math.floor(rand() * orePool.length)];
           world[roomY + 1][roomX + 1] = ore;
           world[roomY + 1][roomX + w - 2] = ore;
           if (tier >= 3) world[floorY - 1][roomX + 2] = Tile.OBSIDIAN;
@@ -1517,7 +1525,7 @@
         const raw = localStorage.getItem(ML.SAVE_KEY);
         if (!raw) return null;
         const data = JSON.parse(raw);
-        if (!data || data.version !== 6 || !data.state || !Array.isArray(data.state.world)) return null;
+        if (!data || data.version !== 7 || !data.state || !Array.isArray(data.state.world)) return null;
         return data.state;
       } catch {
         return null;
@@ -1544,6 +1552,7 @@
         fallGuard: this.fallGuard,
         noiseMuffle: this.noiseMuffle,
         speedBoost: this.speedBoost,
+        cellEfficiency: this.cellEfficiency,
         regenBoost: this.regenBoost,
         treasureSense: this.treasureSense,
         lootBonus: this.lootBonus,
@@ -1575,7 +1584,7 @@
         contractSeq: this.contractSeq
       };
       try {
-        localStorage.setItem(ML.SAVE_KEY, JSON.stringify({ version: 6, state }));
+        localStorage.setItem(ML.SAVE_KEY, JSON.stringify({ version: 7, state }));
         return true;
       } catch {
         return false;
@@ -1645,7 +1654,8 @@
       if (this.lampCharge <= 0) {
         return this.useLampCell() ? { state: "swapped", before, after: 1 } : { state: "empty", before, after: 0 };
       }
-      const drain = Math.max(0, dt) * (spec.drain || 1) * clamp(demand, 0.15, 1.65);
+      const regulator = this.cellEfficiency ? 0.78 : 1;
+      const drain = Math.max(0, dt) * (spec.drain || 1) * clamp(demand, 0.15, 1.65) * regulator;
       this.lampCharge = clamp(this.lampCharge - drain, 0, this.maxLampCharge());
       const after = this.lampChargeRatio();
       if (after <= 0) {
@@ -1668,6 +1678,7 @@
       if (recipe.fallGuard && this.fallGuard) return { ok: false, message: "Already built." };
       if (recipe.noiseMuffle && this.noiseMuffle) return { ok: false, message: "Already built." };
       if (recipe.speedBoost && this.speedBoost) return { ok: false, message: "Already built." };
+      if (recipe.cellEfficiency && this.cellEfficiency) return { ok: false, message: "Already built." };
       if (recipe.regenBoost && this.regenBoost) return { ok: false, message: "Already built." };
       if (recipe.treasureSense && this.treasureSense) return { ok: false, message: "Already built." };
       if (recipe.lootBonus && this.lootBonus) return { ok: false, message: "Already built." };
@@ -1694,6 +1705,7 @@
       if (recipe.fallGuard) this.fallGuard = true;
       if (recipe.noiseMuffle) this.noiseMuffle = true;
       if (recipe.speedBoost) this.speedBoost = true;
+      if (recipe.cellEfficiency) this.cellEfficiency = true;
       if (recipe.regenBoost) this.regenBoost = true;
       if (recipe.treasureSense) this.treasureSense = true;
       if (recipe.lootBonus) this.lootBonus = true;

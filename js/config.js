@@ -31,7 +31,11 @@ window.ML = window.ML || {};
     MUSHROOM: 17,
     CHEST: 18,
     CAMPFIRE: 19,
-    SIGN: 20
+    SIGN: 20,
+    AMBER: 21,
+    QUARTZ: 22,
+    EMBER: 23,
+    VOIDGLASS: 24
   };
 
   // light: glow radius in tiles for the lightmap; hazard: damage per second on contact.
@@ -56,7 +60,11 @@ window.ML = window.ML || {};
     [Tile.MUSHROOM]: { name: "Glow cap", drop: "mushroom", hardness: 0.15, tier: 1, solid: false, light: 2.8 },
     [Tile.CHEST]: { name: "Supply chest", drop: null, loot: true, hardness: 0.6, tier: 1, solid: true },
     [Tile.CAMPFIRE]: { name: "Campfire", drop: "wood", hardness: 0.5, tier: 1, solid: false, light: 7.2, camp: true },
-    [Tile.SIGN]: { name: "Road sign", drop: "wood", hardness: 0.25, tier: 1, solid: false, readable: true }
+    [Tile.SIGN]: { name: "Road sign", drop: "wood", hardness: 0.25, tier: 1, solid: false, readable: true },
+    [Tile.AMBER]: { name: "Amber knot", drop: "amber", hardness: 0.7, tier: 1, solid: true },
+    [Tile.QUARTZ]: { name: "Quartz vein", drop: "quartz", hardness: 1.55, tier: 2, solid: true },
+    [Tile.EMBER]: { name: "Ember shale", drop: "ember", hardness: 2.55, tier: 4, solid: true, light: 0.9 },
+    [Tile.VOIDGLASS]: { name: "Voidglass seam", drop: "voidglass", hardness: 3.35, tier: 5, solid: true, light: 0.45 }
   };
 
   const SOLID_TILES = Object.keys(BLOCKS).map(Number).filter((id) => BLOCKS[id].solid);
@@ -83,7 +91,11 @@ window.ML = window.ML || {};
     [Tile.MUSHROOM]: 0x6fe3d2,
     [Tile.CHEST]: 0xcaa258,
     [Tile.CAMPFIRE]: 0xf0a84d,
-    [Tile.SIGN]: 0xd6b16a
+    [Tile.SIGN]: 0xd6b16a,
+    [Tile.AMBER]: 0xe1a84d,
+    [Tile.QUARTZ]: 0xd8fff7,
+    [Tile.EMBER]: 0xff6f35,
+    [Tile.VOIDGLASS]: 0x6f63ff
   };
 
   // Minimap pixel colors.
@@ -108,7 +120,11 @@ window.ML = window.ML || {};
     [Tile.MUSHROOM]: "#6fe3d2",
     [Tile.CHEST]: "#caa258",
     [Tile.CAMPFIRE]: "#f0a84d",
-    [Tile.SIGN]: "#d6b16a"
+    [Tile.SIGN]: "#d6b16a",
+    [Tile.AMBER]: "#d69445",
+    [Tile.QUARTZ]: "#c9fff6",
+    [Tile.EMBER]: "#db5f33",
+    [Tile.VOIDGLASS]: "#5244b8"
   };
 
   const ITEM_META = {
@@ -121,12 +137,20 @@ window.ML = window.ML || {};
     gold: { name: "Gold", cls: "icon-gold", tint: 0xf0c75e },
     crystal: { name: "Crystal", cls: "icon-crystal", tint: 0x9efff0 },
     obsidian: { name: "Obsidian", cls: "icon-obsidian", tint: 0x6a4ba3 },
+    amber: { name: "Amber", cls: "icon-amber", tint: 0xe1a84d },
+    quartz: { name: "Quartz", cls: "icon-quartz", tint: 0xd8fff7 },
+    ember: { name: "Ember shard", cls: "icon-ember", tint: 0xff6f35 },
+    voidglass: { name: "Voidglass", cls: "icon-voidglass", tint: 0x7f73ff },
     gel: { name: "Gel", cls: "icon-gel", tint: 0x72d8ff },
     coin: { name: "Coins", cls: "icon-coin", tint: 0xf0c75e },
     silk: { name: "Silk", cls: "icon-silk", tint: 0xd8d3f0 },
     fang: { name: "Fang", cls: "icon-fang", tint: 0xe9ddc7 },
     relic: { name: "Ancient relic", cls: "icon-relic", tint: 0xa985ff },
     core: { name: "Abyss core", cls: "icon-core", tint: 0xff7a2e },
+    mapScrap: { name: "Map scrap", cls: "icon-map-scrap", tint: 0xd6b16a },
+    clockwork: { name: "Clockwork seed", cls: "icon-clockwork", tint: 0xf0c75e },
+    mirrorShard: { name: "Mirror shard", cls: "icon-mirror-shard", tint: 0xc9fff6 },
+    strangeKey: { name: "Strange key", cls: "icon-strange-key", tint: 0xb48cff },
     torch: { name: "Torch", cls: "icon-torch", tile: Tile.TORCH, tint: 0xf2c35f },
     battery: { name: "Lamp cell", cls: "icon-battery", tint: 0x7ee6c9 },
     ladder: { name: "Ladder", cls: "icon-ladder", tile: Tile.LADDER, tint: 0xb37236 },
@@ -189,8 +213,10 @@ window.ML = window.ML || {};
       eventPace: 1.08,
       events: { oreSurge: 3, lanternDraft: 3, swarm: 1 },
       ores: [
+        { tile: Tile.AMBER, minDepth: 8, chance: 0.018 },
         { tile: Tile.COAL, minDepth: 10, chance: 0.042 },
         { tile: Tile.COPPER, minDepth: 32, chance: 0.022 },
+        { tile: Tile.QUARTZ, minDepth: 56, chance: 0.009 },
         { tile: Tile.IRON, minDepth: 72, chance: 0.01 }
       ]
     },
@@ -220,6 +246,7 @@ window.ML = window.ML || {};
         { tile: Tile.COAL, minDepth: 22, chance: 0.032 },
         { tile: Tile.COPPER, minDepth: 52, chance: 0.028 },
         { tile: Tile.IRON, minDepth: 78, chance: 0.025 },
+        { tile: Tile.QUARTZ, minDepth: 86, chance: 0.016 },
         { tile: Tile.GOLD, minDepth: 118, chance: 0.009 }
       ]
     },
@@ -249,6 +276,8 @@ window.ML = window.ML || {};
         { tile: Tile.IRON, minDepth: 96, chance: 0.018 },
         { tile: Tile.GOLD, minDepth: 130, chance: 0.017 },
         { tile: Tile.CRYSTAL, minDepth: 150, chance: 0.014 },
+        { tile: Tile.QUARTZ, minDepth: 150, chance: 0.012 },
+        { tile: Tile.EMBER, minDepth: 176, chance: 0.008 },
         { tile: Tile.OBSIDIAN, minDepth: 210, chance: 0.006 }
       ]
     },
@@ -277,7 +306,9 @@ window.ML = window.ML || {};
       ores: [
         { tile: Tile.GOLD, minDepth: 160, chance: 0.014 },
         { tile: Tile.CRYSTAL, minDepth: 190, chance: 0.012 },
-        { tile: Tile.OBSIDIAN, minDepth: 215, chance: 0.05 }
+        { tile: Tile.EMBER, minDepth: 202, chance: 0.021 },
+        { tile: Tile.OBSIDIAN, minDepth: 215, chance: 0.05 },
+        { tile: Tile.VOIDGLASS, minDepth: 250, chance: 0.008 }
       ]
     },
     {
@@ -305,13 +336,16 @@ window.ML = window.ML || {};
       ores: [
         { tile: Tile.CRYSTAL, minDepth: 210, chance: 0.012 },
         { tile: Tile.OBSIDIAN, minDepth: 235, chance: 0.06 },
-        { tile: Tile.GOLD, minDepth: 260, chance: 0.016 }
+        { tile: Tile.GOLD, minDepth: 260, chance: 0.016 },
+        { tile: Tile.EMBER, minDepth: 270, chance: 0.018 },
+        { tile: Tile.VOIDGLASS, minDepth: 300, chance: 0.036 }
       ]
     }
   ];
 
   const RECIPES = [
     { id: "torch", cat: "blocks", name: "Torch bundle", cost: { wood: 1, coal: 1 }, out: { torch: 4 }, note: "Local light for deeper tunnels" },
+    { id: "amberLanterns", cat: "blocks", name: "Amber lanterns", cost: { amber: 1, coal: 1 }, out: { torch: 6 }, note: "Warm resin light that stretches early routes" },
     { id: "gelTorch", cat: "blocks", name: "Gel torches", cost: { wood: 1, gel: 2 }, out: { torch: 5 }, note: "Classic slime-gel torch recipe" },
     { id: "mushroomFlare", cat: "blocks", name: "Mushroom flares", cost: { mushroom: 1, gel: 1 }, out: { torch: 4 }, note: "Soft cyan light from cave growth" },
     { id: "ladder", cat: "blocks", name: "Ladder stack", cost: { wood: 2 }, out: { ladder: 6 }, note: "Vertical movement in shafts" },
@@ -324,6 +358,7 @@ window.ML = window.ML || {};
     { id: "stickyCharge", cat: "blocks", name: "Sticky charges", cost: { coal: 2, copper: 1, gel: 2 }, out: { charge: 2 }, note: "Cheaper bombs after fighting slimes" },
     { id: "bombCrate", cat: "blocks", name: "Bomb crate", cost: { coal: 6, copper: 4, iron: 2 }, out: { charge: 5 }, note: "Bulk explosives for branch mining" },
     { id: "crystalBeacon", cat: "blocks", name: "Crystal beacon bundle", cost: { crystal: 1, coal: 2, wood: 1 }, out: { torch: 8 }, note: "Bright, long-running cave markers" },
+    { id: "emberCharges", cat: "blocks", name: "Ember charges", cost: { ember: 1, charge: 1, coal: 2 }, out: { charge: 4 }, note: "Hot charges from lava shale" },
     { id: "coreCharge", cat: "blocks", name: "Core charges", cost: { coal: 4, obsidian: 2, core: 1 }, out: { charge: 5 }, note: "Boss-core charges for serious excavation" },
 
     { id: "stonePick", cat: "tools", name: "Stone pick", cost: { wood: 2, stone: 10 }, upgrade: 2, note: "Copper seams become reachable" },
@@ -338,6 +373,7 @@ window.ML = window.ML || {};
     { id: "caveBoots", cat: "tools", name: "Cave boots", cost: { wood: 3, iron: 4 }, boots: true, note: "Double jump, softer landings" },
     { id: "minerLamp", cat: "tools", name: "Miner lamp", cost: { copper: 4, coal: 6 }, lamp: 1, note: "Wider personal light, but it drains lamp cells" },
     { id: "beaconLamp", cat: "tools", name: "Beacon lamp", cost: { gold: 6, crystal: 4 }, lamp: 2, note: "Huge light cone with a hungry battery draw" },
+    { id: "clockworkRegulator", cat: "tools", name: "Clockwork regulator", cost: { clockwork: 1, quartz: 3, copper: 2 }, cellEfficiency: true, note: "Lamp cells drain slower under a tuned regulator" },
     { id: "reinforcedSoles", cat: "tools", name: "Reinforced soles", cost: { iron: 4, silk: 2, gel: 2 }, fallGuard: true, note: "Cuts fall damage and hard landing shock" },
     { id: "echoPadding", cat: "tools", name: "Echo padding", cost: { silk: 2, gel: 4, mushroom: 2 }, noiseMuffle: true, note: "Softens mining, landing, and cache noise so mobs track you less through walls" },
     { id: "sprintGreaves", cat: "tools", name: "Sprint greaves", cost: { fang: 1, iron: 5, silk: 2 }, speedBoost: true, note: "Higher walk and sprint speed" },
@@ -352,11 +388,15 @@ window.ML = window.ML || {};
     { id: "luckyPouch", cat: "relics", name: "Lucky pouch", cost: { silk: 3, coin: 30, gold: 2 }, lootBonus: true, note: "Chests and bosses spill more coins" },
     { id: "shadowWard", cat: "relics", name: "Shadow ward", cost: { core: 1, obsidian: 4, crystal: 4 }, ward: true, note: "Softens deep darkness and boss hits" },
     { id: "recallCharm", cat: "relics", name: "Recall charm", cost: { relic: 1, crystal: 2, coin: 24 }, recallCharm: true, note: "Recall to camp costs less energy and recharges faster" },
+    { id: "mirrorCache", cat: "relics", name: "Mirror cache", cost: { mirrorShard: 1, relic: 1, quartz: 2 }, out: { crystal: 2, coin: 16 }, note: "A chest shard that turns old reflections into supplies" },
+    { id: "keyedRelic", cat: "relics", name: "Keyed relic case", cost: { strangeKey: 1, mapScrap: 2, coin: 12 }, out: { relic: 1, torch: 4 }, note: "A guild key opens a cache nobody logged" },
+    { id: "voidglassEdge", cat: "relics", name: "Voidglass edge", cost: { voidglass: 4, obsidian: 3, crystal: 3 }, blade: 4, note: "+7 attack damage through glass-dark plating" },
 
     { id: "fieldKit", cat: "survival", name: "Field kit", cost: { wood: 2, coal: 2, mushroom: 1 }, out: { kit: 1 }, note: "Use from the hotbar: +45 health, +45 energy" },
     { id: "merchantKit", cat: "survival", name: "Merchant kit", cost: { coin: 12, mushroom: 1 }, out: { kit: 1 }, note: "Spend coins for a quick recovery kit" },
     { id: "merchantTorchCrate", cat: "survival", name: "Merchant torch crate", cost: { coin: 10, coal: 1 }, out: { torch: 8 }, note: "Spend coin to restock light before a deep run" },
     { id: "lampCells", cat: "survival", name: "Lamp cells", cost: { coal: 2, copper: 1 }, out: { battery: 2 }, note: "Spare batteries for personal lamps" },
+    { id: "quartzCells", cat: "survival", name: "Quartz lamp cells", cost: { quartz: 1, copper: 1 }, out: { battery: 3 }, note: "Cleaner battery chemistry from quartz veins" },
     { id: "crystalCells", cat: "survival", name: "Crystal lamp cells", cost: { crystal: 1, copper: 2 }, out: { battery: 4 }, note: "High-output cells for abyss expeditions" },
     { id: "surveyorLadderPack", cat: "survival", name: "Surveyor ladder pack", cost: { coin: 12, wood: 1 }, out: { ladder: 12 }, note: "A paid shaft kit for longer descents" },
     { id: "blackPowderOrder", cat: "survival", name: "Black powder order", cost: { coin: 18, coal: 2, copper: 1 }, out: { charge: 3 }, note: "Emergency charge restock for sealed routes" },
@@ -365,8 +405,21 @@ window.ML = window.ML || {};
     { id: "ironRationBox", cat: "survival", name: "Iron ration box", cost: { coin: 20, iron: 2, coal: 1 }, out: { kit: 2 }, note: "Heavy but reliable expedition supplies" },
     { id: "vaultKit", cat: "survival", name: "Vault kit", cost: { coin: 18, silk: 2, mushroom: 2 }, out: { kit: 2 }, note: "Secret-room supplies packed into two field kits" },
     { id: "bossTonic", cat: "survival", name: "Boss tonic", cost: { core: 1, fang: 1, mushroom: 2 }, out: { kit: 3 }, note: "A dangerous brew for late-game fights" },
+    { id: "surveyCache", cat: "survival", name: "Survey cache", cost: { mapScrap: 2, coin: 6 }, out: { ladder: 8, torch: 4 }, note: "Old map scraps point to a practical route bundle" },
+    { id: "emberRation", cat: "survival", name: "Ember ration heater", cost: { ember: 1, kit: 1 }, out: { kit: 2 }, note: "Turns one field kit into two heated emergency packs" },
     { id: "coinPress", cat: "survival", name: "Coin press", cost: { gold: 1 }, out: { coin: 14 }, note: "Press spare gold into merchant coins" },
     { id: "crystalTrade", cat: "survival", name: "Crystal trade", cost: { crystal: 1 }, out: { coin: 20 }, note: "Convert rare crystal into quick money" }
+  ];
+
+  const CHEST_SURPRISES = [
+    { item: "mapScrap", minDepth: 0, chance: 0.26, secretBonus: 0.18, min: 1, max: 2, note: "torn route scraps" },
+    { item: "amber", minDepth: 18, chance: 0.18, secretBonus: 0.1, min: 1, max: 2, note: "resin sealed in old crates" },
+    { item: "quartz", minDepth: 62, chance: 0.14, secretBonus: 0.14, min: 1, max: 2, note: "clean lamp crystal" },
+    { item: "clockwork", minDepth: 72, chance: 0.07, secretBonus: 0.18, min: 1, max: 1, note: "a ticking seed with no maker mark" },
+    { item: "mirrorShard", minDepth: 110, chance: 0.08, secretBonus: 0.22, min: 1, max: 1, note: "a shard that reflects the HUD wrong" },
+    { item: "ember", minDepth: 152, chance: 0.11, secretBonus: 0.15, min: 1, max: 2, note: "warm shale wrapped in cloth" },
+    { item: "strangeKey", minDepth: 84, chance: 0.025, secretBonus: 0.18, min: 1, max: 1, note: "a key not listed on the cache tag" },
+    { item: "voidglass", minDepth: 230, chance: 0.055, secretBonus: 0.2, min: 1, max: 2, note: "glass-dark splinters from below the map" }
   ];
 
   const CRAFT_CATS = [
@@ -389,6 +442,14 @@ window.ML = window.ML || {};
   const ACHIEVEMENTS = [
     { id: "firstBreak", name: "First Spark", note: "Mine your first block.", stat: "mined", at: 1 },
     { id: "stoneCache", name: "Stone Stockpile", note: "Carry 40 stone.", item: "stone", at: 40 },
+    { id: "amberFound", name: "Honey In Stone", note: "Find your first amber knot.", item: "amber", at: 1 },
+    { id: "quartzFound", name: "Clean Signal", note: "Mine your first quartz vein.", item: "quartz", at: 1 },
+    { id: "emberFound", name: "Still Warm", note: "Carry an ember shard from lava shale.", item: "ember", at: 1 },
+    { id: "voidglassFound", name: "Below The Map", note: "Recover voidglass from the repeating shelf.", item: "voidglass", at: 1 },
+    { id: "mapScrapFound", name: "Unfiled Route", note: "Find a map scrap in a cache.", item: "mapScrap", at: 1 },
+    { id: "clockworkFound", name: "Something Ticks", note: "Find a clockwork seed where supplies should be.", item: "clockwork", at: 1 },
+    { id: "mirrorShardFound", name: "Wrong Reflection", note: "Find a mirror shard that reflects the mine strangely.", item: "mirrorShard", at: 1 },
+    { id: "strangeKeyFound", name: "Wrong Key", note: "Find a cache key nobody logged.", item: "strangeKey", at: 1 },
     { id: "firstCraft", name: "Workbench Hands", note: "Craft your first recipe.", stat: "crafted", at: 1 },
     { id: "craftsman", name: "Tunnel Smith", note: "Craft 8 recipes.", stat: "crafted", at: 8 },
     { id: "firstChest", name: "Cache Finder", note: "Open a chest.", stat: "chests", at: 1 },
@@ -404,6 +465,7 @@ window.ML = window.ML || {};
     { id: "stonePick", name: "Stone Age", note: "Craft the Stone pick.", prop: "pickLevel", at: 2 },
     { id: "starDrill", name: "Starforged", note: "Craft the Starforged drill.", prop: "pickLevel", at: 6 },
     { id: "beaconLamp", name: "Beacon Bearer", note: "Craft the Beacon lamp.", prop: "lamp", at: 2 },
+    { id: "cellRegulator", name: "Measured Light", note: "Craft the Clockwork regulator.", flag: "cellEfficiency" },
     { id: "batteryStock", name: "Cells Packed", note: "Carry three spare lamp cells.", item: "battery", at: 3 },
     { id: "abyssEdge", name: "Abyss Edge", note: "Craft the Abyss edge.", prop: "blade", at: 4 },
     { id: "boots", name: "Second Step", note: "Craft Cave boots.", flag: "boots" },
@@ -746,7 +808,7 @@ window.ML = window.ML || {};
     AIR,
     DAY_LENGTH,
     INTERACT_RANGE_TILES: 3.05,
-    SAVE_KEY: "abyssforge.save.v6",
+    SAVE_KEY: "abyssforge.save.v7",
     MUTE_KEY: "abyssforge.muted",
     Tile,
     BLOCKS,
@@ -760,6 +822,7 @@ window.ML = window.ML || {};
     LAMPS,
     STRATA_PROFILES,
     RECIPES,
+    CHEST_SURPRISES,
     CRAFT_CATS,
     CAMP_SERVICES,
     ACHIEVEMENTS,
