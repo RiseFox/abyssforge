@@ -1262,7 +1262,7 @@
           key: "E",
           action: "Read",
           name: discovery?.title || "Road sign",
-          hint: discovery?.read ? "Read again" : "Surface clue",
+          hint: discovery?.read ? "Read again" : discovery?.scope === "underground" ? "Field note" : "Surface clue",
           x: sign.x,
           y: sign.y
         }, sign.distance, 0);
@@ -1306,13 +1306,39 @@
       return false;
     }
 
+    discoveryFloatLabel(discovery) {
+      if (!discovery) return "FIELD MARK";
+      if (discovery.label) return discovery.label;
+      if (discovery.type === "hamlet") return "SILENT HAMLET";
+      if (discovery.type === "waypost") return "WAYPOST";
+      return discovery.scope === "underground" ? "SURVEY MARK" : "ROAD MARK";
+    }
+
+    discoveryCue(discovery) {
+      if (!discovery) return "A mark catches your eye.";
+      if (discovery.scope === "underground") {
+        if (discovery.type === "pump") return "Old machinery interrupts the cave shape.";
+        if (discovery.type === "shrine") return "Warm soot marks a chamber that should be cold.";
+        if (discovery.type === "cache") return "A misfiled cache tag glints in the dark.";
+        return "A survey mark stands where no survey should be.";
+      }
+      if (discovery.type === "hamlet") return "Roofs interrupt the empty horizon.";
+      if (discovery.type === "waypost") return "A waypost stands beyond the old map.";
+      return "A road sign catches your eye.";
+    }
+
     markSurfaceDiscovery(discovery, read = false) {
       if (!discovery) return false;
       const firstSeen = !discovery.seen;
       discovery.seen = true;
       if (read) discovery.read = true;
       if (firstSeen) {
-        this.sim.stats.surfaceDiscoveries = (this.sim.stats.surfaceDiscoveries || 0) + 1;
+        this.sim.stats.poiDiscoveries = (this.sim.stats.poiDiscoveries || 0) + 1;
+        if (discovery.scope === "underground") {
+          this.sim.stats.undergroundDiscoveries = (this.sim.stats.undergroundDiscoveries || 0) + 1;
+        } else {
+          this.sim.stats.surfaceDiscoveries = (this.sim.stats.surfaceDiscoveries || 0) + 1;
+        }
         this.checkAchievements();
       }
       return firstSeen;
@@ -1322,8 +1348,8 @@
       const discovery = this.sim.surfaceDiscoveryAt?.(x, y);
       if (!discovery) return false;
       const firstSeen = this.markSurfaceDiscovery(discovery, true);
-      this.setAction("Read sign", 1200);
-      this.floatText(x * TILE - 16, y * TILE - 18, discovery.type === "hamlet" ? "SILENT HAMLET" : "ROAD MARK", "#ffe2a0");
+      this.setAction(discovery.scope === "underground" ? "Read field mark" : "Read sign", 1200);
+      this.floatText(x * TILE - 18, y * TILE - 18, this.discoveryFloatLabel(discovery), discovery.scope === "underground" ? "#b8f7ff" : "#ffe2a0");
       ML.audio.play(firstSeen ? "secret" : "click");
       ML.showToast(`${discovery.title}: ${discovery.message}`, 6200);
       ML.renderAll(this.sim);
@@ -1345,13 +1371,9 @@
         this.markSurfaceDiscovery(discovery, false);
         if (now - this.lastSurfaceDiscoveryAt > 4500) {
           this.lastSurfaceDiscoveryAt = now;
-          const cue = discovery.type === "hamlet"
-            ? "Roofs interrupt the empty horizon."
-            : discovery.type === "waypost"
-              ? "A waypost stands beyond the old map."
-              : "A road sign catches your eye.";
-          this.setAction("Surface clue", 1400);
-          this.floatText(discovery.x * TILE - 18, discovery.y * TILE - 18, "SURFACE CLUE", "#ffe2a0");
+          const cue = this.discoveryCue(discovery);
+          this.setAction(discovery.scope === "underground" ? "Field mark" : "Surface clue", 1400);
+          this.floatText(discovery.x * TILE - 18, discovery.y * TILE - 18, this.discoveryFloatLabel(discovery), discovery.scope === "underground" ? "#b8f7ff" : "#ffe2a0");
           ML.showToast(`${cue} Press E to read it.`, 3200);
         }
         this.saveGame();

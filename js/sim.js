@@ -57,6 +57,8 @@
         worldExpansions: 0,
         horizontalExpansions: 0,
         surfaceDiscoveries: 0,
+        undergroundDiscoveries: 0,
+        poiDiscoveries: 0,
         noiseEvents: 0,
         noiseLures: 0,
         observerAnomalies: 0,
@@ -143,6 +145,8 @@
         worldExpansions: 0,
         horizontalExpansions: 0,
         surfaceDiscoveries: 0,
+        undergroundDiscoveries: 0,
+        poiDiscoveries: 0,
         noiseEvents: 0,
         noiseLures: 0,
         observerAnomalies: 0,
@@ -559,19 +563,7 @@
     }
 
     placeSurfaceSign(x, type, title, message, rand = Math.random) {
-      x = clamp(Math.floor(x), 2, this.worldWidth() - 3);
-      const floorY = this.surfaceFloorY(x);
-      const y = floorY - 1;
-      const floor = this.tileAt(x, floorY);
-      if (!BLOCKS[floor]?.solid || y < 2) return null;
-      for (let yy = y - 2; yy <= y; yy += 1) {
-        if (yy >= 0 && yy < this.worldHeight()) this.world[yy][x] = AIR;
-      }
-      this.world[y][x] = Tile.SIGN;
-      const id = `surf-${type}-${this.surfaceDiscoveries.length + 1}-${Math.abs((x * 73856093) ^ (y * 19349663) ^ Math.floor(rand() * 99991))}`;
-      const discovery = { id, type, title, message, x, y, seen: false, read: false };
-      this.surfaceDiscoveries.push(discovery);
-      return discovery;
+      return ML.POI?.placeSurfaceSign?.(this, x, type, title, message, rand) || null;
     }
 
     flattenSurfaceRange(x0, x1, targetY) {
@@ -610,72 +602,15 @@
     }
 
     addSurfaceDiscovery(type, x, side, rand = Math.random) {
-      const distance = Math.max(0, Math.abs(x - (this.shaft?.x || this.spawn?.x || Math.floor(this.worldWidth() / 2))));
-      const signMessages = [
-        "The road keeps walking after the map stops. Count your campfires, not your steps.",
-        "Guild survey mark: if the sky is still here, the forge has not closed the loop.",
-        "Do not dig under quiet roofs. They remember names better than stone does.",
-        "A watcher was seen at noon. Nobody believed the report."
-      ];
-      const sideName = side === "left" ? "western" : "eastern";
-      const titleByType = {
-        sign: `${sideName} road sign`,
-        waypost: `${sideName} waypost`,
-        hamlet: `silent ${sideName} hamlet`
-      };
-      const messageByType = {
-        sign: signMessages[Math.floor(rand() * signMessages.length)],
-        waypost: `The ${sideName} waypost still has warm ash. Someone crossed ${distance} tiles from the shaft and did not return underground.`,
-        hamlet: `A dead surface hamlet: roofs, a cache, and no footprints. The mine was not the only place that moved.`
-      };
-      const discovery = this.placeSurfaceSign(x, type, titleByType[type] || "surface mark", messageByType[type] || signMessages[0], rand);
-      if (discovery) discovery.distance = distance;
-      return discovery;
+      return ML.POI?.addSurfaceDiscovery?.(this, type, x, side, rand) || null;
     }
 
     generateSurfaceLandmarks(regionStart, regionEnd, side, rand = Math.random) {
-      if (!Array.isArray(this.surfaceDiscoveries)) this.surfaceDiscoveries = [];
-      const width = this.worldWidth();
-      const minX = clamp(regionStart + 6, 3, width - 4);
-      const maxX = clamp(regionEnd - 6, 3, width - 4);
-      const discoveries = [];
-      const span = Math.max(1, maxX - minX);
-      const candidates = [];
-      for (let tries = 0; tries < 160; tries += 1) {
-        const x = minX + Math.floor(rand() * span);
-        const y = this.surfaceFloorY(x);
-        if (y < 17 || y > 36) continue;
-        const floor = this.tileAt(x, y);
-        if (!BLOCKS[floor]?.solid || !this.hasSurfaceClearance(x, y, 7)) continue;
-        if (Math.abs(x - (this.shaft?.x || -9999)) < 18) continue;
-        candidates.push({ x, y });
-      }
-      if (!candidates.length) return discoveries;
+      return ML.POI?.generateSurfaceLandmarks?.(this, regionStart, regionEnd, side, rand) || [];
+    }
 
-      const primary = candidates[Math.floor(rand() * candidates.length)];
-      const roll = rand();
-      if (roll < 0.2 && candidates.length > 4) {
-        const targetY = primary.y;
-        this.flattenSurfaceRange(primary.x - 11, primary.x + 12, targetY);
-        this.buildSurfaceShelter(primary.x - 5, targetY, rand);
-        this.buildSurfaceShelter(primary.x + 6, targetY, rand);
-        this.world[targetY - 1][primary.x] = Tile.CAMPFIRE;
-        discoveries.push(this.addSurfaceDiscovery("hamlet", primary.x - 9, side, rand));
-      } else if (roll < 0.62) {
-        const targetY = primary.y;
-        this.flattenSurfaceRange(primary.x - 4, primary.x + 5, targetY);
-        this.world[targetY - 1][primary.x + 2] = Tile.CAMPFIRE;
-        this.world[targetY - 1][primary.x - 2] = Tile.CHEST;
-        discoveries.push(this.addSurfaceDiscovery("waypost", primary.x, side, rand));
-      } else {
-        discoveries.push(this.addSurfaceDiscovery("sign", primary.x, side, rand));
-      }
-
-      if (rand() < 0.34 && candidates.length > 8) {
-        const extra = candidates[Math.floor(rand() * candidates.length)];
-        if (Math.abs(extra.x - primary.x) > 14) discoveries.push(this.addSurfaceDiscovery("sign", extra.x, side, rand));
-      }
-      return discoveries.filter(Boolean);
+    generateUndergroundLandmarks(options = {}) {
+      return ML.POI?.generateUndergroundLandmarks?.(this, options) || [];
     }
 
     surfaceDiscoveryAt(x, y) {
@@ -882,6 +817,17 @@
       }
 
       const surfaceDiscoveries = this.generateSurfaceLandmarks(regionStart, regionEnd, side, rand);
+      const caveDiscoveries = this.generateUndergroundLandmarks({
+        source: "horizon",
+        side,
+        xMin: minX,
+        xMax: maxX,
+        yMinForX: (x) => (this.surface[x] || 24) + 14,
+        yMax: height - 9,
+        minDepth: 22,
+        target: 1 + (addColumns >= 80 ? 1 : 0),
+        rand
+      });
 
       let mobAdds = 0;
       const mobCap = Math.max(12, Math.floor(addColumns / 5));
@@ -924,7 +870,9 @@
         edgeSurface: profile?.edgeSurface || this.surface[edgeX] || 24,
         nearestSurface: left ? this.surface[addColumns - 1] : this.surface[oldWidth],
         surfaceStep: Math.abs((profile?.edgeSurface || 24) - (left ? this.surface[addColumns - 1] : this.surface[oldWidth] || 24)),
-        discoveries: surfaceDiscoveries.length
+        discoveries: surfaceDiscoveries.length + caveDiscoveries.length,
+        surfaceDiscoveries: surfaceDiscoveries.length,
+        undergroundDiscoveries: caveDiscoveries.length
       };
     }
 
@@ -1012,6 +960,19 @@
         }
       }
 
+      const discoveries = this.generateUndergroundLandmarks({
+        source: "depth",
+        xMin: 5,
+        xMax: width - 6,
+        yMin: oldHeight + 6,
+        yMax: newHeight - 10,
+        minDepth: 36,
+        target: addRows >= 96 ? 2 : 1,
+        entryX,
+        stratum,
+        rand
+      });
+
       let mobAdds = 0;
       for (let tries = 0; tries < 320 && mobAdds < mobCap; tries += 1) {
         const x = 4 + Math.floor(rand() * (width - 8));
@@ -1026,7 +987,7 @@
       this.rebuildLights();
       this.mobBaseline = Math.max(this.mobBaseline || 0, (this.mobs || []).length);
       this.stats.worldExpansions = (this.stats.worldExpansions || 0) + 1;
-      return { from: oldHeight, to: newHeight, rows: addRows, entryX, chests, camps, mobs: mobAdds, stratumId: stratum?.id, stratumName: stratum?.name };
+      return { from: oldHeight, to: newHeight, rows: addRows, entryX, chests, camps, mobs: mobAdds, discoveries: discoveries.length, undergroundDiscoveries: discoveries.length, stratumId: stratum?.id, stratumName: stratum?.name };
     }
 
     // Mobs are part of the world, decided at generation time like ores: they
@@ -1551,7 +1512,7 @@
         const raw = localStorage.getItem(ML.SAVE_KEY);
         if (!raw) return null;
         const data = JSON.parse(raw);
-        if (!data || data.version !== 4 || !data.state || !Array.isArray(data.state.world)) return null;
+        if (!data || data.version !== 5 || !data.state || !Array.isArray(data.state.world)) return null;
         return data.state;
       } catch {
         return null;
@@ -1607,7 +1568,7 @@
         contractSeq: this.contractSeq
       };
       try {
-        localStorage.setItem(ML.SAVE_KEY, JSON.stringify({ version: 4, state }));
+        localStorage.setItem(ML.SAVE_KEY, JSON.stringify({ version: 5, state }));
         return true;
       } catch {
         return false;

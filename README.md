@@ -67,7 +67,7 @@ Depth is no longer a single hardcoded ore ladder. AbyssForge now uses data-drive
 | Obsidian Abyss | 220 m | Lava-glass danger with fewer camps, heavier mobs, richer caches, and severe darkness. |
 | Voidglass Shelf | 330 m | Strange repeating lower shelves where safe light is scarce and the mine stops behaving naturally. |
 
-Opening bedrock seams extends the world downward and moves the next generated abyss section into the active stratum instead of repeating the same cave recipe forever. Reaching the far left or right horizon now opens a new horizontal region instead of ending at a hard boundary. The horizon generator reads the actual edge columns first, then continues the surface slope, nearby stone and ore bands, and any cave openings into the new region while the map, minimap, mobs, caches, and camp hooks expand around the expedition.
+Opening bedrock seams extends the world downward and moves the next generated abyss section into the active stratum instead of repeating the same cave recipe forever. Reaching the far left or right horizon now opens a new horizontal region instead of ending at a hard boundary. The horizon generator reads the actual edge columns first, then continues the surface slope, nearby stone and ore bands, and any cave openings into the new region while the map, minimap, mobs, caches, camp hooks, and points of interest expand around the expedition.
 
 ## Current Features
 
@@ -79,7 +79,8 @@ Opening bedrock seams extends the world downward and moves the next generated ab
 - Expanded crafting across tools, blocks, survival items, and relic upgrades.
 - Campfire rest points with warm light, services, safe respawn anchors, and recall support.
 - Secret vault rooms with chests, rare relic materials, boss rooms, and deeper camp points.
-- Endless-style horizontal exploration that opens fresh side regions with cave routes, loot caches, camp points, surface signs, wayposts, abandoned hamlets, trees, lava shelves, and region-appropriate mobs.
+- Endless-style horizontal exploration that opens fresh side regions with cave routes, loot caches, camp points, surface signs, wayposts, abandoned hamlets, underground survey stations, old pump rooms, quiet shrines, trees, lava shelves, and region-appropriate mobs.
+- Procedural point-of-interest registry that keeps discoveries data-driven instead of hardcoding every road sign or deep station in the core world loop.
 - Dynamic cave events: ore surge, lantern draft, depth swarm, and cave tremor.
 - Story-phase event variants: familiar cave events start as mining hazards, then slowly read like signals from a broken machine.
 - Instinct-based enemy behavior: mobs react to light, weakness, allies, distance, and their own health instead of only walking at the player.
@@ -126,6 +127,7 @@ npm test
 - `js/config.js` - shared constants, items, recipes, strata profiles, contracts, achievements, enemies, and events.
 - `js/sim.js` - pure world simulation, generation, strata selection, saves, inventory, crafting, contracts, mobs, and spawn repair.
 - `js/biomes.js` - biome definitions, detection, lore, and gameplay properties.
+- `js/poi.js` - procedural surface and underground points of interest, readable field marks, and discovery placement rules.
 - `js/camp.js` - campfire proximity, anchor, respawn, and service logic.
 - `js/audio.js` - Web Audio SFX and situational music modes.
 - `js/textures.js` - generated pixel textures and sprites.

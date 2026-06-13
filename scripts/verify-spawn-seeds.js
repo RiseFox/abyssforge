@@ -277,7 +277,9 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const sceneWidthAfterLeft = scene?.worldWidthTiles?.() || scene?.sim?.worldWidth?.() || WORLD_W;
     const sceneLeftShift = (scene?.player?.x || 0) - sceneLeftXBefore;
     const sceneHorizontalSupport = scene?.sim?.hasPlayerSupport?.({ x: scene.player.x, y: scene.player.y });
-    const sceneDiscovery = scene?.sim?.surfaceDiscoveries?.find?.((entry) => scene.sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN);
+    const undergroundDiscovery = sim.surfaceDiscoveries?.find?.((entry) => entry.scope === "underground" && sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN);
+    const sceneDiscovery = scene?.sim?.surfaceDiscoveries?.find?.((entry) => entry.scope !== "underground" && scene.sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN)
+      || scene?.sim?.surfaceDiscoveries?.find?.((entry) => scene.sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN);
     const sceneDiscoveryBefore = scene?.sim?.stats?.surfaceDiscoveries || 0;
     let sceneDiscoveryRead = false;
     if (sceneDiscovery) {
@@ -288,6 +290,16 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     }
     const sceneDiscoveryAfter = scene?.sim?.stats?.surfaceDiscoveries || 0;
     const sceneDiscoveryTarget = sceneDiscovery ? scene.interactionTarget?.() : null;
+    const sceneUndergroundDiscovery = scene?.sim?.surfaceDiscoveries?.find?.((entry) => entry.scope === "underground" && scene.sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN);
+    const sceneUndergroundBefore = scene?.sim?.stats?.undergroundDiscoveries || 0;
+    let sceneUndergroundRead = false;
+    if (sceneUndergroundDiscovery) {
+      const floorY = sceneUndergroundDiscovery.y + 1;
+      scene.player.setPosition(sceneUndergroundDiscovery.x * window.ML.TILE + window.ML.TILE / 2, floorY * window.ML.TILE - 17);
+      scene.sim.player = { x: scene.player.x, y: scene.player.y };
+      sceneUndergroundRead = scene.readSurfaceDiscovery?.(sceneUndergroundDiscovery.x, sceneUndergroundDiscovery.y) || false;
+    }
+    const sceneUndergroundAfter = scene?.sim?.stats?.undergroundDiscoveries || 0;
     let combatLosCheck = null;
     if (scene?.player && scene?.enemies && scene?.sim && typeof scene.hasSightToEnemy === "function") {
       const { TILE, AIR, Tile, BLOCKS } = window.ML;
@@ -510,11 +522,15 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       extensionRows: extension?.rows || 0,
       extensionChests: extension?.chests || 0,
       extensionMobs: extension?.mobs || 0,
+      extensionDiscoveries: extension?.discoveries || 0,
+      extensionUndergroundDiscoveries: extension?.undergroundDiscoveries || 0,
       extensionStratum: extension?.stratumId || null,
       seamOpened,
       heightAfterSecond,
       secondExtensionRows: secondExtension?.rows || 0,
       secondExtensionMobs: secondExtension?.mobs || 0,
+      secondExtensionDiscoveries: secondExtension?.discoveries || 0,
+      secondExtensionUndergroundDiscoveries: secondExtension?.undergroundDiscoveries || 0,
       secondExtensionStratum: secondExtension?.stratumId || null,
       secondSeamOpened,
       worldExpansions: sim.stats.worldExpansions || 0,
@@ -531,6 +547,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       eastEdgeOpenings: eastExtension?.edgeOpenings || 0,
       eastEdgeCorridors: eastExtension?.edgeCorridors || 0,
       eastSurfaceDiscoveries: eastExtension?.discoveries || 0,
+      eastUndergroundDiscoveries: eastExtension?.undergroundDiscoveries || 0,
       westColumns: westExtension?.columns || 0,
       westShiftTiles: westExtension?.shiftTiles || 0,
       westChests: westExtension?.chests || 0,
@@ -541,7 +558,11 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       westEdgeOpenings: westExtension?.edgeOpenings || 0,
       westEdgeCorridors: westExtension?.edgeCorridors || 0,
       westSurfaceDiscoveries: westExtension?.discoveries || 0,
+      westUndergroundDiscoveries: westExtension?.undergroundDiscoveries || 0,
       surfaceDiscoveries: sim.surfaceDiscoveries?.length || 0,
+      undergroundDiscoveries: sim.surfaceDiscoveries?.filter?.((entry) => entry.scope === "underground").length || 0,
+      undergroundDiscoveryTile: Boolean(undergroundDiscovery && sim.tileAt(undergroundDiscovery.x, undergroundDiscovery.y) === window.ML.Tile.SIGN),
+      poiApi: Boolean(window.ML.POI?.generateUndergroundLandmarks),
       horizontalExpansions: sim.stats.horizontalExpansions || 0,
       horizontalSpawnStable: Boolean(horizontalSpawnStable),
       horizontalCampSupport: Boolean(horizontalCampSupport),
@@ -558,6 +579,11 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       sceneDiscoveryReadState: Boolean(sceneDiscovery?.read),
       sceneDiscoveryStatDelta: sceneDiscoveryAfter - sceneDiscoveryBefore,
       sceneDiscoveryTargetKind: sceneDiscoveryTarget?.kind || null,
+      sceneUndergroundDiscoveries: scene?.sim?.surfaceDiscoveries?.filter?.((entry) => entry.scope === "underground").length || 0,
+      sceneUndergroundDiscoveryTile: Boolean(sceneUndergroundDiscovery && scene.sim.tileAt(sceneUndergroundDiscovery.x, sceneUndergroundDiscovery.y) === window.ML.Tile.SIGN),
+      sceneUndergroundDiscoveryRead: Boolean(sceneUndergroundRead),
+      sceneUndergroundDiscoveryReadState: Boolean(sceneUndergroundDiscovery?.read),
+      sceneUndergroundDiscoveryStatDelta: sceneUndergroundAfter - sceneUndergroundBefore,
       combatLosRuntime: Boolean(combatLosCheck?.runtime),
       actionRulesRuntime: Boolean(combatLosCheck?.actionRulesRuntime),
       mobSensorsRuntime: Boolean(combatLosCheck?.mobSensorsRuntime),
@@ -690,7 +716,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
   await browser.close();
 
   const progressionFailed = progressionCheck.recipes < 34
-    || progressionCheck.achievements < 49
+    || progressionCheck.achievements < 51
     || progressionCheck.contracts < 5
     || progressionCheck.caveEvents < 4
     || progressionCheck.eventVariantCount < 4
@@ -748,11 +774,15 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.heightAfter <= progressionCheck.heightBefore
     || progressionCheck.extensionRows < 48
     || progressionCheck.extensionMobs < 1
+    || progressionCheck.extensionDiscoveries < 1
+    || progressionCheck.extensionUndergroundDiscoveries < 1
     || !progressionCheck.extensionStratum
     || !progressionCheck.seamOpened
     || progressionCheck.heightAfterSecond <= progressionCheck.heightAfter
     || progressionCheck.secondExtensionRows < 48
     || progressionCheck.secondExtensionMobs < 1
+    || progressionCheck.secondExtensionDiscoveries < 1
+    || progressionCheck.secondExtensionUndergroundDiscoveries < 1
     || !progressionCheck.secondExtensionStratum
     || progressionCheck.secondExtensionStratum === progressionCheck.extensionStratum
     || !progressionCheck.secondSeamOpened
@@ -769,7 +799,12 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.westMobs < 1
     || progressionCheck.eastSurfaceDiscoveries < 1
     || progressionCheck.westSurfaceDiscoveries < 1
+    || progressionCheck.eastUndergroundDiscoveries < 1
+    || progressionCheck.westUndergroundDiscoveries < 1
     || progressionCheck.surfaceDiscoveries < 2
+    || progressionCheck.undergroundDiscoveries < 2
+    || !progressionCheck.undergroundDiscoveryTile
+    || !progressionCheck.poiApi
     || progressionCheck.eastInheritedTiles < 64
     || progressionCheck.westInheritedTiles < 64
     || progressionCheck.eastSurfaceStep > 4
@@ -791,6 +826,11 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || !progressionCheck.sceneDiscoveryReadState
     || progressionCheck.sceneDiscoveryStatDelta < 1
     || progressionCheck.sceneDiscoveryTargetKind !== "surfaceDiscovery"
+    || progressionCheck.sceneUndergroundDiscoveries < 1
+    || !progressionCheck.sceneUndergroundDiscoveryTile
+    || !progressionCheck.sceneUndergroundDiscoveryRead
+    || !progressionCheck.sceneUndergroundDiscoveryReadState
+    || progressionCheck.sceneUndergroundDiscoveryStatDelta < 1
     || !progressionCheck.combatLosRuntime
     || !progressionCheck.actionRulesRuntime
     || !progressionCheck.mobSensorsRuntime
