@@ -649,6 +649,10 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const externalCacheProfile = firstChest ? scene.cacheVisualProfile?.(firstChest.x, firstChest.y) || null : null;
     const chestPropPoolSize = scene?.chestPropPool?.length || 0;
     const chestPropCount = scene?.visibleChestPropCount || 0;
+    const externalSlicedIconUrls = ["sealedLetter", "strangeKey", "watcherToken", "battery"]
+      .map((item) => window.ML.ExternalAssets?.itemCssUrl?.(item) || "");
+    const externalSlicedIconCount = externalSlicedIconUrls.filter((url) => url.startsWith("data:image/png;base64,")).length;
+    const externalSlicedIconUnique = new Set(externalSlicedIconUrls.filter(Boolean)).size;
     const externalKitHotbarIcon = Boolean(document.querySelector('.slot[data-item="kit"] .slot-icon.asset-icon'));
     return {
       recipes: window.ML.RECIPES.length,
@@ -719,6 +723,10 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       externalFangTexture: Boolean(window.ML.ExternalAssets?.itemTextureKey?.("fang", scene)),
       externalCacheOpenTexture: Boolean(window.ML.ExternalAssets?.cacheTextureKey?.("rare", true, scene)),
       externalCacheTextureCount: externalReport.cacheTextureCount || 0,
+      externalDerivedCssIconCount: externalReport.derivedCssIconCount || 0,
+      externalSheetIconCount: externalReport.sheetIconCount || 0,
+      externalSlicedIconCount,
+      externalSlicedIconUnique,
       externalCacheProfile,
       chestPropPoolSize,
       chestPropCount,
@@ -1032,6 +1040,10 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || !progressionCheck.externalFangTexture
     || !progressionCheck.externalCacheOpenTexture
     || progressionCheck.externalCacheTextureCount < 8
+    || progressionCheck.externalDerivedCssIconCount < 20
+    || progressionCheck.externalSheetIconCount < 4
+    || progressionCheck.externalSlicedIconCount < 4
+    || progressionCheck.externalSlicedIconUnique < 4
     || !progressionCheck.externalCacheProfile?.kind
     || progressionCheck.chestPropPoolSize < 48
     || !progressionCheck.externalKitHotbarIcon

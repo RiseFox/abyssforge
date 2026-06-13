@@ -34,30 +34,30 @@
   };
 
   const ITEM_ICON_ASSETS = {
-    copper: "gem2",
-    iron: "gem2",
-    coin: "coin",
-    amber: "gem3",
-    gold: "gem3",
-    crystal: "gem1",
-    obsidian: "gem4",
-    quartz: "gem2",
-    ember: "impact",
-    voidglass: "gem4",
-    gel: "slime",
-    fang: "skeleton",
-    relic: "scroll",
-    mapScrap: "scroll",
-    sealedLetter: "scroll",
-    oldCompass: "dungeonItems",
-    watcherToken: "gem4",
-    mirrorShard: "gem2",
-    strangeKey: "key",
-    kit: "medipack",
-    charge: "impact",
-    battery: "gem1",
-    core: "relicFx",
-    clockwork: "hammer"
+    copper: { source: "gem2", scale: 1 },
+    iron: { source: "gem2", scale: 1 },
+    coin: { source: "coin", scale: 1 },
+    amber: { source: "gem3", scale: 1 },
+    gold: { source: "gem3", scale: 1 },
+    crystal: { source: "gem1", scale: 1 },
+    obsidian: { source: "gem4", scale: 1 },
+    quartz: { source: "gem2", scale: 1 },
+    ember: { source: "impact", scale: 0.9 },
+    voidglass: { source: "gem4", scale: 1 },
+    gel: { source: "slime", scale: 1 },
+    fang: { source: "skeleton", scale: 1.18, alignY: 0.6 },
+    relic: { source: "scroll", scale: 1 },
+    mapScrap: { source: "scroll", scale: 0.96 },
+    sealedLetter: { source: "dungeonItems", rect: [8, 0, 8, 8], scale: 1.56, pad: 1 },
+    oldCompass: { source: "coin", scale: 0.95 },
+    watcherToken: { source: "dungeonItems", rect: [0, 0, 8, 8], scale: 1.46, pad: 1 },
+    mirrorShard: { source: "gem2", scale: 1.08 },
+    strangeKey: { source: "dungeonItems", rect: [8, 8, 8, 8], scale: 1.48, pad: 1 },
+    kit: { source: "medipack", scale: 1 },
+    charge: { source: "impact", scale: 0.9 },
+    battery: { source: "dungeonItems", rect: [0, 8, 8, 8], scale: 1.5, pad: 1 },
+    core: { source: "relicFx", scale: 0.9 },
+    clockwork: { source: "hammer", scale: 1 }
   };
 
   const RUNTIME_ITEM_TEXTURES = Object.freeze(
@@ -75,7 +75,8 @@
     requested: 0,
     loaded: new Set(),
     normalized: new Set(),
-    missing: new Set()
+    missing: new Set(),
+    cssIcons: Object.create(null)
   };
 
   function rawKey(name) {
@@ -109,9 +110,45 @@
     }
   }
 
-  function drawImageInBox(ctx, image, x, y, width, height, options = {}) {
+  function sourceRectFor(image, options = {}) {
     const iw = image.naturalWidth || image.width || 1;
     const ih = image.naturalHeight || image.height || 1;
+    const rect = Array.isArray(options.sourceRect) ? options.sourceRect : null;
+    if (!rect) return { sx: 0, sy: 0, sw: iw, sh: ih };
+    return {
+      sx: clampInt(rect[0], 0, iw - 1),
+      sy: clampInt(rect[1], 0, ih - 1),
+      sw: clampInt(rect[2], 1, iw),
+      sh: clampInt(rect[3], 1, ih)
+    };
+  }
+
+  function clampInt(value, min, max) {
+    return Math.max(min, Math.min(max, Math.round(Number(value) || 0)));
+  }
+
+  function itemSpec(item) {
+    const spec = ITEM_ICON_ASSETS[item];
+    if (!spec) return null;
+    return typeof spec === "string" ? { source: spec } : spec;
+  }
+
+  function textureDataUrl(scene, key) {
+    if (!scene?.textures?.exists?.(key)) return "";
+    const texture = scene.textures.get(key);
+    const image = texture?.getSourceImage?.() || texture?.source?.[0]?.image || null;
+    if (!image?.toDataURL) return "";
+    try {
+      return image.toDataURL("image/png");
+    } catch {
+      return "";
+    }
+  }
+
+  function drawImageInBox(ctx, image, x, y, width, height, options = {}) {
+    const rect = sourceRectFor(image, options);
+    const iw = rect.sw;
+    const ih = rect.sh;
     const pad = options.pad ?? 2;
     const boxW = Math.max(1, width - pad * 2);
     const boxH = Math.max(1, height - pad * 2);
@@ -129,7 +166,7 @@
       ctx.fillRect(dx + Math.max(1, Math.round(drawW * 0.12)), dy + drawH - 2, Math.max(3, Math.round(drawW * 0.76)), 3);
     }
     ctx.globalAlpha = options.alpha ?? 1;
-    ctx.drawImage(image, dx, dy, drawW, drawH);
+    ctx.drawImage(image, rect.sx, rect.sy, rect.sw, rect.sh, dx, dy, drawW, drawH);
     ctx.restore();
   }
 
@@ -188,14 +225,17 @@
       });
     }
 
-    for (const [item, sourceName] of Object.entries(ITEM_ICON_ASSETS)) {
+    for (const item of Object.keys(ITEM_ICON_ASSETS)) {
+      const spec = itemSpec(item);
       const targetKey = RUNTIME_ITEM_TEXTURES[item];
-      createNormalizedTexture(scene, targetKey, sourceName, 22, 22, {
-        pad: 2,
-        scale: item === "charge" || item === "core" || item === "ember" ? 0.9 : item === "fang" ? 1.18 : 1,
-        alignY: 0.5,
+      createNormalizedTexture(scene, targetKey, spec.source, 22, 22, {
+        pad: spec.pad ?? 2,
+        scale: spec.scale ?? 1,
+        alignY: spec.alignY ?? 0.5,
+        sourceRect: spec.rect,
         shadow: true
       });
+      state.cssIcons[item] = textureDataUrl(scene, targetKey) || rawUrl(spec.source);
     }
   }
 
@@ -205,8 +245,8 @@
   }
 
   function itemCssUrl(item) {
-    const sourceName = ITEM_ICON_ASSETS[item];
-    return sourceName ? rawUrl(sourceName) : "";
+    const spec = itemSpec(item);
+    return state.cssIcons[item] || (spec?.source ? rawUrl(spec.source) : "");
   }
 
   function cacheTextureKey(kind = "chest", open = false, scene = ML.sceneRef) {
@@ -220,6 +260,10 @@
     const loaded = requestedKeys.filter((key) => scene?.textures?.exists?.(key));
     const itemTextureCount = Object.keys(RUNTIME_ITEM_TEXTURES)
       .filter((item) => itemTextureKey(item, scene)).length;
+    const derivedCssIconCount = Object.keys(RUNTIME_ITEM_TEXTURES)
+      .filter((item) => state.cssIcons[item]?.startsWith?.("data:image/png;base64,")).length;
+    const sheetIconCount = Object.values(ITEM_ICON_ASSETS)
+      .filter((spec) => Array.isArray(spec?.rect)).length;
     const cacheTextureCount = Object.values(CACHE_TEXTURES)
       .flatMap((cache) => [cache.closed, cache.open])
       .filter((key) => scene?.textures?.exists?.(key)).length;
@@ -228,6 +272,8 @@
       loaded: loaded.length,
       normalized: state.normalized.size,
       itemTextureCount,
+      derivedCssIconCount,
+      sheetIconCount,
       cacheTextureCount,
       missing: [...state.missing].filter((key) => !scene?.textures?.exists?.(key))
     };

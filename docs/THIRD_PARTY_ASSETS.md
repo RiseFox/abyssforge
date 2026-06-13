@@ -8,6 +8,7 @@ AbyssForge primarily uses code-generated pixel textures. External assets are tre
 - Each source must have a source URL, license URL, author, and intended role.
 - Raw assets live under `assets/external/`.
 - Runtime-ready derivatives should be normalized before use and should not silently replace existing code-generated sprites.
+- UI icons must use normalized derived PNGs or tightly cropped sheet regions, not full raw sheets.
 - Runtime-packed assets must be regenerated through `npm run assets:build-runtime` and audited with `npm run assets:audit`; the audit checks license metadata, source hashes, and the generated data-URL bundle.
 - Do not import ripped Minecraft, Terraria, or commercial game assets.
 
@@ -29,7 +30,7 @@ AbyssForge primarily uses code-generated pixel textures. External assets are tre
 - License evidence: source page lists CC0.
 - Local files: `assets/external/opengameart/dungeon-items/`
 - Use case: potion, skull, parchment, and strange-loot references for chest rewards and secret caches.
-- Runtime status: candidate only; needs item slicing and palette cleanup before direct in-game use.
+- Runtime status: selected sheet slots are approved for sliced, normalized item icons in `js/assets.js`; unused slots remain references.
 
 ### OpenGameArt - Chest - Opening Animation 16x16
 

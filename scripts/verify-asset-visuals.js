@@ -51,6 +51,11 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
     const recoverFx = scene.children.list.filter((child) => child.texture?.key === "asset-heart-full");
     const firstTexture = visibleCaches[0]?.texture?.key || null;
     const cacheProfile = firstChest ? scene.cacheVisualProfile(firstChest.x, firstChest.y) : null;
+    const slicedItems = ["sealedLetter", "strangeKey", "watcherToken", "battery"];
+    const slicedIconUrls = Object.fromEntries(
+      slicedItems.map((item) => [item, window.ML.ExternalAssets.itemCssUrl(item)])
+    );
+    const slicedIconUnique = new Set(Object.values(slicedIconUrls).filter(Boolean)).size;
 
     return {
       firstChest,
@@ -58,6 +63,8 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
       visibleCacheProps: scene.visibleChestPropCount,
       firstTexture,
       recoverFxCount: recoverFx.length,
+      slicedIconUrls,
+      slicedIconUnique,
       externalAssets: window.ML.ExternalAssets.report(scene)
     };
   });
@@ -73,10 +80,13 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
   if ((snapshot.externalAssets?.normalized || 0) < 39) failures.push("expected 39 normalized runtime textures");
   if ((snapshot.externalAssets?.cacheTextureCount || 0) < 8) failures.push("expected 8 cache textures");
   if ((snapshot.externalAssets?.itemTextureCount || 0) < 20) failures.push("expected expanded item textures");
+  if ((snapshot.externalAssets?.derivedCssIconCount || 0) < 20) failures.push("expected derived CSS item icons");
+  if ((snapshot.externalAssets?.sheetIconCount || 0) < 4) failures.push("expected sliced sheet item icons");
   if (!snapshot.firstChest) failures.push("expected at least one cache tile in the generated world");
   if ((snapshot.visibleCacheProps || 0) < 1) failures.push("expected visible cache prop overlay");
   if (!snapshot.firstTexture?.startsWith("asset-cache-")) failures.push("expected normalized cache texture in scene");
   if ((snapshot.recoverFxCount || 0) < 1) failures.push("expected recover heart FX");
+  if ((snapshot.slicedIconUnique || 0) < 4) failures.push("expected unique sliced lore/supply icons");
 
   if (failures.length) {
     console.error(`Asset visual check failed: ${failures.join("; ")}`);

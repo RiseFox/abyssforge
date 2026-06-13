@@ -36,7 +36,7 @@ The player should always have a practical reason to continue: a better pick, a s
 | Cave events | 4 event families |
 | Enemy archetypes | 7 mob/boss types |
 | Hidden lore | 19 notes, 8 goals |
-| External asset layer | 25 packed CC0 image assets, 39 normalized runtime textures |
+| External asset layer | 25 packed CC0 image assets, 39 normalized runtime textures, 24 derived UI item icons |
 
 ## Game Pillars
 
@@ -179,7 +179,7 @@ npm run assets:all
 
 - `test:spawn` checks 300 generated seeds for spawn support, starter camp reachability, mob ecology rules, progression disclosure, chest interaction, vertical expansion, horizontal expansion, POI behavior, light/lamp behavior, lore hooks, Watcher runtime, combat line of sight, worldgen director content, and external asset runtime normalization.
 - `test:perf` boots the game at 1280x720 and checks browser errors, RAF FPS, average frame time, p95 frame time, HUD DOM weight, minimap default state, canvas availability, and that the HUD has loaded external item icons.
-- `test:assets` checks that normalized cache sprites and recover-heart FX are actually instantiated in the Phaser scene, not only present in the packed asset bundle.
+- `test:assets` checks that normalized cache sprites, sliced sheet icons, derived CSS icons, and recover-heart FX are actually instantiated, not only present in the packed asset bundle.
 
 ## Project Shape
 
@@ -203,6 +203,7 @@ npm run assets:all
 - `scripts/verify-hud-performance.js` - HUD and frame-time smoke gate.
 - `scripts/verify-asset-visuals.js` - runtime visual smoke gate for external cache props and recover FX.
 - `scripts/capture-readme-images.js` - repeatable screenshot capture for README images.
+- `docs/ASSET_PIPELINE.md` - production bar for source intake, normalization, derived icons, and asset gates.
 
 ## Direction
 
