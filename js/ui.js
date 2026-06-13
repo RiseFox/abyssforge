@@ -26,6 +26,10 @@
     contractText: document.getElementById("contractText"),
     contractBar: document.getElementById("contractBar"),
     contractReward: document.getElementById("contractReward"),
+    biomePanel: document.querySelector(".biome-panel"),
+    biomeName: document.getElementById("biomeName"),
+    biomeEffects: document.getElementById("biomeEffects"),
+    biomeLore: document.getElementById("biomeLore"),
     hotbar: document.getElementById("hotbar"),
     helpDrawer: document.getElementById("helpDrawer"),
     campDrawer: document.getElementById("campDrawer"),
@@ -134,8 +138,9 @@
     const scene = ML.sceneRef;
     const day = scene ? scene.dayNumber() : 1;
     const phase = scene ? scene.phaseName() : "Day";
-    const biome = scene?.biomeName ? scene.biomeName() : "";
-    ui.worldLabel.textContent = `Seed ${sim.seed} · Day ${day} · ${phase}${biome ? ` · ${biome}` : ""}`;
+    const biome = scene?.currentBiome ? scene.currentBiome() : ML.BiomeSystem?.current?.(sim, { x: px, y: py });
+    ui.worldLabel.textContent = `Seed ${sim.seed} · Day ${day} · ${phase}${biome?.name ? ` · ${biome.name}` : ""}`;
+    renderBiome(biome);
     const pickName = PICKS[sim.pickLevel]?.name || "Pickaxe";
     ui.pickText.textContent = pickName;
     ui.pickHudText.textContent = pickName;
@@ -151,6 +156,15 @@
     ui.actionText.textContent = scene?.currentAction || "Explore";
     ui.targetText.textContent = scene?.targetLabel || "None";
     ui.campToggle?.classList.toggle("camp-ready", Boolean(scene?.nearCamp?.()));
+  }
+
+  function renderBiome(biome) {
+    if (!ui.biomePanel || !biome || !ui.biomeName || !ui.biomeEffects || !ui.biomeLore) return;
+    ui.biomeName.textContent = biome.name;
+    ui.biomeEffects.textContent = ML.BiomeSystem?.effectText?.(biome) || biome.tone || "";
+    ui.biomeLore.textContent = biome.lore || "";
+    ui.biomePanel.style.borderColor = biome.accent || "";
+    ui.biomePanel.style.boxShadow = `0 0 0 1px ${biome.accent || "rgba(236, 205, 135, 0.24)"}22, 0 12px 32px var(--shadow)`;
   }
 
   // The hotbar DOM is built once; later calls only patch counts and selection.
@@ -762,6 +776,7 @@
     showToast,
     flashDamage,
     renderStatus,
+    renderBiome,
     renderHotbar,
     bumpItem,
     recipeVisible,

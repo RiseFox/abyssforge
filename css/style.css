@@ -393,6 +393,59 @@ canvas:focus { outline: none; }
   font-weight: 800;
 }
 
+.biome-panel {
+  width: min(330px, calc(100vw - 24px));
+  padding: 8px 10px;
+  border: 1px solid rgba(111, 174, 88, 0.3);
+  border-radius: var(--radius);
+  background: rgba(14, 17, 17, 0.9);
+  box-shadow: 0 12px 32px var(--shadow);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.biome-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.biome-head span {
+  flex: 0 0 auto;
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.biome-head strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.15;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.biome-panel small,
+.biome-panel em {
+  display: block;
+  overflow: hidden;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.biome-panel em {
+  color: rgba(242, 232, 211, 0.72);
+}
+
 .top-right {
   position: absolute;
   right: max(12px, env(safe-area-inset-right));
@@ -1266,7 +1319,15 @@ canvas:focus { outline: none; }
     width: min(190px, calc(100vw - 24px));
     padding: 7px;
   }
+  .biome-panel {
+    width: min(190px, calc(100vw - 24px));
+    padding: 7px;
+  }
   .objective-head {
+    display: grid;
+    gap: 3px;
+  }
+  .biome-head {
     display: grid;
     gap: 3px;
   }
@@ -1274,10 +1335,17 @@ canvas:focus { outline: none; }
     font-size: 12px;
     text-align: left;
   }
+  .biome-head strong {
+    font-size: 12px;
+    text-align: left;
+  }
   .objective-panel small,
-  .objective-panel em {
+  .objective-panel em,
+  .biome-panel small,
+  .biome-panel em {
     font-size: 10px;
   }
+  .biome-panel em { display: none; }
   .hotbar { grid-auto-columns: 50px; }
   .slot { width: 50px; height: 50px; }
   .craft-drawer {

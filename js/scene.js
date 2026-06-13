@@ -65,6 +65,8 @@
       this.lastSizzleAt = 0;
       this.lastDarkWarnAt = 0;
       this.lastCampHintAt = 0;
+      this.lastBiomeId = null;
+      this.lastBiomeToastAt = 0;
       this.caveEvent = null;
       this.nextCaveEventAt = 0;
       this.eventPulseAt = 0;
@@ -397,6 +399,7 @@
       if (this.caveEvent?.id === "lanternDraft") {
         this.sim.energy = clamp(this.sim.energy + dt * 4.5, 0, this.sim.maxEnergy);
       }
+      this.applyBiomeEnergy(dt, onFloor, inLava);
 
       const pointer = this.input.activePointer;
       if (pointer.isDown && pointer.leftButtonDown() && !this.findEnemyAtPointer(pointer)) {
@@ -437,6 +440,7 @@
         ML.renderEvent(this);
         ML.renderBossBar(this);
         ML.renderRecall(this);
+        this.checkBiomeTransition();
       }
       this.lastMapUpdate += delta;
       if (this.lastMapUpdate > 400) {
@@ -477,12 +481,14 @@
 
     currentMusicMode() {
       const depth = this.depthMeters();
+      const biome = this.currentBiome();
       if (this.hasActiveBoss()) return "boss";
       if (this.caveEvent?.id === "swarm" || this.caveEvent?.id === "tremor") return "danger";
       if (this.caveEvent?.id === "oreSurge") return "treasure";
       if (this.hasNearbyDanger()) return "danger";
       if (this.nearCamp()) return "camp";
       if (this.nearUnopenedSecretChest()) return "treasure";
+      if (biome?.id && biome.id !== "surface") return biome.music || (depth > 130 ? "deep" : "cave");
       if (depth > 130) return "deep";
       if (depth > 10) return "cave";
       return this.phaseName() === "Night" ? "night" : "surface";
@@ -538,19 +544,20 @@
       return Math.max(0, Math.floor(this.player.y / TILE - surfaceY));
     }
 
+    currentBiome() {
+      return ML.BiomeSystem?.current?.(this.sim, this.player) || ML.BIOMES?.surface || null;
+    }
+
     biomeName() {
-      const depth = this.depthMeters();
-      if (depth > 210) return "Abyss";
-      if (depth > 140) return "Deepstone";
-      if (depth > 60) return "Lower caves";
-      if (depth > 10) return "Upper caves";
-      return "Surface";
+      return this.currentBiome()?.name || "Surface";
     }
 
     ambientLight() {
       const depth = this.depthMeters();
+      const biome = this.currentBiome();
       const df = clamp(1 - depth / 46, 0, 1);
-      return clamp(0.08 + df * this.surfaceBrightness(), 0.08, 1);
+      const floor = biome?.ambientFloor ?? 0.08;
+      return clamp(Math.max(floor, df * this.surfaceBrightness()), floor, 1);
     }
 
     playerLight() {
@@ -760,7 +767,9 @@
       const litRest = light > 0.5;
       const campRest = this.nearCamp();
       if (!surfaceRest && !litRest && !campRest) return;
+      const biome = this.currentBiome();
       let rate = campRest ? 1.7 : surfaceRest ? 1.15 : 0.55;
+      rate *= biome?.regenRate || 1;
       if (this.sim.regenBoost) rate *= 1.55;
       if (this.caveEvent?.id === "lanternDraft") rate *= 1.8;
       const before = this.sim.health;
@@ -768,6 +777,29 @@
       if (Math.floor(before) !== Math.floor(this.sim.health) && (!this.actionHoldUntil || this.time.now > this.actionHoldUntil)) {
         this.currentAction = campRest ? "Resting" : "Recover";
       }
+    }
+
+    applyBiomeEnergy(dt, onFloor, inLava) {
+      if (inLava) return;
+      const biome = this.currentBiome();
+      const rate = biome?.energyRate || 0;
+      if (!rate) return;
+      const floorFactor = onFloor ? 1 : 0.45;
+      const campFactor = this.nearCamp() && rate < 0 ? 0.2 : 1;
+      this.sim.energy = clamp(this.sim.energy + dt * rate * floorFactor * campFactor, 0, this.sim.maxEnergy);
+    }
+
+    checkBiomeTransition() {
+      const biome = this.currentBiome();
+      if (!biome || biome.id === this.lastBiomeId) return;
+      const previous = this.lastBiomeId;
+      this.lastBiomeId = biome.id;
+      if (!previous) return;
+      const now = this.time.now;
+      if (now - this.lastBiomeToastAt < 3000) return;
+      this.lastBiomeToastAt = now;
+      this.setAction(biome.tone || "Biome", 1000);
+      ML.showToast(ML.BiomeSystem.transitionText(biome), 2600);
     }
 
     touchingLava() {
@@ -1913,11 +1945,16 @@
       }
 
       const light = this.playerLight();
-      if (depth > 140 && light < 0.22) {
-        this.applyDamage((this.sim.ward ? 1.15 : 2.6) * dt, "dark");
+      const biome = this.currentBiome();
+      const darkPressure = biome?.darkPressure || 0;
+      const darkDepth = biome?.darkDepth ?? 140;
+      const darkThreshold = biome?.darkThreshold ?? 0.22;
+      if (darkPressure > 0 && depth > darkDepth && light < darkThreshold) {
+        const wardFactor = this.sim.ward ? 0.45 : 1;
+        this.applyDamage(darkPressure * 2.05 * wardFactor * dt, "dark");
         if (now - this.lastDarkWarnAt > 12000) {
           this.lastDarkWarnAt = now;
-          ML.showToast("The darkness gnaws at you. Light a torch or craft a lamp.", 2600);
+          ML.showToast(`${biome.name} is crushing your light. Place a torch or craft a lamp.`, 2800);
         }
       }
 
