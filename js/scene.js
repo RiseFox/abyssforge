@@ -37,6 +37,7 @@
       this.dead = false;
       this.pausedByUI = false;
       this.craftOpen = false;
+      this.campOpen = false;
       this.helpOpen = false;
       this.mineTarget = null;
       this.mineProgress = 0;
@@ -156,6 +157,7 @@
       });
 
       this.input.keyboard.on("keydown-E", () => this.toggleCraft());
+      this.input.keyboard.on("keydown-C", () => this.toggleCamp());
       this.input.keyboard.on("keydown-M", () => ML.toggleMinimap());
       this.input.keyboard.on("keydown-ESC", () => this.setPaused(!this.pausedByUI));
       this.input.keyboard.on("keydown-F", () => this.attack());
@@ -171,7 +173,7 @@
       this.prepareGameInputFocus();
 
       this.input.on("wheel", (_pointer, _objects, _dx, dy) => {
-        if (this.craftOpen || this.helpOpen) return;
+        if (this.craftOpen || this.campOpen || this.helpOpen) return;
         this.sim.selected = (this.sim.selected + (dy > 0 ? 1 : -1) + HOTBAR.length) % HOTBAR.length;
         ML.renderHotbar(this.sim);
       });
@@ -202,6 +204,7 @@
       ML.minimap.init(this.sim);
       ML.hideDeath();
       ML.ui.craftDrawer.classList.add("hidden");
+      ML.ui.campDrawer?.classList.add("hidden");
       ML.ui.helpDrawer.classList.add("hidden");
       this.scheduleNextCaveEvent(true);
       this.refreshMobActivation();
@@ -1935,10 +1938,62 @@
 
     // ---- UI plumbing ------------------------------------------------------------------
 
+    nearCamp() {
+      if (!this.player) return false;
+      const safe = this.sim.safeSpawnPixels();
+      return this.depthMeters() <= 8 && Phaser.Math.Distance.Between(this.player.x, this.player.y, safe.x, safe.y) <= TILE * 8;
+    }
+
+    toggleCamp(force) {
+      const opening = typeof force === "boolean" ? force : !this.campOpen;
+      if (opening && !this.nearCamp()) {
+        this.setAction("Find camp", 900);
+        ML.audio.play("denied");
+        ML.showToast("Camp services are available only at the surface camp.", 1800);
+        return;
+      }
+      this.campOpen = opening;
+      ML.ui.campDrawer?.classList.toggle("hidden", !this.campOpen);
+      if (this.campOpen) {
+        this.toggleCraft(false);
+        this.toggleHelp(false);
+        ML.toggleMinimap(false);
+        ML.renderCamp(this.sim);
+      }
+    }
+
+    useCampService(id) {
+      if (!this.nearCamp()) {
+        this.toggleCamp(false);
+        ML.audio.play("denied");
+        ML.showToast("Move back to the surface camp.", 1300);
+        return false;
+      }
+      const service = (ML.CAMP_SERVICES || []).find((entry) => entry.id === id);
+      const result = this.sim.campService(service);
+      ML.audio.play(result.ok ? (service?.kind === "rest" ? "recall" : "craft") : "denied");
+      ML.showToast(result.message, result.ok ? 1500 : 1800);
+      if (!result.ok) {
+        ML.renderCamp(this.sim);
+        return false;
+      }
+      if (service.kind === "rest") {
+        this.nextRecallAt = 0;
+        this.playerIframesUntil = this.time.now + 700;
+      }
+      this.setAction("Camp", 900);
+      this.floatText(this.player.x - 18, this.player.y - 38, service.action.toUpperCase(), "#f5d77a");
+      this.checkAchievements();
+      ML.renderAll(this.sim);
+      this.saveGame();
+      return true;
+    }
+
     toggleCraft(force) {
       this.craftOpen = typeof force === "boolean" ? force : !this.craftOpen;
       ML.ui.craftDrawer.classList.toggle("hidden", !this.craftOpen);
       if (this.craftOpen) {
+        this.toggleCamp(false);
         this.toggleHelp(false);
         ML.toggleMinimap(false);
         ML.renderCraft(this.sim);
@@ -1949,6 +2004,7 @@
       this.helpOpen = typeof force === "boolean" ? force : !this.helpOpen;
       ML.ui.helpDrawer.classList.toggle("hidden", !this.helpOpen);
       if (this.helpOpen) {
+        this.toggleCamp(false);
         this.toggleCraft(false);
         ML.toggleMinimap(false);
       }
@@ -1961,6 +2017,7 @@
       this.resetInputState();
       if (paused) {
         this.physics.world.pause();
+        this.toggleCamp(false);
         this.toggleCraft(false);
         this.toggleHelp(false);
         ML.toggleMinimap(false);
@@ -1980,6 +2037,7 @@
       this.autoPausedByVisibility = false;
       this.sim.health = 0;
       this.physics.world.pause();
+      this.toggleCamp(false);
       ML.ui.pauseMenu?.classList.add("hidden");
       for (const item of ["coal", "copper", "iron", "gold", "crystal", "obsidian"]) {
         this.sim.inventory[item] = Math.floor((this.sim.inventory[item] || 0) * 0.72);
@@ -2000,6 +2058,7 @@
       this.resetInputState();
       ML.ui.pauseIcon.innerHTML = '<path d="M8 5v14"/><path d="M16 5v14"/>';
       ML.hideDeath();
+      this.toggleCamp(false);
       ML.ui.pauseMenu?.classList.add("hidden");
       this.physics.world.resume();
       this.sim.health = this.sim.maxHealth;
@@ -2021,6 +2080,7 @@
       try { localStorage.removeItem(ML.SAVE_KEY); } catch { /* ignore */ }
       this.sim.newWorld();
       ML.hideDeath();
+      this.toggleCamp(false);
       ML.ui.pauseMenu?.classList.add("hidden");
       this.scene.restart();
     }

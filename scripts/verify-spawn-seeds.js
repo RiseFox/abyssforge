@@ -56,6 +56,10 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     sim.addItem("crystal", 2);
     sim.addItem("coin", 24);
     const recallCraft = sim.craft(recallRecipe);
+    const campService = window.ML.CAMP_SERVICES.find((service) => service.id === "torchCache");
+    sim.addItem("coin", 8);
+    const torchesBefore = sim.inventory.torch || 0;
+    const campResult = sim.campService(campService);
     const contractBefore = sim.contractProgress();
     if (contractBefore?.contract.absolute) {
       sim.stats[contractBefore.contract.type] = contractBefore.target;
@@ -68,10 +72,14 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       achievements: window.ML.ACHIEVEMENTS.length,
       contracts: window.ML.CONTRACTS.length,
       caveEvents: Object.keys(window.ML.CAVE_EVENTS || {}).length,
+      campServices: window.ML.CAMP_SERVICES.length,
       craftable: craftable.length,
       craftResult,
       recallCraft,
       recallCharm: sim.recallCharm,
+      campResult,
+      campUses: sim.stats.campUses,
+      torchDelta: (sim.inventory.torch || 0) - torchesBefore,
       contractBefore,
       contractClaim,
       crafted: sim.stats.crafted,
@@ -95,7 +103,9 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       support: scene.sim.hasPlayerSupport({ x: scene.player.x, y: scene.player.y }),
       stable: scene.sim.hasStableSpawnFloor(),
       floorTile: scene.sim.tileAt(scene.sim.spawn.x, scene.sim.spawnFloorY()),
-      recallApi: typeof scene.recallToCamp === "function" && typeof scene.recallCost === "function"
+      recallApi: typeof scene.recallToCamp === "function" && typeof scene.recallCost === "function",
+      campApi: typeof scene.nearCamp === "function" && typeof scene.toggleCamp === "function" && typeof scene.useCampService === "function",
+      nearCamp: scene.nearCamp()
     };
   });
   await page.keyboard.down("s");
@@ -113,16 +123,20 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.achievements < 24
     || progressionCheck.contracts < 5
     || progressionCheck.caveEvents < 4
+    || progressionCheck.campServices < 5
     || progressionCheck.craftable < 3
     || !progressionCheck.craftResult.ok
     || !progressionCheck.recallCraft.ok
     || !progressionCheck.recallCharm
+    || !progressionCheck.campResult.ok
+    || progressionCheck.campUses < 1
+    || progressionCheck.torchDelta < 6
     || !progressionCheck.contractBefore
     || !progressionCheck.contractClaim
     || progressionCheck.crafted < 1
     || progressionCheck.completedContracts < 1
     || progressionCheck.platforms < 4;
-  const failed = errors.length > 0 || seedCheck.failures.length > 0 || progressionFailed || !start.support || !start.stable || !start.recallApi || fallDelta > 1;
+  const failed = errors.length > 0 || seedCheck.failures.length > 0 || progressionFailed || !start.support || !start.stable || !start.recallApi || !start.campApi || !start.nearCamp || fallDelta > 1;
   const report = { seedCheck, progressionCheck, start, afterDown, fallDelta, errors };
   console.log(JSON.stringify(report, null, 2));
 

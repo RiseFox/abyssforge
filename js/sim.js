@@ -34,7 +34,7 @@
       this.blastRadius = this.blastRadius || 0;
       this.health = clamp(this.health ?? this.maxHealth, 0, this.maxHealth);
       this.energy = clamp(this.energy ?? this.maxEnergy, 0, this.maxEnergy);
-      this.stats = Object.assign({ mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0, recalls: 0 }, this.stats || {});
+      this.stats = Object.assign({ mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0, recalls: 0, campUses: 0 }, this.stats || {});
       this.achievements = Object.assign({}, this.achievements || {});
       this.craftedRecipes = Object.assign({}, this.craftedRecipes || {});
       this.inventory = Object.assign(
@@ -85,7 +85,7 @@
       this.spawn = generated.spawn;
       this.shaft = generated.shaft;
       this.secrets = generated.secrets || [];
-      this.stats = { mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0, recalls: 0 };
+      this.stats = { mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0, recalls: 0, campUses: 0 };
       this.achievements = {};
       this.craftedRecipes = {};
       this.contractSeq = 0;
@@ -611,6 +611,26 @@
       this.stats.contracts += 1;
       const next = this.rollContract();
       return { completed, next };
+    }
+
+    campService(service) {
+      if (!service) return { ok: false, message: "Unknown camp service." };
+      if (!ML.canAfford(this.inventory, service.cost || {})) {
+        return { ok: false, message: "Need " + ML.formatCost(service.cost) + "." };
+      }
+      ML.spend(this.inventory, service.cost || {});
+      if (service.kind === "rest") {
+        this.health = this.maxHealth;
+        this.energy = this.maxEnergy;
+      }
+      if (service.kind === "rerollContract") {
+        this.rollContract();
+      }
+      if (service.out) {
+        for (const [item, count] of Object.entries(service.out)) this.addItem(item, count);
+      }
+      this.stats.campUses += 1;
+      return { ok: true, message: `${service.name} complete.`, service };
     }
 
     load() {

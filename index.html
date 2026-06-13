@@ -70,6 +70,9 @@
         <button id="menuToggle" class="icon-button" type="button" title="Menu">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg>
         </button>
+        <button id="campToggle" class="icon-button" type="button" title="Camp (C)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h18"/><path d="M5 20 12 4l7 16"/><path d="M9 20l3-7 3 7"/><path d="M12 4v9"/></svg>
+        </button>
         <button id="helpToggle" class="icon-button" type="button" title="Controls">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.2 8a3 3 0 1 1 5.4 1.8c-.9.8-1.8 1.4-1.8 3.2"/><path d="M12 17h.01"/><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z"/></svg>
         </button>
@@ -159,6 +162,7 @@
           <div class="help-row"><span><kbd>1</kbd>-<kbd>9</kbd></span><span>Select hotbar slot (mouse wheel works too)</span></div>
           <div class="help-row"><span><kbd>F</kbd></span><span>Swing at enemies in front of you</span></div>
           <div class="help-row"><span><kbd>R</kbd></span><span>Recall to the surface camp when the route turns bad</span></div>
+          <div class="help-row"><span><kbd>C</kbd></span><span>Open camp services when standing near the surface camp</span></div>
           <div class="help-row"><span><kbd>E</kbd></span><span>Open crafting. A gold badge means something new is buildable</span></div>
           <div class="help-row"><span><kbd>M</kbd></span><span>Toggle the minimap</span></div>
           <div class="help-row"><span><kbd>Gel</kbd></span><span>Slimes and crawlers drop gel for torches and charges</span></div>
@@ -167,6 +171,19 @@
           <div class="help-row"><span><kbd>Rest</kbd></span><span>Health slowly regenerates when safe, lit, and out of combat</span></div>
           <div class="help-row"><span><kbd>Esc</kbd></span><span>Pause or resume</span></div>
         </div>
+      </aside>
+
+      <aside id="campDrawer" class="camp-drawer hidden">
+        <div class="drawer-head">
+          <div>
+            <strong>Surface camp</strong>
+            <span id="campStatus">Stand near camp</span>
+          </div>
+          <button id="closeCamp" class="icon-button" type="button" title="Close">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg>
+          </button>
+        </div>
+        <div id="campServices" class="camp-services"></div>
       </aside>
 
       <aside id="craftDrawer" class="craft-drawer hidden">

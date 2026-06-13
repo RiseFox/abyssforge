@@ -218,6 +218,15 @@ window.ML = window.ML || {};
     { id: "relics", label: "Relics" }
   ];
 
+  const CAMP_SERVICES = [
+    { id: "rest", name: "Rest at camp", action: "Rest", kind: "rest", cost: {}, note: "Restore health, energy, and recall cooldown." },
+    { id: "torchCache", name: "Torch cache", action: "Buy", cost: { coin: 8 }, out: { torch: 6 }, note: "Cheap light for another descent." },
+    { id: "ladderCache", name: "Ladder cache", action: "Buy", cost: { coin: 10 }, out: { ladder: 10 }, note: "Fast vertical route restock." },
+    { id: "medicPack", name: "Medic pack", action: "Buy", cost: { coin: 14 }, out: { kit: 1 }, note: "One field kit from the camp medic." },
+    { id: "powderCache", name: "Powder cache", action: "Buy", cost: { coin: 18, coal: 1 }, out: { charge: 2 }, note: "Emergency explosives for sealed caves." },
+    { id: "rerollContract", name: "New contract", action: "Reroll", kind: "rerollContract", cost: { coin: 6 }, note: "Replace the current expedition contract." }
+  ];
+
   const ACHIEVEMENTS = [
     { id: "firstBreak", name: "First Spark", note: "Mine your first block.", stat: "mined", at: 1 },
     { id: "stoneCache", name: "Stone Stockpile", note: "Carry 40 stone.", item: "stone", at: 40 },
@@ -246,7 +255,9 @@ window.ML = window.ML || {};
     { id: "eventOne", name: "Living Mine", note: "Encounter your first cave event.", stat: "events", at: 1 },
     { id: "eventFive", name: "Faultline Veteran", note: "Encounter five cave events.", stat: "events", at: 5 },
     { id: "recallOne", name: "Back to Camp", note: "Recall safely to the surface camp.", stat: "recalls", at: 1 },
-    { id: "recallCharm", name: "Anchor Spark", note: "Craft the Recall charm.", flag: "recallCharm" }
+    { id: "recallCharm", name: "Anchor Spark", note: "Craft the Recall charm.", flag: "recallCharm" },
+    { id: "campFirst", name: "Camp Ledger", note: "Use a surface camp service.", stat: "campUses", at: 1 },
+    { id: "campTen", name: "Quartermaster", note: "Use ten surface camp services.", stat: "campUses", at: 10 }
   ];
 
   const CONTRACTS = [
@@ -378,6 +389,7 @@ window.ML = window.ML || {};
     LAMPS,
     RECIPES,
     CRAFT_CATS,
+    CAMP_SERVICES,
     ACHIEVEMENTS,
     CONTRACTS,
     CAVE_EVENTS,

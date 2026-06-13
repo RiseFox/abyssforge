@@ -11,6 +11,7 @@ AbyssForge is a browser-based 2D mining, crafting, and survival prototype inspir
 - Dynamic cave events: ore surges, lantern drafts, depth swarms, and tremors.
 - Rare elite mobs with stronger stats and better loot.
 - Recall-to-camp survival action with energy cost, cooldown, boss lockout, and a craftable Recall charm upgrade.
+- Surface camp services for resting, buying supplies, and rerolling expedition contracts.
 - Boss health bar, depth-zone labeling, and clearer active objective tracking.
 - Torch and headlamp lighting, day/night mood, situational background music, and compact pixel-art UI.
 - Craft-ready HUD badge and notifications when new recipes become buildable.
@@ -27,6 +28,7 @@ AbyssForge is a browser-based 2D mining, crafting, and survival prototype inspir
 - Right mouse - place or use the selected hotbar item
 - `F` - attack with the pickaxe
 - `R` - recall to the surface camp when deep routes get dangerous
+- `C` - open surface camp services while standing near camp
 - `E` - craft selected recipe
 - `1`-`9` - select hotbar slot
 - `M` - toggle map

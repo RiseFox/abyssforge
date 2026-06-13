@@ -2,7 +2,7 @@
 (() => {
   "use strict";
   const ML = window.ML;
-  const { WORLD_W, WORLD_H, AIR, TILE, ITEM_META, HOTBAR, PICKS, BLADES, LAMPS, RECIPES, CRAFT_CATS, ACHIEVEMENTS, MAP_COLORS, clamp } = ML;
+  const { WORLD_W, WORLD_H, AIR, TILE, ITEM_META, HOTBAR, PICKS, BLADES, LAMPS, RECIPES, CRAFT_CATS, CAMP_SERVICES, ACHIEVEMENTS, MAP_COLORS, clamp } = ML;
 
   const ui = {
     healthText: document.getElementById("healthText"),
@@ -28,11 +28,16 @@
     contractReward: document.getElementById("contractReward"),
     hotbar: document.getElementById("hotbar"),
     helpDrawer: document.getElementById("helpDrawer"),
+    campDrawer: document.getElementById("campDrawer"),
+    campServices: document.getElementById("campServices"),
+    campStatus: document.getElementById("campStatus"),
     craftDrawer: document.getElementById("craftDrawer"),
     craftTabs: document.getElementById("craftTabs"),
     inventoryGrid: document.getElementById("inventoryGrid"),
     recipes: document.getElementById("recipes"),
     helpToggle: document.getElementById("helpToggle"),
+    campToggle: document.getElementById("campToggle"),
+    closeCamp: document.getElementById("closeCamp"),
     closeHelp: document.getElementById("closeHelp"),
     craftToggle: document.getElementById("craftToggle"),
     craftBadge: document.getElementById("craftBadge"),
@@ -394,6 +399,52 @@
     });
   }
 
+  function campServiceSummary(service) {
+    if (service.kind === "rest") return "Full health, energy, and recall ready.";
+    if (service.kind === "rerollContract") return "Replace the active contract.";
+    return rewardText(service.out);
+  }
+
+  function renderCamp(sim) {
+    const scene = ML.sceneRef;
+    if (!scene || !ui.campServices || !scene.campOpen) return;
+    const near = scene.nearCamp ? scene.nearCamp() : false;
+    ui.campStatus.textContent = near ? "Camp ready" : "Move closer to camp";
+    ui.campServices.textContent = "";
+    CAMP_SERVICES.forEach((service) => {
+      const ok = near && ML.canAfford(sim.inventory, service.cost || {});
+      const btn = document.createElement("button");
+      btn.className = "camp-service";
+      btn.type = "button";
+      btn.disabled = !ok;
+      btn.addEventListener("click", () => scene.useCampService(service.id));
+
+      const copy = document.createElement("span");
+      const name = document.createElement("strong");
+      name.textContent = service.name;
+      const small = document.createElement("small");
+      const cost = ML.costParts(service.cost || {}, sim.inventory);
+      if (cost.length) {
+        cost.forEach((part, index) => {
+          if (index > 0) small.appendChild(document.createTextNode(", "));
+          const span = document.createElement("span");
+          span.className = part.ok ? "cost-ok" : "cost-short";
+          span.textContent = part.label;
+          small.appendChild(span);
+        });
+        small.appendChild(document.createTextNode(`. ${campServiceSummary(service)} ${service.note}`));
+      } else {
+        small.textContent = `${campServiceSummary(service)} ${service.note}`;
+      }
+      copy.append(name, small);
+
+      const action = document.createElement("b");
+      action.textContent = near ? service.action : "Away";
+      btn.append(copy, action);
+      ui.campServices.appendChild(btn);
+    });
+  }
+
   function renderAll(sim) {
     const scene = ML.sceneRef;
     renderStatus(sim, scene?.player, scene?.playerLight ? scene.playerLight() : 1);
@@ -404,6 +455,7 @@
     renderRecall(scene);
     updateCraftReady(sim);
     renderAchievements(sim);
+    renderCamp(sim);
     renderCraft(sim);
   }
 
@@ -550,6 +602,7 @@
     if (minimapOpen) {
       ML.sceneRef?.toggleCraft(false);
       ML.sceneRef?.toggleHelp(false);
+      ML.sceneRef?.toggleCamp(false);
       minimap.render(ML.sceneRef);
     }
   }
@@ -573,6 +626,7 @@
       ["Contracts", sim.stats.contracts || 0],
       ["Events", sim.stats.events || 0],
       ["Recalls", sim.stats.recalls || 0],
+      ["Camp", sim.stats.campUses || 0],
       ["Achievements", Object.keys(sim.achievements || {}).length],
       ["Days", day]
     ];
@@ -610,6 +664,8 @@
 
     ui.helpToggle.addEventListener("click", () => activeScene().toggleHelp());
     ui.closeHelp.addEventListener("click", () => activeScene().toggleHelp(false));
+    ui.campToggle?.addEventListener("click", () => activeScene().toggleCamp());
+    ui.closeCamp?.addEventListener("click", () => activeScene().toggleCamp(false));
     ui.craftToggle.addEventListener("click", () => activeScene().toggleCraft());
     ui.craftReady?.addEventListener("click", () => activeScene().toggleCraft(true));
     ui.closeCraft.addEventListener("click", () => activeScene().toggleCraft(false));
@@ -702,6 +758,7 @@
     renderEvent,
     renderBossBar,
     renderRecall,
+    renderCamp,
     renderAll,
     minimap,
     toggleMinimap,
