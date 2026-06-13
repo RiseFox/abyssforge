@@ -148,6 +148,21 @@
     ctx.fillRect(campX + 18, 15, 4, 7);
     ctx.fillStyle = "#9d3a24";
     ctx.fillRect(campX + 15, 18, 3, 5);
+
+    const signX = Tile.SIGN * TILE;
+    ctx.clearRect(signX, 0, TILE, TILE);
+    ctx.fillStyle = "rgba(0,0,0,0.24)";
+    ctx.fillRect(signX + 6, 28, 20, 3);
+    ctx.fillStyle = "#6e431f";
+    ctx.fillRect(signX + 14, 13, 5, 17);
+    ctx.fillStyle = "#c7924c";
+    ctx.fillRect(signX + 5, 7, 22, 11);
+    ctx.fillStyle = "#6a3f1d";
+    ctx.fillRect(signX + 6, 8, 20, 2);
+    ctx.fillRect(signX + 6, 17, 20, 2);
+    ctx.fillStyle = "#2f2014";
+    ctx.fillRect(signX + 9, 11, 10, 2);
+    ctx.fillRect(signX + 9, 14, 14, 2);
     tiles.refresh();
 
     // ---- Player sprite sheet: 8 frames of 28x36 ---------------------------

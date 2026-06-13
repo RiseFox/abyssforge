@@ -72,6 +72,8 @@
       this.lampStandby = false;
       this.lampDemand = 0;
       this.externalLight = 1;
+      this.lastSurfaceDiscoveryAt = 0;
+      this.lastSurfaceDiscoveryCheckAt = 0;
       this.lastCampHintAt = 0;
       this.lastBiomeId = null;
       this.lastStratumId = null;
@@ -496,6 +498,7 @@
       this.updateLampBattery(dt);
       this.updateHazards(dt, inLava);
       this.updateHorizontalExpansion();
+      this.updateSurfaceDiscoveries();
       this.updateObserverAwareness(dt, { vx, left, right, up, down, jumpPressed, onFloor, onLadder, pointer });
       this.updateSky();
       this.drawAnimatedTileFx();
@@ -1194,10 +1197,15 @@
 
     interactionTarget() {
       if (!this.player || this.dead || this.pausedByUI) return null;
+      const candidates = [];
+      const pushCandidate = (target, distance = 0, priority = 0) => {
+        candidates.push({ target, distance, priority });
+      };
+
       const chest = this.nearestTileObject((tile) => tile === Tile.CHEST, INTERACT_RANGE_TILES);
       if (chest) {
         const secret = this.sim.secretAt(chest.x, chest.y);
-        return {
+        pushCandidate({
           kind: secret ? "secretChest" : "chest",
           key: "E",
           action: "Open",
@@ -1205,12 +1213,26 @@
           hint: secret ? "Hidden loot" : "Loot cache",
           x: chest.x,
           y: chest.y
-        };
+        }, chest.distance, 0.08);
+      }
+
+      const sign = this.nearestTileObject((tile) => tile === Tile.SIGN, INTERACT_RANGE_TILES);
+      if (sign) {
+        const discovery = this.sim.surfaceDiscoveryAt?.(sign.x, sign.y);
+        pushCandidate({
+          kind: "surfaceDiscovery",
+          key: "E",
+          action: "Read",
+          name: discovery?.title || "Road sign",
+          hint: discovery?.read ? "Read again" : "Surface clue",
+          x: sign.x,
+          y: sign.y
+        }, sign.distance, 0);
       }
 
       const camp = ML.CampSystem.nearestCampfire(this.sim, this.player);
       if (camp) {
-        return {
+        pushCandidate({
           kind: "camp",
           key: "E",
           action: "Use",
@@ -1218,10 +1240,16 @@
           hint: `Anchor ${ML.CampSystem.campLabel(this.sim, ML.CampSystem.activeCamp(this.sim))}`,
           x: camp.x,
           y: camp.y
-        };
+        }, camp.distance || 0, 0.16);
       }
 
-      return null;
+      candidates.sort((a, b) => {
+        const scoreA = a.distance + a.priority;
+        const scoreB = b.distance + b.priority;
+        if (scoreA !== scoreB) return scoreA - scoreB;
+        return a.distance - b.distance;
+      });
+      return candidates[0]?.target || null;
     }
 
     interact() {
@@ -1230,11 +1258,67 @@
       if (target.kind === "chest" || target.kind === "secretChest") {
         return this.openChest(target.x, target.y);
       }
+      if (target.kind === "surfaceDiscovery") {
+        return this.readSurfaceDiscovery(target.x, target.y);
+      }
       if (target.kind === "camp") {
         this.toggleCamp(true);
         return true;
       }
       return false;
+    }
+
+    markSurfaceDiscovery(discovery, read = false) {
+      if (!discovery) return false;
+      const firstSeen = !discovery.seen;
+      discovery.seen = true;
+      if (read) discovery.read = true;
+      if (firstSeen) {
+        this.sim.stats.surfaceDiscoveries = (this.sim.stats.surfaceDiscoveries || 0) + 1;
+        this.checkAchievements();
+      }
+      return firstSeen;
+    }
+
+    readSurfaceDiscovery(x, y) {
+      const discovery = this.sim.surfaceDiscoveryAt?.(x, y);
+      if (!discovery) return false;
+      const firstSeen = this.markSurfaceDiscovery(discovery, true);
+      this.setAction("Read sign", 1200);
+      this.floatText(x * TILE - 16, y * TILE - 18, discovery.type === "hamlet" ? "SILENT HAMLET" : "ROAD MARK", "#ffe2a0");
+      ML.audio.play(firstSeen ? "secret" : "click");
+      ML.showToast(`${discovery.title}: ${discovery.message}`, 6200);
+      ML.renderAll(this.sim);
+      this.saveGame();
+      return true;
+    }
+
+    updateSurfaceDiscoveries() {
+      const now = this.time.now || 0;
+      if (now - this.lastSurfaceDiscoveryCheckAt < 650) return;
+      this.lastSurfaceDiscoveryCheckAt = now;
+      if (!Array.isArray(this.sim.surfaceDiscoveries) || !this.sim.surfaceDiscoveries.length) return;
+      const px = this.player.x / TILE;
+      const py = this.player.y / TILE;
+      for (const discovery of this.sim.surfaceDiscoveries) {
+        if (discovery.seen) continue;
+        const distance = Math.hypot(discovery.x + 0.5 - px, discovery.y + 0.5 - py);
+        if (distance > 8.5) continue;
+        this.markSurfaceDiscovery(discovery, false);
+        if (now - this.lastSurfaceDiscoveryAt > 4500) {
+          this.lastSurfaceDiscoveryAt = now;
+          const cue = discovery.type === "hamlet"
+            ? "Roofs interrupt the empty horizon."
+            : discovery.type === "waypost"
+              ? "A waypost stands beyond the old map."
+              : "A road sign catches your eye.";
+          this.setAction("Surface clue", 1400);
+          this.floatText(discovery.x * TILE - 18, discovery.y * TILE - 18, "SURFACE CLUE", "#ffe2a0");
+          ML.showToast(`${cue} Press E to read it.`, 3200);
+        }
+        this.saveGame();
+        break;
+      }
     }
 
     interactOrCraft() {

@@ -271,6 +271,17 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const sceneWidthAfterLeft = scene?.worldWidthTiles?.() || scene?.sim?.worldWidth?.() || WORLD_W;
     const sceneLeftShift = (scene?.player?.x || 0) - sceneLeftXBefore;
     const sceneHorizontalSupport = scene?.sim?.hasPlayerSupport?.({ x: scene.player.x, y: scene.player.y });
+    const sceneDiscovery = scene?.sim?.surfaceDiscoveries?.find?.((entry) => scene.sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN);
+    const sceneDiscoveryBefore = scene?.sim?.stats?.surfaceDiscoveries || 0;
+    let sceneDiscoveryRead = false;
+    if (sceneDiscovery) {
+      const floorY = sceneDiscovery.y + 1;
+      scene.player.setPosition(sceneDiscovery.x * window.ML.TILE + window.ML.TILE / 2, floorY * window.ML.TILE - 17);
+      scene.sim.player = { x: scene.player.x, y: scene.player.y };
+      sceneDiscoveryRead = scene.readSurfaceDiscovery?.(sceneDiscovery.x, sceneDiscovery.y) || false;
+    }
+    const sceneDiscoveryAfter = scene?.sim?.stats?.surfaceDiscoveries || 0;
+    const sceneDiscoveryTarget = sceneDiscovery ? scene.interactionTarget?.() : null;
     const stratumIds = new Set();
     const stratumSamples = [];
     [24, 96, 168, 252, 350].forEach((depth, index) => {
@@ -370,6 +381,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       eastEdgeOpenness: eastExtension?.edgeOpenness || 0,
       eastEdgeOpenings: eastExtension?.edgeOpenings || 0,
       eastEdgeCorridors: eastExtension?.edgeCorridors || 0,
+      eastSurfaceDiscoveries: eastExtension?.discoveries || 0,
       westColumns: westExtension?.columns || 0,
       westShiftTiles: westExtension?.shiftTiles || 0,
       westChests: westExtension?.chests || 0,
@@ -379,6 +391,8 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       westEdgeOpenness: westExtension?.edgeOpenness || 0,
       westEdgeOpenings: westExtension?.edgeOpenings || 0,
       westEdgeCorridors: westExtension?.edgeCorridors || 0,
+      westSurfaceDiscoveries: westExtension?.discoveries || 0,
+      surfaceDiscoveries: sim.surfaceDiscoveries?.length || 0,
       horizontalExpansions: sim.stats.horizontalExpansions || 0,
       horizontalSpawnStable: Boolean(horizontalSpawnStable),
       horizontalCampSupport: Boolean(horizontalCampSupport),
@@ -389,6 +403,12 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       sceneWidthAfterLeft,
       sceneLeftShift,
       sceneHorizontalSupport: Boolean(sceneHorizontalSupport),
+      sceneSurfaceDiscoveries: scene?.sim?.surfaceDiscoveries?.length || 0,
+      sceneDiscoveryTile: Boolean(sceneDiscovery && scene.sim.tileAt(sceneDiscovery.x, sceneDiscovery.y) === window.ML.Tile.SIGN),
+      sceneDiscoveryRead: Boolean(sceneDiscoveryRead),
+      sceneDiscoveryReadState: Boolean(sceneDiscovery?.read),
+      sceneDiscoveryStatDelta: sceneDiscoveryAfter - sceneDiscoveryBefore,
+      sceneDiscoveryTargetKind: sceneDiscoveryTarget?.kind || null,
       watcherTraceDelta: traceAfter - traceBefore,
       watcherTraceActive: Boolean(trace),
       watcherSpotDistance: watcherSpot ? Math.round(Math.hypot(watcherSpot.x - scene.player.x, watcherSpot.y - scene.player.y)) : 0,
@@ -495,7 +515,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
   await browser.close();
 
   const progressionFailed = progressionCheck.recipes < 34
-    || progressionCheck.achievements < 46
+    || progressionCheck.achievements < 47
     || progressionCheck.contracts < 5
     || progressionCheck.caveEvents < 4
     || progressionCheck.eventVariantCount < 4
@@ -570,6 +590,9 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.westChests < 1
     || progressionCheck.eastMobs < 1
     || progressionCheck.westMobs < 1
+    || progressionCheck.eastSurfaceDiscoveries < 1
+    || progressionCheck.westSurfaceDiscoveries < 1
+    || progressionCheck.surfaceDiscoveries < 2
     || progressionCheck.eastInheritedTiles < 64
     || progressionCheck.westInheritedTiles < 64
     || progressionCheck.eastSurfaceStep > 4
@@ -585,6 +608,12 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.sceneWidthAfterLeft <= progressionCheck.sceneWidthAfterRight
     || progressionCheck.sceneLeftShift < 48 * progressionCheck.tileSize
     || !progressionCheck.sceneHorizontalSupport
+    || progressionCheck.sceneSurfaceDiscoveries < 2
+    || !progressionCheck.sceneDiscoveryTile
+    || !progressionCheck.sceneDiscoveryRead
+    || !progressionCheck.sceneDiscoveryReadState
+    || progressionCheck.sceneDiscoveryStatDelta < 1
+    || progressionCheck.sceneDiscoveryTargetKind !== "surfaceDiscovery"
     || !progressionCheck.watcherTraceActive
     || progressionCheck.watcherTraceDelta < 1
     || progressionCheck.watcherSpotDistance < 245

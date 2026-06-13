@@ -30,7 +30,8 @@ window.ML = window.ML || {};
     LAVA: 16,
     MUSHROOM: 17,
     CHEST: 18,
-    CAMPFIRE: 19
+    CAMPFIRE: 19,
+    SIGN: 20
   };
 
   // light: glow radius in tiles for the lightmap; hazard: damage per second on contact.
@@ -54,7 +55,8 @@ window.ML = window.ML || {};
     [Tile.LAVA]: { name: "Lava", drop: null, hardness: 999, tier: 99, solid: false, hazard: 16, light: 3.6 },
     [Tile.MUSHROOM]: { name: "Glow cap", drop: "mushroom", hardness: 0.15, tier: 1, solid: false, light: 2.8 },
     [Tile.CHEST]: { name: "Supply chest", drop: null, loot: true, hardness: 0.6, tier: 1, solid: true },
-    [Tile.CAMPFIRE]: { name: "Campfire", drop: "wood", hardness: 0.5, tier: 1, solid: false, light: 7.2, camp: true }
+    [Tile.CAMPFIRE]: { name: "Campfire", drop: "wood", hardness: 0.5, tier: 1, solid: false, light: 7.2, camp: true },
+    [Tile.SIGN]: { name: "Road sign", drop: "wood", hardness: 0.25, tier: 1, solid: false, readable: true }
   };
 
   const SOLID_TILES = Object.keys(BLOCKS).map(Number).filter((id) => BLOCKS[id].solid);
@@ -80,7 +82,8 @@ window.ML = window.ML || {};
     [Tile.LAVA]: 0xff7a2e,
     [Tile.MUSHROOM]: 0x6fe3d2,
     [Tile.CHEST]: 0xcaa258,
-    [Tile.CAMPFIRE]: 0xf0a84d
+    [Tile.CAMPFIRE]: 0xf0a84d,
+    [Tile.SIGN]: 0xd6b16a
   };
 
   // Minimap pixel colors.
@@ -104,7 +107,8 @@ window.ML = window.ML || {};
     [Tile.LAVA]: "#e25822",
     [Tile.MUSHROOM]: "#6fe3d2",
     [Tile.CHEST]: "#caa258",
-    [Tile.CAMPFIRE]: "#f0a84d"
+    [Tile.CAMPFIRE]: "#f0a84d",
+    [Tile.SIGN]: "#d6b16a"
   };
 
   const ITEM_META = {
@@ -418,6 +422,7 @@ window.ML = window.ML || {};
     { id: "worldBelow", name: "No Bottom", note: "Split the lower bedrock seam and open another stratum.", stat: "worldExpansions", at: 1 },
     { id: "voidglass", name: "False Floor", note: "Open two abyss seams and reach the stranger repeating shelves.", stat: "worldExpansions", at: 2 },
     { id: "farHorizon", name: "Far Horizon", note: "Open a new horizontal region beyond the old map edge.", stat: "horizontalExpansions", at: 1 },
+    { id: "surfaceRumor", name: "Road Past The Map", note: "Find a surface discovery beyond the starter world.", stat: "surfaceDiscoveries", at: 1 },
     { id: "firstFieldNote", name: "It Does Not Fit", note: "Decode your first hidden field note.", loreNotes: 1 },
     { id: "loreHunter", name: "Between the Contracts", note: "Decode five hidden field notes.", loreNotes: 5 },
     { id: "firstWatcher", name: "Watched From the Dark", note: "Notice the hidden observer beyond your light.", stat: "watcherSightings", at: 1 },
@@ -736,7 +741,7 @@ window.ML = window.ML || {};
     AIR,
     DAY_LENGTH,
     INTERACT_RANGE_TILES: 3.05,
-    SAVE_KEY: "abyssforge.save.v3",
+    SAVE_KEY: "abyssforge.save.v4",
     MUTE_KEY: "abyssforge.muted",
     Tile,
     BLOCKS,

@@ -79,7 +79,7 @@ Opening bedrock seams extends the world downward and moves the next generated ab
 - Expanded crafting across tools, blocks, survival items, and relic upgrades.
 - Campfire rest points with warm light, services, safe respawn anchors, and recall support.
 - Secret vault rooms with chests, rare relic materials, boss rooms, and deeper camp points.
-- Endless-style horizontal exploration that opens fresh side regions with cave routes, loot caches, camp points, trees, lava shelves, and region-appropriate mobs.
+- Endless-style horizontal exploration that opens fresh side regions with cave routes, loot caches, camp points, surface signs, wayposts, abandoned hamlets, trees, lava shelves, and region-appropriate mobs.
 - Dynamic cave events: ore surge, lantern draft, depth swarm, and cave tremor.
 - Story-phase event variants: familiar cave events start as mining hazards, then slowly read like signals from a broken machine.
 - Instinct-based enemy behavior: mobs react to light, weakness, allies, distance, and their own health instead of only walking at the player.
