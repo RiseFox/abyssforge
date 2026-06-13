@@ -108,6 +108,48 @@
   let achievementQueue = [];
   let achievementShowing = false;
 
+  const ITEM_KIND = {
+    dirt: "Terrain",
+    stone: "Terrain",
+    wood: "Build",
+    torch: "Light",
+    ladder: "Route",
+    platform: "Route",
+    charge: "Blast",
+    mushroom: "Use",
+    kit: "Use",
+    coal: "Fuel",
+    copper: "Ore",
+    iron: "Ore",
+    gold: "Rare",
+    crystal: "Rare",
+    obsidian: "Abyss",
+    gel: "Drop",
+    coin: "Trade",
+    silk: "Boss",
+    fang: "Boss",
+    relic: "Relic",
+    core: "Core"
+  };
+
+  const RARE_ITEMS = new Set(["gold", "crystal", "obsidian", "silk", "fang", "relic", "core"]);
+  const VOLATILE_ITEMS = new Set(["charge", "core"]);
+
+  function itemAccent(item) {
+    const tint = ITEM_META[item]?.tint;
+    return typeof tint === "number" ? `#${tint.toString(16).padStart(6, "0")}` : "#e1a84d";
+  }
+
+  function itemStateClass(item, amount) {
+    const parts = [`item-${item}`];
+    if (ITEM_META[item]?.tile !== undefined) parts.push("placeable");
+    if (ITEM_META[item]?.consumable) parts.push("usable");
+    if (RARE_ITEMS.has(item)) parts.push("rare");
+    if (VOLATILE_ITEMS.has(item)) parts.push("volatile");
+    parts.push(amount > 0 ? "has-items" : "empty");
+    return parts.join(" ");
+  }
+
   function showToast(message, ms = 2000) {
     if (!ui.toast) return;
     ui.toast.textContent = message;
@@ -190,6 +232,8 @@
       slot.className = "slot";
       slot.type = "button";
       slot.title = ITEM_META[item].name;
+      slot.dataset.item = item;
+      slot.style.setProperty("--item-accent", itemAccent(item));
       slot.addEventListener("click", () => {
         sim.selected = index;
         ML.audio.play("click");
@@ -207,7 +251,11 @@
       count.className = "slot-count";
       count.dataset.item = item;
 
-      slot.append(key, icon, count);
+      const type = document.createElement("span");
+      type.className = "slot-type";
+      type.textContent = ITEM_KIND[item] || "Item";
+
+      slot.append(key, icon, type, count);
       if (ITEM_META[item].consumable) {
         const use = document.createElement("span");
         use.className = "slot-use";
@@ -223,9 +271,12 @@
     if (!hotbarEls) buildHotbar(sim);
     HOTBAR.forEach((item, index) => {
       const { slot, count } = hotbarEls[index];
+      const amount = sim.inventory[item] || 0;
+      slot.className = `slot ${itemStateClass(item, amount)}`;
       slot.classList.toggle("selected", sim.selected === index);
-      const amount = String(sim.inventory[item] || 0);
-      if (count.textContent !== amount) count.textContent = amount;
+      const label = String(amount);
+      if (count.textContent !== label) count.textContent = label;
+      count.classList.toggle("zero", amount <= 0);
     });
   }
 
@@ -381,12 +432,19 @@
       const amount = sim.inventory[item] || 0;
       if (!amount && !HOTBAR.includes(item)) continue;
       const chip = document.createElement("div");
-      chip.className = "inv-chip";
+      chip.className = `inv-chip ${itemStateClass(item, amount)}`;
+      chip.style.setProperty("--item-accent", itemAccent(item));
       const icon = document.createElement("i");
       icon.className = "mini-icon " + ITEM_META[item].cls;
       const label = document.createElement("span");
-      label.textContent = `${ITEM_META[item].name} ${amount}`;
-      chip.append(icon, label);
+      const name = document.createElement("strong");
+      name.textContent = ITEM_META[item].name;
+      const kind = document.createElement("small");
+      kind.textContent = ITEM_KIND[item] || "Item";
+      label.append(name, kind);
+      const qty = document.createElement("b");
+      qty.textContent = `x${amount}`;
+      chip.append(icon, label, qty);
       ui.inventoryGrid.appendChild(chip);
     }
 
