@@ -282,6 +282,113 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     }
     const sceneDiscoveryAfter = scene?.sim?.stats?.surfaceDiscoveries || 0;
     const sceneDiscoveryTarget = sceneDiscovery ? scene.interactionTarget?.() : null;
+    let combatLosCheck = null;
+    if (scene?.player && scene?.enemies && scene?.sim && typeof scene.hasSightToEnemy === "function") {
+      const { TILE, AIR, Tile, BLOCKS } = window.ML;
+      const baseX = Math.max(10, Math.min(scene.worldWidthTiles() - 12, (scene.sim.spawn?.x || 20) + 8));
+      const floorY = Math.max(30, Math.min(scene.worldHeightTiles() - 12, (scene.sim.surface?.[baseX] || 24) + 7));
+      const previousPlayer = { x: scene.player.x, y: scene.player.y };
+      const setTile = (x, y, tileId) => {
+        scene.sim.setTile(x, y, tileId);
+        if (tileId === AIR) {
+          scene.layer.removeTileAt(x, y, false);
+        } else {
+          const tile = scene.layer.putTileAt(tileId, x, y, false);
+          const block = BLOCKS[tileId];
+          if (tile && block?.solid) {
+            if (block.platform) tile.setCollision(false, false, true, false);
+            else tile.setCollision(true);
+          } else if (tile) {
+            tile.setCollision(false);
+          }
+        }
+      };
+      const buildArena = (wallTile) => {
+        for (let y = floorY - 5; y <= floorY; y += 1) {
+          for (let x = baseX - 2; x <= baseX + 7; x += 1) {
+            setTile(x, y, y === floorY ? Tile.STONE : AIR);
+          }
+        }
+        if (wallTile !== AIR) {
+          for (let y = floorY - 3; y < floorY; y += 1) setTile(baseX + 2, y, wallTile);
+        }
+        scene.layer.calculateFacesWithin(baseX - 3, floorY - 6, 12, 8);
+      };
+      buildArena(Tile.STONE);
+
+      scene.player.setPosition((baseX + 0.5) * TILE, floorY * TILE - 17);
+      scene.player.setVelocity(0, 0);
+      scene.player.setFlipX(false);
+      scene.sim.player = { x: scene.player.x, y: scene.player.y };
+      const cfg = window.ML.ENEMIES.crawler;
+      const enemy = scene.enemies.create((baseX + 4.5) * TILE, floorY * TILE - 17, cfg.texture);
+      enemy.kind = "crawler";
+      enemy.hp = 30;
+      enemy.maxHp = 30;
+      enemy.speed = cfg.speed;
+      enemy.touch = cfg.touch;
+      enemy.body.setSize(cfg.bodyW, cfg.bodyH).setOffset(cfg.offX, cfg.offY);
+      const pointer = { worldX: enemy.x, worldY: enemy.y };
+      const blockedPointer = scene.findEnemyAtPointer(pointer);
+      const blockedTargets = scene.findAttackTargets(pointer);
+      const blockedTileTarget = scene.targetTile({ worldX: (baseX + 3.5) * TILE, worldY: (floorY - 1.5) * TILE });
+      const hpBeforeBlockedAttack = enemy.hp;
+      scene.nextAttackAt = 0;
+      const blockedAttackResult = scene.attack(pointer);
+      const hpAfterBlockedAttack = enemy.hp;
+
+      for (let y = floorY - 3; y < floorY; y += 1) setTile(baseX + 2, y, AIR);
+      scene.layer.calculateFacesWithin(baseX - 3, floorY - 6, 12, 8);
+      const openPointer = scene.findEnemyAtPointer(pointer);
+      const openTargets = scene.findAttackTargets(pointer);
+      const hpBeforeOpenAttack = enemy.hp;
+      scene.nextAttackAt = 0;
+      const openAttackResult = scene.attack(pointer);
+      const hpAfterOpenAttack = enemy.hp;
+
+      buildArena(Tile.BEDROCK);
+      enemy.hp = 30;
+      const hpBeforeBlockedBlast = enemy.hp;
+      scene.explode(baseX + 1, floorY - 2, 2.45);
+      const hpAfterBlockedBlast = enemy.hp;
+      buildArena(AIR);
+      enemy.hp = 30;
+      const hpBeforeOpenBlast = enemy.hp;
+      scene.explode(baseX + 1, floorY - 2, 2.45);
+      const hpAfterOpenBlast = enemy.hp;
+
+      buildArena(Tile.BEDROCK);
+      scene.sim.maxHealth = Math.max(scene.sim.maxHealth || 100, 100);
+      scene.sim.health = 100;
+      const healthBeforeBlockedShockwave = scene.sim.health;
+      scene.bossShockwave(enemy);
+      const healthAfterBlockedShockwave = scene.sim.health;
+      buildArena(AIR);
+      scene.sim.health = 100;
+      const healthBeforeOpenShockwave = scene.sim.health;
+      scene.bossShockwave(enemy);
+      const healthAfterOpenShockwave = scene.sim.health;
+      combatLosCheck = {
+        runtime: true,
+        wallBlocksEnemyPointer: blockedPointer === null,
+        wallAttackTargets: blockedTargets.length,
+        wallAttackDamage: hpBeforeBlockedAttack - hpAfterBlockedAttack,
+        wallAttackResult: Boolean(blockedAttackResult),
+        wallBlocksTileTarget: blockedTileTarget === null,
+        openSightEnemyPointer: openPointer === enemy,
+        openSightTargets: openTargets.length,
+        openSightDamage: hpBeforeOpenAttack - hpAfterOpenAttack,
+        openAttackResult: Boolean(openAttackResult),
+        wallBlastDamage: hpBeforeBlockedBlast - hpAfterBlockedBlast,
+        openBlastDamage: hpBeforeOpenBlast - hpAfterOpenBlast,
+        wallShockwaveDamage: healthBeforeBlockedShockwave - healthAfterBlockedShockwave,
+        openShockwaveDamage: healthBeforeOpenShockwave - healthAfterOpenShockwave
+      };
+      enemy.destroy();
+      scene.player.setPosition(previousPlayer.x, previousPlayer.y);
+      scene.player.setVelocity(0, 0);
+      scene.sim.player = { x: previousPlayer.x, y: previousPlayer.y };
+    }
     const stratumIds = new Set();
     const stratumSamples = [];
     [24, 96, 168, 252, 350].forEach((depth, index) => {
@@ -409,6 +516,20 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       sceneDiscoveryReadState: Boolean(sceneDiscovery?.read),
       sceneDiscoveryStatDelta: sceneDiscoveryAfter - sceneDiscoveryBefore,
       sceneDiscoveryTargetKind: sceneDiscoveryTarget?.kind || null,
+      combatLosRuntime: Boolean(combatLosCheck?.runtime),
+      wallBlocksEnemyPointer: Boolean(combatLosCheck?.wallBlocksEnemyPointer),
+      wallAttackTargets: combatLosCheck?.wallAttackTargets ?? -1,
+      wallAttackDamage: combatLosCheck?.wallAttackDamage ?? -1,
+      wallAttackResult: Boolean(combatLosCheck?.wallAttackResult),
+      wallBlocksTileTarget: Boolean(combatLosCheck?.wallBlocksTileTarget),
+      openSightEnemyPointer: Boolean(combatLosCheck?.openSightEnemyPointer),
+      openSightTargets: combatLosCheck?.openSightTargets ?? 0,
+      openSightDamage: combatLosCheck?.openSightDamage ?? 0,
+      openAttackResult: Boolean(combatLosCheck?.openAttackResult),
+      wallBlastDamage: combatLosCheck?.wallBlastDamage ?? -1,
+      openBlastDamage: combatLosCheck?.openBlastDamage ?? 0,
+      wallShockwaveDamage: combatLosCheck?.wallShockwaveDamage ?? -1,
+      openShockwaveDamage: combatLosCheck?.openShockwaveDamage ?? 0,
       watcherTraceDelta: traceAfter - traceBefore,
       watcherTraceActive: Boolean(trace),
       watcherSpotDistance: watcherSpot ? Math.round(Math.hypot(watcherSpot.x - scene.player.x, watcherSpot.y - scene.player.y)) : 0,
@@ -614,6 +735,20 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || !progressionCheck.sceneDiscoveryReadState
     || progressionCheck.sceneDiscoveryStatDelta < 1
     || progressionCheck.sceneDiscoveryTargetKind !== "surfaceDiscovery"
+    || !progressionCheck.combatLosRuntime
+    || !progressionCheck.wallBlocksEnemyPointer
+    || progressionCheck.wallAttackTargets !== 0
+    || progressionCheck.wallAttackDamage !== 0
+    || progressionCheck.wallAttackResult
+    || !progressionCheck.wallBlocksTileTarget
+    || !progressionCheck.openSightEnemyPointer
+    || progressionCheck.openSightTargets < 1
+    || progressionCheck.openSightDamage <= 0
+    || !progressionCheck.openAttackResult
+    || progressionCheck.wallBlastDamage !== 0
+    || progressionCheck.openBlastDamage <= 0
+    || progressionCheck.wallShockwaveDamage !== 0
+    || progressionCheck.openShockwaveDamage <= 0
     || !progressionCheck.watcherTraceActive
     || progressionCheck.watcherTraceDelta < 1
     || progressionCheck.watcherSpotDistance < 245

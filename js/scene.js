@@ -1147,6 +1147,7 @@
       const dy = y * TILE + TILE / 2 - this.player.y;
       if (Math.sqrt(dx * dx + dy * dy) > TILE * INTERACT_RANGE_TILES) return null;
       if (x < 0 || y < 0 || x >= this.worldWidthTiles() || y >= this.worldHeightTiles()) return null;
+      if (!this.hasSightToTile(x, y)) return null;
       return { x, y, tile: this.sim.tileAt(x, y) };
     }
 
@@ -1158,15 +1159,30 @@
     }
 
     hasSightToTile(x, y) {
-      const from = this.playerTilePoint();
-      const to = { x: x + 0.5, y: y + 0.5 };
+      return this.hasSightBetweenTiles(this.playerTilePoint(), { x: x + 0.5, y: y + 0.5 });
+    }
+
+    hasSightBetweenWorld(ax, ay, bx, by) {
+      return this.hasSightBetweenTiles({ x: ax / TILE, y: ay / TILE }, { x: bx / TILE, y: by / TILE });
+    }
+
+    hasSightToEnemy(enemy) {
+      if (!enemy?.active) return false;
+      return this.hasSightBetweenWorld(this.player.x, this.player.y, enemy.x, enemy.y);
+    }
+
+    hasSightBetweenTiles(from, to) {
       const distance = Math.hypot(to.x - from.x, to.y - from.y);
       const steps = Math.max(2, Math.ceil(distance * 5));
+      const fromX = Math.floor(from.x);
+      const fromY = Math.floor(from.y);
+      const toX = Math.floor(to.x);
+      const toY = Math.floor(to.y);
       for (let i = 1; i < steps; i += 1) {
         const t = i / steps;
         const tx = Math.floor(from.x + (to.x - from.x) * t);
         const ty = Math.floor(from.y + (to.y - from.y) * t);
-        if (tx === x && ty === y) continue;
+        if ((tx === fromX && ty === fromY) || (tx === toX && ty === toY)) continue;
         const tile = this.sim.tileAt(tx, ty);
         if (tile !== AIR && BLOCKS[tile]?.solid && tile !== Tile.PLATFORM) return false;
       }
@@ -1369,6 +1385,7 @@
       let bestDistance = Infinity;
       for (const enemy of this.enemies.getChildren()) {
         if (!enemy.active) continue;
+        if (!this.hasSightToEnemy(enemy)) continue;
         const distance = Phaser.Math.Distance.Between(pointer.worldX, pointer.worldY, enemy.x, enemy.y);
         if (distance < 34 && distance < bestDistance) {
           best = enemy;
@@ -1938,13 +1955,15 @@
       // The blast hurts everything close to it.
       const blastX = cx * TILE + TILE / 2;
       const blastY = cy * TILE + TILE / 2;
-      if (Phaser.Math.Distance.Between(this.player.x, this.player.y, blastX, blastY) < radius * TILE * 1.25) {
+      if (Phaser.Math.Distance.Between(this.player.x, this.player.y, blastX, blastY) < radius * TILE * 1.25
+        && this.hasSightBetweenWorld(blastX, blastY, this.player.x, this.player.y)) {
         this.applyDamage(12, "blast");
         this.floatText(this.player.x - 10, this.player.y - 30, "-12", "#f08561");
       }
       this.enemies.getChildren().forEach((enemy) => {
         if (!enemy.active) return;
         if (Phaser.Math.Distance.Between(enemy.x, enemy.y, blastX, blastY) < radius * TILE * 1.4) {
+          if (!this.hasSightBetweenWorld(blastX, blastY, enemy.x, enemy.y)) return;
           this.damageEnemy(enemy, 6, blastX);
         }
       });
@@ -1988,6 +2007,7 @@
       const aimed = pointer ? this.findEnemyAtPointer(pointer) : null;
       this.enemies.getChildren().forEach((enemy) => {
         if (!enemy.active) return;
+        if (!this.hasSightToEnemy(enemy)) return;
         const dx = enemy.x - this.player.x;
         const dy = Math.abs(enemy.y - this.player.y);
         const distance = Math.hypot(dx, enemy.y - this.player.y);
@@ -2267,7 +2287,7 @@
       ML.audio.play("roar");
       this.floatText(enemy.x - 14, enemy.y - 38, "STOMP", "#ffb36a");
       const distance = Phaser.Math.Distance.Between(enemy.x, enemy.y, this.player.x, this.player.y);
-      if (distance < 145) {
+      if (distance < 145 && this.hasSightBetweenWorld(enemy.x, enemy.y, this.player.x, this.player.y)) {
         const damage = this.sim.ward ? 5 : 8;
         this.applyDamage(damage, enemy.kind);
         this.player.setVelocityY(-260);
