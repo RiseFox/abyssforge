@@ -123,6 +123,18 @@
     return SURFACE_MESSAGES[Math.floor(rand() * SURFACE_MESSAGES.length)];
   }
 
+  function surfaceRoughness(sim, x, radius = 5) {
+    let low = Infinity;
+    let high = -Infinity;
+    const width = widthOf(sim);
+    for (let xx = clamp(x - radius, 2, width - 3); xx <= clamp(x + radius, 2, width - 3); xx += 1) {
+      const y = sim.surfaceFloorY?.(xx) ?? sim.surface?.[xx] ?? 24;
+      low = Math.min(low, y);
+      high = Math.max(high, y);
+    }
+    return Number.isFinite(low) && Number.isFinite(high) ? high - low : 99;
+  }
+
   function placeSurfaceSign(sim, x, type, title, message, rand = Math.random) {
     x = clamp(Math.floor(x), 2, Math.max(2, widthOf(sim) - 3));
     const floorY = sim.surfaceFloorY?.(x) ?? sim.surface?.[x] ?? 24;
@@ -157,6 +169,39 @@
     return discovery;
   }
 
+  function nearSurfaceHumanMark(sim, x, radius = 52) {
+    const discoveries = ensureDiscoveries(sim).filter((entry) => entry.scope !== "underground");
+    if (discoveries.some((entry) => Math.abs((entry.x || 0) - x) < radius)) return true;
+    const min = clamp(x - radius, 2, Math.max(2, widthOf(sim) - 3));
+    const max = clamp(x + radius, 2, Math.max(2, widthOf(sim) - 3));
+    for (let xx = min; xx <= max; xx += 1) {
+      const y = sim.surfaceFloorY?.(xx) ?? sim.surface?.[xx] ?? 24;
+      const tile = tileAt(sim, xx, y - 1);
+      if (tile === Tile.SIGN || tile === Tile.CAMPFIRE) return true;
+    }
+    return false;
+  }
+
+  function shouldPlaceSurfaceLandmark(sim, minX, maxX, side, rand) {
+    const origin = sim.shaft?.x || sim.spawn?.x || Math.floor(widthOf(sim) / 2);
+    const midpoint = Math.floor((minX + maxX) / 2);
+    const distance = Math.abs(midpoint - origin);
+    if (distance < 150) return false;
+    if (nearSurfaceHumanMark(sim, midpoint, 78)) return false;
+
+    const expansionIndex = sim.stats?.horizontalExpansions || 0;
+    const lastSurfaceExpansion = ensureDiscoveries(sim)
+      .filter((entry) => entry.scope !== "underground" && Number.isFinite(entry.expansion))
+      .reduce((latest, entry) => Math.max(latest, entry.expansion), -99);
+    if (expansionIndex - lastSurfaceExpansion < 3) return false;
+    const cadence = distance < 420 ? 4 : distance < 760 ? 3 : 2;
+    const seedPhase = Math.abs((sim.seed || 0) % cadence);
+    const sidePhase = side === "left" ? 2 : 0;
+    const cadenceHit = ((expansionIndex + sidePhase + seedPhase) % cadence) === 0;
+    const rareChance = clamp(0.06 + distance / 3600, 0.06, 0.24);
+    return cadenceHit || rand() < rareChance;
+  }
+
   function generateSurfaceLandmarks(sim, regionStart, regionEnd, side, rand = Math.random) {
     ensureDiscoveries(sim);
     const width = widthOf(sim);
@@ -164,37 +209,38 @@
     const maxX = clamp(regionEnd - 6, 3, width - 4);
     const discoveries = [];
     const span = Math.max(1, maxX - minX);
+    if (!shouldPlaceSurfaceLandmark(sim, minX, maxX, side, rand)) return discoveries;
     const candidates = [];
     for (let tries = 0; tries < 160; tries += 1) {
       const x = minX + Math.floor(rand() * span);
       const y = sim.surfaceFloorY?.(x) ?? sim.surface?.[x] ?? 24;
       if (y < 17 || y > 36) continue;
       if (!solidAt(sim, x, y) || !sim.hasSurfaceClearance?.(x, y, 7)) continue;
-      if (Math.abs(x - (sim.shaft?.x || -9999)) < 18) continue;
-      candidates.push({ x, y });
+      if (Math.abs(x - (sim.shaft?.x || -9999)) < 34) continue;
+      if (nearSurfaceHumanMark(sim, x, 48)) continue;
+      candidates.push({ x, y, roughness: surfaceRoughness(sim, x, 6) });
     }
     if (!candidates.length) return discoveries;
 
     const primary = candidates[Math.floor(rand() * candidates.length)];
     const roll = rand();
-    if (roll < 0.2 && candidates.length > 4) {
-      sim.flattenSurfaceRange?.(primary.x - 11, primary.x + 12, primary.y);
+    if (roll < 0.045 && candidates.length > 4 && primary.roughness <= 3) {
+      sim.flattenSurfaceRange?.(primary.x - 8, primary.x - 2, primary.y);
+      sim.flattenSurfaceRange?.(primary.x + 2, primary.x + 8, primary.y);
       sim.buildSurfaceShelter?.(primary.x - 5, primary.y, rand);
       sim.buildSurfaceShelter?.(primary.x + 6, primary.y, rand);
-      setTile(sim, primary.x, primary.y - 1, Tile.CAMPFIRE);
+      if (rand() < 0.24) setTile(sim, primary.x, primary.y - 1, Tile.CAMPFIRE);
       discoveries.push(addSurfaceDiscovery(sim, "hamlet", primary.x - 9, side, rand));
-    } else if (roll < 0.62) {
-      sim.flattenSurfaceRange?.(primary.x - 4, primary.x + 5, primary.y);
-      setTile(sim, primary.x + 2, primary.y - 1, Tile.CAMPFIRE);
+    } else if (roll < 0.18 && primary.roughness <= 4) {
+      sim.flattenSurfaceRange?.(primary.x - 2, primary.x + 3, primary.y);
+      if (rand() < 0.14) setTile(sim, primary.x + 2, primary.y - 1, Tile.CAMPFIRE);
       setTile(sim, primary.x - 2, primary.y - 1, Tile.CHEST);
       discoveries.push(addSurfaceDiscovery(sim, "waypost", primary.x, side, rand));
     } else {
       discoveries.push(addSurfaceDiscovery(sim, "sign", primary.x, side, rand));
     }
-
-    if (rand() < 0.34 && candidates.length > 8) {
-      const extra = candidates[Math.floor(rand() * candidates.length)];
-      if (Math.abs(extra.x - primary.x) > 14) discoveries.push(addSurfaceDiscovery(sim, "sign", extra.x, side, rand));
+    for (const discovery of discoveries) {
+      if (discovery) discovery.expansion = sim.stats?.horizontalExpansions || 0;
     }
     return discoveries.filter(Boolean);
   }
@@ -246,11 +292,11 @@
       for (let y = room.top; y <= room.floorY; y += 1) {
         if (y % 2 === 0) setTile(sim, room.center, y, Tile.LADDER);
       }
-      placeIfOpen(sim, room.right - 1, room.y, Tile.CAMPFIRE);
+      if ((ctx.rand || Math.random)() < 0.18) placeIfOpen(sim, room.right - 1, room.y, Tile.CAMPFIRE);
     } else if (type === "shrine") {
       placeIfOpen(sim, room.left + 1, room.y, Tile.MUSHROOM);
       placeIfOpen(sim, room.right - 1, room.y, Tile.MUSHROOM);
-      placeIfOpen(sim, room.center, room.y, Tile.CAMPFIRE);
+      if ((ctx.rand || Math.random)() < 0.3) placeIfOpen(sim, room.center, room.y, Tile.CAMPFIRE);
     } else {
       placeIfOpen(sim, torchX, room.y, Tile.TORCH);
     }

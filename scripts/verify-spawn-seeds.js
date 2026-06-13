@@ -91,6 +91,57 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const sim = new window.ML.MinerSim();
     sim.newWorld(7919);
     const { WORLD_H, WORLD_W } = window.ML;
+    const maxFlatRun = (surface) => {
+      let max = 1;
+      let run = 1;
+      for (let i = 1; i < surface.length; i += 1) {
+        if (surface[i] === surface[i - 1]) run += 1;
+        else run = 1;
+        max = Math.max(max, run);
+      }
+      return max;
+    };
+    const countSurfaceMarks = (sampleSim) => {
+      const marks = { signs: 0, camps: 0 };
+      for (let x = 0; x < sampleSim.worldWidth(); x += 1) {
+        const y = (sampleSim.surface[x] || 24) - 1;
+        const tile = sampleSim.tileAt(x, y);
+        if (tile === window.ML.Tile.SIGN) marks.signs += 1;
+        if (tile === window.ML.Tile.CAMPFIRE) marks.camps += 1;
+      }
+      return marks;
+    };
+    const terrainSeeds = [7919, 123456789, 246813, 98765, 43210, 5554501, 7777777];
+    const terrainSamples = terrainSeeds.map((seed) => {
+      const sample = new window.ML.MinerSim();
+      sample.newWorld(seed);
+      return {
+        seed,
+        maxFlat: maxFlatRun(sample.surface),
+        surfaceMarks: countSurfaceMarks(sample)
+      };
+    });
+    const horizonSim = new window.ML.MinerSim();
+    horizonSim.newWorld(7919);
+    const horizonSteps = [];
+    for (let i = 0; i < 8; i += 1) {
+      const direction = i % 2 === 0 ? "right" : "left";
+      const result = horizonSim.extendHorizontal(direction, 96);
+      horizonSteps.push({
+        direction,
+        surface: result?.surfaceDiscoveries || 0,
+        underground: result?.undergroundDiscoveries || 0
+      });
+    }
+    const terrainCheck = {
+      starterMaxFlat: Math.max(...terrainSamples.map((entry) => entry.maxFlat)),
+      starterSurfaceSigns: Math.max(...terrainSamples.map((entry) => entry.surfaceMarks.signs)),
+      starterSurfaceCamps: Math.max(...terrainSamples.map((entry) => entry.surfaceMarks.camps)),
+      horizonMaxFlat: maxFlatRun(horizonSim.surface),
+      firstPairSurfaceDiscoveries: horizonSteps.slice(0, 2).reduce((sum, entry) => sum + entry.surface, 0),
+      horizonSurfaceDiscoveries: horizonSim.surfaceDiscoveries.filter((entry) => entry.scope !== "underground").length,
+      horizonUndergroundDiscoveries: horizonSim.surfaceDiscoveries.filter((entry) => entry.scope === "underground").length
+    };
     const fresh = new window.ML.MinerSim();
     fresh.newWorld(7919);
     const itemCatalogSize = Object.keys(window.ML.ITEM_META || {}).length;
@@ -319,9 +370,11 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const sceneLeftShift = (scene?.player?.x || 0) - sceneLeftXBefore;
     const sceneHorizontalSupport = scene?.sim?.hasPlayerSupport?.({ x: scene.player.x, y: scene.player.y });
     const undergroundDiscovery = sim.surfaceDiscoveries?.find?.((entry) => entry.scope === "underground" && sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN);
-    const sceneDiscovery = scene?.sim?.surfaceDiscoveries?.find?.((entry) => entry.scope !== "underground" && scene.sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN)
+    const sceneSurfaceDiscovery = scene?.sim?.surfaceDiscoveries?.find?.((entry) => entry.scope !== "underground" && scene.sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN);
+    const sceneDiscovery = sceneSurfaceDiscovery
       || scene?.sim?.surfaceDiscoveries?.find?.((entry) => scene.sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN);
-    const sceneDiscoveryBefore = scene?.sim?.stats?.surfaceDiscoveries || 0;
+    const sceneDiscoveryStatKey = sceneDiscovery?.scope === "underground" ? "undergroundDiscoveries" : "surfaceDiscoveries";
+    const sceneDiscoveryBefore = scene?.sim?.stats?.[sceneDiscoveryStatKey] || 0;
     let sceneDiscoveryRead = false;
     if (sceneDiscovery) {
       const floorY = sceneDiscovery.y + 1;
@@ -329,9 +382,13 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       scene.sim.player = { x: scene.player.x, y: scene.player.y };
       sceneDiscoveryRead = scene.readSurfaceDiscovery?.(sceneDiscovery.x, sceneDiscovery.y) || false;
     }
-    const sceneDiscoveryAfter = scene?.sim?.stats?.surfaceDiscoveries || 0;
+    const sceneDiscoveryAfter = scene?.sim?.stats?.[sceneDiscoveryStatKey] || 0;
     const sceneDiscoveryTarget = sceneDiscovery ? scene.interactionTarget?.() : null;
-    const sceneUndergroundDiscovery = scene?.sim?.surfaceDiscoveries?.find?.((entry) => entry.scope === "underground" && scene.sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN);
+    const sceneUndergroundDiscovery = scene?.sim?.surfaceDiscoveries?.find?.((entry) =>
+      entry !== sceneDiscovery
+      && entry.scope === "underground"
+      && scene.sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN
+    ) || (sceneDiscovery?.scope === "underground" ? sceneDiscovery : null);
     const sceneUndergroundBefore = scene?.sim?.stats?.undergroundDiscoveries || 0;
     let sceneUndergroundRead = false;
     if (sceneUndergroundDiscovery) {
@@ -342,11 +399,22 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     }
     const sceneUndergroundAfter = scene?.sim?.stats?.undergroundDiscoveries || 0;
     let poiAmbienceCheck = null;
-    const curiosityDiscovery = scene?.sim?.surfaceDiscoveries?.find?.((entry) =>
-      entry !== sceneUndergroundDiscovery
+    let curiosityDiscovery = scene?.sim?.surfaceDiscoveries?.find?.((entry) =>
+      entry !== sceneDiscovery
+      && entry !== sceneUndergroundDiscovery
       && entry.scope === "underground"
+      && !entry.read
       && scene.sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN
     );
+    if (!curiosityDiscovery && scene?.openHorizontalRegion?.("right")) {
+      curiosityDiscovery = scene?.sim?.surfaceDiscoveries?.find?.((entry) =>
+        entry !== sceneDiscovery
+        && entry !== sceneUndergroundDiscovery
+        && entry.scope === "underground"
+        && !entry.read
+        && scene.sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN
+      );
+    }
     if (scene && curiosityDiscovery) {
       const { TILE } = window.ML;
       scene.player.setPosition(curiosityDiscovery.x * TILE + TILE / 2, (curiosityDiscovery.y + 1) * TILE - 17);
@@ -354,9 +422,9 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       scene.cameras.main.centerOn(scene.player.x, scene.player.y);
       scene.nextPoiSignalScanAt = 0;
       scene.updatePoiAmbience?.();
-      const cfg = window.ML.ENEMIES.golem;
+      const cfg = window.ML.ENEMIES.crawler;
       const enemy = scene.enemies.create((curiosityDiscovery.x + 1.5) * TILE, curiosityDiscovery.y * TILE + 12, cfg.texture);
-      enemy.kind = "golem";
+      enemy.kind = "crawler";
       enemy.body.setSize(cfg.bodyW, cfg.bodyH).setOffset(cfg.offX, cfg.offY);
       enemy.hp = cfg.hp;
       enemy.maxHp = cfg.hp;
@@ -366,7 +434,14 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       enemy.elite = false;
       enemy.bobSeed = 0;
       enemy.nextThinkAt = 0;
-      scene.player.setPosition((curiosityDiscovery.x + 18) * TILE, (curiosityDiscovery.y + 1) * TILE - 17);
+      enemy.nextPoiScanAt = 0;
+      enemy.poiAnchor = null;
+      enemy.intent = null;
+      scene.noiseEvents = [];
+      const farTileX = curiosityDiscovery.x < scene.worldWidthTiles() / 2
+        ? Math.min(scene.worldWidthTiles() - 8, curiosityDiscovery.x + 34)
+        : Math.max(8, curiosityDiscovery.x - 34);
+      scene.player.setPosition(farTileX * TILE, (curiosityDiscovery.y + 1) * TILE - 17);
       scene.sim.player = { x: scene.player.x, y: scene.player.y };
       const intent = scene.enemyInstinct?.(enemy, (scene.time?.now || 0) + 1200);
       poiAmbienceCheck = {
@@ -548,6 +623,13 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       newRecipesPresent,
       newOreTiles: newOreTiles.length,
       newOreTilesInWorld,
+      terrainStarterMaxFlat: terrainCheck.starterMaxFlat,
+      terrainStarterSurfaceSigns: terrainCheck.starterSurfaceSigns,
+      terrainStarterSurfaceCamps: terrainCheck.starterSurfaceCamps,
+      terrainHorizonMaxFlat: terrainCheck.horizonMaxFlat,
+      terrainFirstPairSurfaceDiscoveries: terrainCheck.firstPairSurfaceDiscoveries,
+      terrainHorizonSurfaceDiscoveries: terrainCheck.horizonSurfaceDiscoveries,
+      terrainHorizonUndergroundDiscoveries: terrainCheck.horizonUndergroundDiscoveries,
       starterKnownItems,
       starterCraftVisible,
       starterCraftReady,
@@ -648,7 +730,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       eastEdgeOpenness: eastExtension?.edgeOpenness || 0,
       eastEdgeOpenings: eastExtension?.edgeOpenings || 0,
       eastEdgeCorridors: eastExtension?.edgeCorridors || 0,
-      eastSurfaceDiscoveries: eastExtension?.discoveries || 0,
+      eastSurfaceDiscoveries: eastExtension?.surfaceDiscoveries || 0,
       eastUndergroundDiscoveries: eastExtension?.undergroundDiscoveries || 0,
       westColumns: westExtension?.columns || 0,
       westShiftTiles: westExtension?.shiftTiles || 0,
@@ -659,7 +741,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       westEdgeOpenness: westExtension?.edgeOpenness || 0,
       westEdgeOpenings: westExtension?.edgeOpenings || 0,
       westEdgeCorridors: westExtension?.edgeCorridors || 0,
-      westSurfaceDiscoveries: westExtension?.discoveries || 0,
+      westSurfaceDiscoveries: westExtension?.surfaceDiscoveries || 0,
       westUndergroundDiscoveries: westExtension?.undergroundDiscoveries || 0,
       surfaceDiscoveries: sim.surfaceDiscoveries?.length || 0,
       undergroundDiscoveries: sim.surfaceDiscoveries?.filter?.((entry) => entry.scope === "underground").length || 0,
@@ -838,6 +920,14 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.newRecipesPresent < 9
     || progressionCheck.newOreTiles < 4
     || progressionCheck.newOreTilesInWorld < 12
+    || progressionCheck.terrainStarterMaxFlat > 12
+    || progressionCheck.terrainStarterSurfaceSigns > 0
+    || progressionCheck.terrainStarterSurfaceCamps > 1
+    || progressionCheck.terrainHorizonMaxFlat > 12
+    || progressionCheck.terrainFirstPairSurfaceDiscoveries > 0
+    || progressionCheck.terrainHorizonSurfaceDiscoveries < 1
+    || progressionCheck.terrainHorizonSurfaceDiscoveries > 3
+    || progressionCheck.terrainHorizonUndergroundDiscoveries < 6
     || !progressionCheck.regulatorCraft?.ok
     || !progressionCheck.regulatorEfficiency
     || progressionCheck.regulatorLampAfter <= progressionCheck.plainLampAfter
@@ -926,8 +1016,6 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.westChests < 1
     || progressionCheck.eastMobs < 1
     || progressionCheck.westMobs < 1
-    || progressionCheck.eastSurfaceDiscoveries < 1
-    || progressionCheck.westSurfaceDiscoveries < 1
     || progressionCheck.eastUndergroundDiscoveries < 1
     || progressionCheck.westUndergroundDiscoveries < 1
     || progressionCheck.surfaceDiscoveries < 2

@@ -184,18 +184,52 @@
       const world = Array.from({ length: WORLD_H }, () => Array(WORLD_W).fill(AIR));
       const surface = [];
 
-      // Terrain column by column with an ore lottery per cell.
-      let h = 24;
+      // Terrain column by column with broad landform segments and local erosion
+      // instead of a flat random walk.
+      let h = 24 + Math.floor(rand() * 5) - 2;
+      let targetH = h;
+      let segmentLeft = 0;
+      let terraceLeft = 0;
+      let flatRun = 0;
       for (let x = 0; x < WORLD_W; x += 1) {
-        h += Math.floor(rand() * 3) - 1;
-        const wave = Math.sin(x / 12) * 2 + Math.sin(x / 31) * 4;
-        surface[x] = clamp(Math.floor(h + wave), 18, 31);
+        if (segmentLeft <= 0) {
+          segmentLeft = 8 + Math.floor(rand() * 24);
+          targetH = clamp(h + Math.floor((rand() - 0.5) * 12), 17, 36);
+          terraceLeft = rand() < 0.26 ? 4 + Math.floor(rand() * 10) : 0;
+        }
+        let step = Math.sign(targetH - h) * (rand() < 0.68 ? 1 : 0);
+        if (rand() < 0.12) step += Math.floor(rand() * 3) - 1;
+        if (rand() < 0.035) step += rand() < 0.5 ? -2 : 2;
+        if (terraceLeft > 0) {
+          step = rand() < 0.82 ? 0 : step;
+          terraceLeft -= 1;
+        }
+        h = clamp(h + step, 17, 36);
+        segmentLeft -= 1;
+        const wave = Math.sin((x + this.seed % 97) / 13) * 1.4 + Math.sin((x + this.seed % 41) / 37) * 2.7;
+        let ySurface = clamp(Math.floor(h + wave), 17, 36);
+        if (x > 0) ySurface = clamp(ySurface, surface[x - 1] - 3, surface[x - 1] + 3);
+        if (x > 0 && ySurface === surface[x - 1]) flatRun += 1;
+        else flatRun = 1;
+        if (flatRun > 10) {
+          let dir = ySurface <= 18 ? 1 : ySurface >= 35 ? -1 : (rand() < 0.5 ? -1 : 1);
+          ySurface = clamp(ySurface + dir, 17, 36);
+          if (x > 0) ySurface = clamp(ySurface, surface[x - 1] - 2, surface[x - 1] + 2);
+          if (x > 0 && ySurface === surface[x - 1]) {
+            dir = surface[x - 1] > 26 ? -1 : 1;
+            ySurface = clamp(surface[x - 1] + dir, 17, 36);
+          }
+          h = ySurface;
+          flatRun = x > 0 && ySurface === surface[x - 1] ? flatRun : 1;
+        }
+        surface[x] = ySurface;
+        const soilDepth = clamp(3 + Math.floor(rand() * 4) + (Math.abs(surface[x] - (surface[x - 1] || surface[x])) > 1 ? 1 : 0), 3, 7);
         for (let y = surface[x]; y < WORLD_H; y += 1) {
           if (y >= WORLD_H - 4) {
             world[y][x] = Tile.BEDROCK;
           } else if (y === surface[x]) {
             world[y][x] = Tile.GRASS;
-          } else if (y < surface[x] + 5) {
+          } else if (y < surface[x] + soilDepth) {
             world[y][x] = Tile.DIRT;
           } else {
             world[y][x] = this.deepTileFor(x, y, rand, surface);
@@ -232,6 +266,7 @@
         return t !== AIR && BLOCKS[t] && BLOCKS[t].solid;
       };
       const secrets = [];
+      let secretCampBudget = 1;
       const canCarveSecret = (roomX, roomY, w, h) => {
         if (roomX < 4 || roomY < 38 || roomX + w >= WORLD_W - 4 || roomY + h >= WORLD_H - 8) return false;
         if (Math.abs(roomX + w / 2 - sx) < 14) return false;
@@ -275,7 +310,11 @@
           if (campX === chestX || campX === lampX) campX = roomX + 1;
           world[floorY][chestX] = Tile.CHEST;
           world[floorY][lampX] = tier >= 2 ? Tile.MUSHROOM : Tile.TORCH;
-          if (!bossKind) world[floorY][campX] = Tile.CAMPFIRE;
+          const hasCamp = !bossKind && secretCampBudget > 0 && rand() < (tier >= 3 ? 0.08 : tier >= 2 ? 0.12 : 0.16);
+          if (hasCamp) {
+            world[floorY][campX] = Tile.CAMPFIRE;
+            secretCampBudget -= 1;
+          }
 
           const orePool = tier >= 3
             ? [Tile.CRYSTAL, Tile.OBSIDIAN, Tile.EMBER, Tile.VOIDGLASS]
@@ -296,7 +335,7 @@
             h,
             opened: false,
             chest: { x: chestX, y: floorY },
-            camp: !bossKind ? { x: campX, y: floorY } : null
+            camp: hasCamp ? { x: campX, y: floorY } : null
           };
           if (bossKind) {
             secret.boss = {
@@ -343,7 +382,7 @@
 
       // Supply chests tucked into caves.
       let chests = 0;
-      for (let tries = 0; tries < 600 && chests < 14; tries += 1) {
+      for (let tries = 0; tries < 600 && chests < 10; tries += 1) {
         const x = 4 + Math.floor(rand() * (WORLD_W - 8));
         const y = surface[x] + 15 + Math.floor(rand() * (WORLD_H - surface[x] - 28));
         if (Math.abs(x - sx) < 10) continue;
@@ -354,9 +393,13 @@
       }
 
       // Trees.
+      let lastTreeX = -999;
       for (let x = 6; x < WORLD_W - 6; x += 1) {
         if (Math.abs(x - sx) <= 7) continue;
-        if (rand() < 0.095) {
+        if (x - lastTreeX < 15 + Math.floor(rand() * 9)) continue;
+        const slope = Math.abs((surface[x - 2] || surface[x]) - (surface[x + 2] || surface[x]));
+        const treeChance = slope > 3 ? 0.018 : slope > 1 ? 0.035 : 0.052;
+        if (rand() < treeChance) {
           const ground = surface[x];
           const trunk = 3 + Math.floor(rand() * 3);
           for (let y = ground - trunk; y < ground; y += 1) world[y][x] = Tile.WOOD;
@@ -371,6 +414,7 @@
               }
             }
           }
+          lastTreeX = x;
         }
       }
 
@@ -681,11 +725,49 @@
       let surfaceFloat = profile?.edgeSurface ?? this.surface[edgeX] ?? 24;
       let surfaceY = Math.round(surfaceFloat);
       let trend = profile?.surfaceSlope || 0;
+      let targetSurface = surfaceFloat;
+      let landformLeft = 0;
+      let terraceLeft = 0;
+      let outwardFlatRun = 1;
+      for (let i = 1; i < Math.min(12, oldWidth); i += 1) {
+        const probeX = left ? i : oldWidth - 1 - i;
+        if ((this.surface[probeX] || 24) === (this.surface[edgeX] || 24)) outwardFlatRun += 1;
+        else break;
+      }
       for (let i = 0; i < addColumns; i += 1) {
-        const noise = (rand() - 0.5) * 1.55 + (rand() < 0.08 ? (rand() < 0.5 ? -1 : 1) : 0);
-        surfaceFloat = clamp(surfaceFloat + trend * 0.85 + noise, 17, 34);
-        surfaceY = clamp(Math.round(surfaceFloat), 17, 34);
+        if (landformLeft <= 0) {
+          landformLeft = 8 + Math.floor(rand() * 24);
+          targetSurface = clamp(surfaceFloat + Math.floor((rand() - 0.5) * 11), 17, 36);
+          terraceLeft = rand() < 0.24 ? 4 + Math.floor(rand() * 10) : 0;
+        }
+        let push = Math.sign(targetSurface - surfaceFloat) * (rand() < 0.62 ? 0.9 : 0);
+        if (terraceLeft > 0) {
+          push *= 0.15;
+          terraceLeft -= 1;
+        }
+        const noise = (rand() - 0.5) * 1.15 + (rand() < 0.045 ? (rand() < 0.5 ? -1.8 : 1.8) : 0);
+        surfaceFloat = clamp(surfaceFloat + trend * 0.64 + push + noise, 17, 36);
+        surfaceY = clamp(Math.round(surfaceFloat), 17, 36);
+        const prevSurface = outwardSurfaces.length
+          ? outwardSurfaces[outwardSurfaces.length - 1]
+          : clamp(Math.round(profile?.edgeSurface ?? this.surface[edgeX] ?? 24), 17, 36);
+        surfaceY = clamp(surfaceY, prevSurface - 3, prevSurface + 3);
+        surfaceFloat = surfaceY;
+        if (surfaceY === prevSurface) outwardFlatRun += 1;
+        else outwardFlatRun = 1;
+        if (outwardFlatRun > 10) {
+          let dir = surfaceY <= 18 ? 1 : surfaceY >= 35 ? -1 : (rand() < 0.5 ? -1 : 1);
+          surfaceY = clamp(surfaceY + dir, prevSurface - 2, prevSurface + 2);
+          surfaceY = clamp(surfaceY, 17, 36);
+          if (surfaceY === prevSurface) {
+            dir = prevSurface > 26 ? -1 : 1;
+            surfaceY = clamp(prevSurface + dir, 17, 36);
+          }
+          surfaceFloat = surfaceY;
+          outwardFlatRun = surfaceY === prevSurface ? outwardFlatRun : 1;
+        }
         trend *= 0.94;
+        landformLeft -= 1;
         outwardSurfaces.push(surfaceY);
       }
       const newSurfaces = left ? outwardSurfaces.reverse() : outwardSurfaces;
@@ -777,31 +859,24 @@
         if (this.tileAt(x, y) !== AIR || !solidAt(x, y + 1)) continue;
         featureSpots.push({ x, y });
         const depth = this.mobDepthAt(x, y);
-        if (chests < Math.max(6, Math.floor(addColumns / 16)) && rand() < 0.28) {
+        if (chests < Math.max(4, Math.floor(addColumns / 20)) && rand() < 0.2) {
           this.world[y][x] = Tile.CHEST;
           chests += 1;
           continue;
         }
-        if (camps < 2 && depth > 18 && rand() < 0.08) {
+        if (camps < 1 && depth > 34 && rand() < 0.026) {
           this.world[y][x] = Tile.CAMPFIRE;
           camps += 1;
           continue;
         }
-        if (rand() < 0.16) this.world[y][x] = Tile.MUSHROOM;
+        if (rand() < 0.1) this.world[y][x] = Tile.MUSHROOM;
       }
-      const targetChests = Math.max(3, Math.floor(addColumns / 24));
+      const targetChests = Math.max(2, Math.floor(addColumns / 30));
       for (const spot of featureSpots) {
         if (chests >= targetChests) break;
         if (this.world[spot.y][spot.x] !== AIR || !solidAt(spot.x, spot.y + 1)) continue;
         this.world[spot.y][spot.x] = Tile.CHEST;
         chests += 1;
-      }
-      if (camps < 1) {
-        const campSpot = featureSpots.find((spot) => this.mobDepthAt(spot.x, spot.y) > 24 && this.world[spot.y][spot.x] === AIR && solidAt(spot.x, spot.y + 1));
-        if (campSpot) {
-          this.world[campSpot.y][campSpot.x] = Tile.CAMPFIRE;
-          camps += 1;
-        }
       }
 
       for (let y = 210; y < height - 8; y += 1) {
@@ -813,9 +888,12 @@
         }
       }
 
+      let lastRegionTreeX = -999;
       for (let x = minX; x <= maxX; x += 1) {
         if (Math.abs(x - (this.shaft?.x || -9999)) <= 9) continue;
-        if (rand() >= 0.08) continue;
+        if (x - lastRegionTreeX < 16 + Math.floor(rand() * 10)) continue;
+        const localSlope = Math.abs((this.surface[x - 2] || this.surface[x]) - (this.surface[x + 2] || this.surface[x]));
+        if (rand() >= (localSlope > 2 ? 0.028 : 0.052)) continue;
         const ground = this.surface[x] || 24;
         const trunk = 3 + Math.floor(rand() * 3);
         for (let y = ground - trunk; y < ground; y += 1) this.world[y][x] = Tile.WOOD;
@@ -827,6 +905,7 @@
             if (Math.abs(ox) + Math.abs(oy) < 4 && rand() > 0.12) this.world[ty][tx] = Tile.LEAVES;
           }
         }
+        lastRegionTreeX = x;
       }
 
       const surfaceDiscoveries = this.generateSurfaceLandmarks(regionStart, regionEnd, side, rand);
@@ -838,7 +917,7 @@
         yMinForX: (x) => (this.surface[x] || 24) + 14,
         yMax: height - 9,
         minDepth: 22,
-        target: 1 + (addColumns >= 80 ? 1 : 0),
+        target: 1,
         rand
       });
 
@@ -1525,7 +1604,7 @@
         const raw = localStorage.getItem(ML.SAVE_KEY);
         if (!raw) return null;
         const data = JSON.parse(raw);
-        if (!data || data.version !== 7 || !data.state || !Array.isArray(data.state.world)) return null;
+        if (!data || data.version !== 8 || !data.state || !Array.isArray(data.state.world)) return null;
         return data.state;
       } catch {
         return null;
@@ -1584,7 +1663,7 @@
         contractSeq: this.contractSeq
       };
       try {
-        localStorage.setItem(ML.SAVE_KEY, JSON.stringify({ version: 7, state }));
+        localStorage.setItem(ML.SAVE_KEY, JSON.stringify({ version: 8, state }));
         return true;
       } catch {
         return false;
