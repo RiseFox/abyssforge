@@ -365,10 +365,20 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       eastColumns: eastExtension?.columns || 0,
       eastChests: eastExtension?.chests || 0,
       eastMobs: eastExtension?.mobs || 0,
+      eastInheritedTiles: eastExtension?.inheritedTiles || 0,
+      eastSurfaceStep: eastExtension?.surfaceStep ?? 99,
+      eastEdgeOpenness: eastExtension?.edgeOpenness || 0,
+      eastEdgeOpenings: eastExtension?.edgeOpenings || 0,
+      eastEdgeCorridors: eastExtension?.edgeCorridors || 0,
       westColumns: westExtension?.columns || 0,
       westShiftTiles: westExtension?.shiftTiles || 0,
       westChests: westExtension?.chests || 0,
       westMobs: westExtension?.mobs || 0,
+      westInheritedTiles: westExtension?.inheritedTiles || 0,
+      westSurfaceStep: westExtension?.surfaceStep ?? 99,
+      westEdgeOpenness: westExtension?.edgeOpenness || 0,
+      westEdgeOpenings: westExtension?.edgeOpenings || 0,
+      westEdgeCorridors: westExtension?.edgeCorridors || 0,
       horizontalExpansions: sim.stats.horizontalExpansions || 0,
       horizontalSpawnStable: Boolean(horizontalSpawnStable),
       horizontalCampSupport: Boolean(horizontalCampSupport),
@@ -560,6 +570,12 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.westChests < 1
     || progressionCheck.eastMobs < 1
     || progressionCheck.westMobs < 1
+    || progressionCheck.eastInheritedTiles < 64
+    || progressionCheck.westInheritedTiles < 64
+    || progressionCheck.eastSurfaceStep > 4
+    || progressionCheck.westSurfaceStep > 4
+    || (progressionCheck.eastEdgeOpenings > 0 && progressionCheck.eastEdgeCorridors < 1)
+    || (progressionCheck.westEdgeOpenings > 0 && progressionCheck.westEdgeCorridors < 1)
     || progressionCheck.horizontalExpansions < 2
     || !progressionCheck.horizontalSpawnStable
     || !progressionCheck.horizontalCampSupport

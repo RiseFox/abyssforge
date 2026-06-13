@@ -67,11 +67,11 @@ Depth is no longer a single hardcoded ore ladder. AbyssForge now uses data-drive
 | Obsidian Abyss | 220 m | Lava-glass danger with fewer camps, heavier mobs, richer caches, and severe darkness. |
 | Voidglass Shelf | 330 m | Strange repeating lower shelves where safe light is scarce and the mine stops behaving naturally. |
 
-Opening bedrock seams extends the world downward and moves the next generated abyss section into the active stratum instead of repeating the same cave recipe forever. Reaching the far left or right horizon now opens a new horizontal region instead of ending at a hard boundary, preserving the player position while the map, minimap, mobs, caches, and camp hooks expand around the expedition.
+Opening bedrock seams extends the world downward and moves the next generated abyss section into the active stratum instead of repeating the same cave recipe forever. Reaching the far left or right horizon now opens a new horizontal region instead of ending at a hard boundary. The horizon generator reads the actual edge columns first, then continues the surface slope, nearby stone and ore bands, and any cave openings into the new region while the map, minimap, mobs, caches, and camp hooks expand around the expedition.
 
 ## Current Features
 
-- Seeded procedural world with a quality-gated spawn area and procedural horizontal horizon expansion.
+- Seeded procedural world with a quality-gated spawn area and edge-informed horizontal horizon expansion.
 - Data-driven strata profiles for ore distribution, cave shape, lava, caches, camps, mob pressure, elite chance, cave events, and mining fatigue.
 - Stable starter shaft, no-air spawn checks, and a protected first drop bridge.
 - Mining, block placement, ladders, torches, platforms, charges, and hotbar use.

@@ -434,6 +434,106 @@
       }
     }
 
+    edgeProfile(direction = "right", sampleWidth = 12) {
+      if (!Array.isArray(this.world) || !Array.isArray(this.surface)) return null;
+      const width = this.worldWidth();
+      const height = this.worldHeight();
+      const left = direction === "left";
+      const edgeX = left ? 0 : width - 1;
+      const inward = left ? 1 : -1;
+      const samples = [];
+      const maxSamples = clamp(Math.floor(sampleWidth), 4, Math.min(24, width));
+      for (let i = 0; i < maxSamples; i += 1) {
+        const x = clamp(edgeX + inward * i, 0, width - 1);
+        samples.push({
+          x,
+          surface: this.surface[x] || 24,
+          cells: this.world.map((row) => row[x])
+        });
+      }
+      const edgeSurface = this.surface[edgeX] || 24;
+      const innerSurface = samples[samples.length - 1]?.surface || edgeSurface;
+      const surfaceSlope = clamp((edgeSurface - innerSurface) / Math.max(1, samples.length - 1), -0.72, 0.72);
+      const isOpenTile = (tile) => tile === AIR || (tile !== Tile.LAVA && BLOCKS[tile] && !BLOCKS[tile].solid);
+      let airTiles = 0;
+      let totalTiles = 0;
+      let run = null;
+      const openings = [];
+
+      for (let y = Math.max(2, edgeSurface + 5); y < height - 7; y += 1) {
+        let rowOpen = false;
+        for (const sample of samples) {
+          if (y <= sample.surface + 4) continue;
+          totalTiles += 1;
+          if (isOpenTile(sample.cells[y])) {
+            airTiles += 1;
+            if (Math.abs(sample.x - edgeX) <= 3) rowOpen = true;
+          }
+        }
+        if (rowOpen) {
+          if (!run) run = { start: y, end: y, weight: 1 };
+          else {
+            run.end = y;
+            run.weight += 1;
+          }
+        } else if (run) {
+          openings.push(run);
+          run = null;
+        }
+      }
+      if (run) openings.push(run);
+
+      return {
+        side: left ? "left" : "right",
+        left,
+        edgeX,
+        edgeSurface,
+        surfaceSlope,
+        openness: totalTiles ? airTiles / totalTiles : 0,
+        samples,
+        openings: openings
+          .map((entry) => ({
+            y: Math.round((entry.start + entry.end) / 2),
+            height: entry.end - entry.start + 1,
+            radius: clamp(Math.ceil((entry.end - entry.start + 1) / 3), 1, 3),
+            weight: entry.weight
+          }))
+          .filter((entry) => entry.height >= 2)
+          .slice(0, 18)
+      };
+    }
+
+    naturalEdgeTile(tile) {
+      return tile !== AIR
+        && tile !== Tile.BEDROCK
+        && tile !== Tile.CHEST
+        && tile !== Tile.CAMPFIRE
+        && tile !== Tile.PLATFORM
+        && tile !== Tile.LADDER
+        && tile !== Tile.TORCH
+        && tile !== Tile.WOOD
+        && tile !== Tile.LEAVES
+        && BLOCKS[tile]?.solid;
+    }
+
+    edgeSolidTileAt(profile, y, rand = Math.random) {
+      const candidates = [];
+      for (const sample of profile?.samples || []) {
+        const tile = sample.cells?.[y];
+        if (this.naturalEdgeTile(tile)) candidates.push(tile);
+      }
+      if (!candidates.length) return null;
+      return candidates[Math.floor(rand() * candidates.length)];
+    }
+
+    horizonTileForColumn(y, surfaceY, rand, profile, distanceFromSeam = 0) {
+      let tile = this.deepTileForColumn(y, surfaceY, rand);
+      const edgeTile = this.edgeSolidTileAt(profile, y, rand);
+      const inheritChance = clamp(0.66 - distanceFromSeam * 0.035, 0.08, 0.66);
+      if (edgeTile !== null && rand() < inheritChance) tile = edgeTile;
+      return tile;
+    }
+
     shiftTileCoordinates(deltaX) {
       if (!deltaX) return;
       const shiftPoint = (point) => {
@@ -470,28 +570,41 @@
       const height = this.worldHeight();
       const left = side === "left";
       const edgeX = left ? 0 : oldWidth - 1;
+      const profile = this.edgeProfile(side, 14);
       const seedMix = (this.seed
         ^ (oldWidth * 1103515245)
         ^ (height * 2654435761)
         ^ (((this.stats.horizontalExpansions || 0) + 1) * 2246822519)
+        ^ (Math.round((profile?.openness || 0) * 10000) * 374761393)
+        ^ ((profile?.edgeSurface || 24) * 668265263)
         ^ (left ? 0x51f15e : 0xe451de)) >>> 0;
       const rand = mulberry32(seedMix);
 
       const outwardSurfaces = [];
-      let surfaceY = this.surface[edgeX] || 24;
+      let surfaceFloat = profile?.edgeSurface ?? this.surface[edgeX] ?? 24;
+      let surfaceY = Math.round(surfaceFloat);
+      let trend = profile?.surfaceSlope || 0;
       for (let i = 0; i < addColumns; i += 1) {
-        const drift = Math.floor(rand() * 3) - 1 + (rand() < 0.08 ? (rand() < 0.5 ? -1 : 1) : 0);
-        surfaceY = clamp(surfaceY + drift, 17, 34);
+        const noise = (rand() - 0.5) * 1.55 + (rand() < 0.08 ? (rand() < 0.5 ? -1 : 1) : 0);
+        surfaceFloat = clamp(surfaceFloat + trend * 0.85 + noise, 17, 34);
+        surfaceY = clamp(Math.round(surfaceFloat), 17, 34);
+        trend *= 0.94;
         outwardSurfaces.push(surfaceY);
       }
       const newSurfaces = left ? outwardSurfaces.reverse() : outwardSurfaces;
-      const newColumns = newSurfaces.map((colSurface) => {
+      let inheritedTiles = 0;
+      const newColumns = newSurfaces.map((colSurface, index) => {
+        const distanceFromSeam = left ? addColumns - 1 - index : index;
         const column = Array(height).fill(AIR);
         for (let y = colSurface; y < height; y += 1) {
           if (y >= height - 4) column[y] = Tile.BEDROCK;
           else if (y === colSurface) column[y] = Tile.GRASS;
           else if (y < colSurface + 5) column[y] = Tile.DIRT;
-          else column[y] = this.deepTileForColumn(y, colSurface, rand);
+          else {
+            const edgeTile = this.edgeSolidTileAt(profile, y, rand);
+            column[y] = this.horizonTileForColumn(y, colSurface, rand, profile, distanceFromSeam);
+            if (edgeTile !== null && column[y] === edgeTile) inheritedTiles += 1;
+          }
         }
         return column;
       });
@@ -519,6 +632,23 @@
       };
 
       const seamX = left ? addColumns : oldWidth - 1;
+      const outDir = left ? -1 : 1;
+      let edgeCorridors = 0;
+      for (const opening of profile?.openings || []) {
+        let x = seamX;
+        let y = clamp(opening.y, (this.surface[clamp(seamX, 0, this.worldWidth() - 1)] || 24) + 6, height - 8);
+        const length = clamp(10 + opening.height * 2 + Math.floor(rand() * 24), 10, addColumns - 6);
+        const radius = clamp(opening.radius, 1, 3);
+        for (let step = 0; step < length; step += 1) {
+          x += outDir;
+          if (x < regionStart || x > regionEnd) break;
+          y = clamp(y + Math.floor(rand() * 3) - 1, (this.surface[x] || 24) + 6, height - 8);
+          this.carveAirCircle(x, y, radius, (this.surface[x] || 24) + 4, height - 6);
+          if (rand() < 0.18) this.carveAirCircle(x, y + (rand() < 0.5 ? -1 : 1), Math.max(1, radius - 1), (this.surface[x] || 24) + 4, height - 6);
+        }
+        edgeCorridors += 1;
+      }
+
       for (let i = 0; i < 5; i += 1) {
         const base = this.surface[clamp(seamX, 0, this.worldWidth() - 1)] || 24;
         const y = clamp(base + 20 + i * 38 + Math.floor(rand() * 12), base + 9, height - 8);
@@ -527,7 +657,7 @@
         for (let x = start; x <= end; x += 1) this.carveAirCircle(x, y, rand() < 0.35 ? 2 : 1, base + 4, height - 6);
       }
 
-      const caveWorms = Math.max(20, Math.round(addColumns * 0.52));
+      const caveWorms = Math.max(20, Math.round(addColumns * (0.42 + (profile?.openness || 0) * 0.95)));
       for (let c = 0; c < caveWorms; c += 1) {
         let x = randX();
         let y = (this.surface[x] || 24) + 18 + Math.floor(rand() * Math.max(16, height - (this.surface[x] || 24) - 32));
@@ -635,7 +765,14 @@
         shiftTiles: left ? addColumns : 0,
         chests,
         camps,
-        mobs: mobAdds
+        mobs: mobAdds,
+        inheritedTiles,
+        edgeOpenings: profile?.openings?.length || 0,
+        edgeCorridors,
+        edgeOpenness: profile?.openness || 0,
+        edgeSurface: profile?.edgeSurface || this.surface[edgeX] || 24,
+        nearestSurface: left ? this.surface[addColumns - 1] : this.surface[oldWidth],
+        surfaceStep: Math.abs((profile?.edgeSurface || 24) - (left ? this.surface[addColumns - 1] : this.surface[oldWidth] || 24))
       };
     }
 
@@ -1262,7 +1399,7 @@
         const raw = localStorage.getItem(ML.SAVE_KEY);
         if (!raw) return null;
         const data = JSON.parse(raw);
-        if (!data || data.version !== 2 || !data.state || !Array.isArray(data.state.world)) return null;
+        if (!data || data.version !== 3 || !data.state || !Array.isArray(data.state.world)) return null;
         return data.state;
       } catch {
         return null;
@@ -1316,7 +1453,7 @@
         contractSeq: this.contractSeq
       };
       try {
-        localStorage.setItem(ML.SAVE_KEY, JSON.stringify({ version: 2, state }));
+        localStorage.setItem(ML.SAVE_KEY, JSON.stringify({ version: 3, state }));
         return true;
       } catch {
         return false;
