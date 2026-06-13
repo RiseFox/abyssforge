@@ -72,6 +72,7 @@
       this.lastCampHintAt = 0;
       this.lastBiomeId = null;
       this.lastStratumId = null;
+      this.lastStoryPhaseId = ML.LoreSystem?.phase?.(this.sim)?.id || "contract";
       this.lastBiomeToastAt = 0;
       this.shadowPressure = clamp(this.sim.shadowPressure || 0, 0, 100);
       this.lastShadowWarnAt = 0;
@@ -1764,6 +1765,62 @@
 
     // ---- Enemies ------------------------------------------------------------------
 
+    enemyInstinct(enemy, now = this.time.now) {
+      if (enemy.nextThinkAt && now < enemy.nextThinkAt && enemy.intent) return enemy.intent;
+      const cfg = ENEMIES[enemy.kind] || {};
+      const ai = cfg.ai || {};
+      const dx = this.player.x - enemy.x;
+      const dy = this.player.y - enemy.y;
+      const distance = Math.max(1, Math.hypot(dx, dy));
+      const dir = Math.sign(dx) || 1;
+      const localLight = this.lightLevelAt(enemy.x, enemy.y);
+      const hpRatio = clamp((enemy.hp || 1) / Math.max(1, enemy.maxHp || 1), 0, 1);
+      const playerWeak = (this.sim.health / Math.max(1, this.sim.maxHealth) < 0.34)
+        || (this.sim.energy / Math.max(1, this.sim.maxEnergy) < 0.24)
+        || (this.shadowPressure || 0) > 58;
+      let allies = 0;
+      for (const other of this.enemies.getChildren()) {
+        if (!other.active || other === enemy || other.kind !== enemy.kind) continue;
+        if (Phaser.Math.Distance.Between(other.x, other.y, enemy.x, enemy.y) < 150) allies += 1;
+      }
+
+      let mode = "press";
+      if (cfg.boss) {
+        mode = distance > 260 ? "guard" : playerWeak ? "pressure" : "press";
+      } else if (hpRatio < 0.38 && (ai.courage || 0.5) < 0.75 && localLight > 0.34) {
+        mode = "retreat";
+      } else if (localLight > (0.48 + (ai.courage || 0.5) * 0.22) && (ai.lightFear || 0) > 0.28) {
+        mode = "circle";
+      } else if (ai.mind === "ambusher" && distance > 125 && !playerWeak) {
+        mode = "wait";
+      } else if (ai.mind === "guardian" && distance > 230) {
+        mode = "guard";
+      } else if (playerWeak || allies >= 2 || enemy.elite || enemy.event) {
+        mode = "pressure";
+      } else if (ai.mind === "stalker" && distance > 170) {
+        mode = "stalk";
+      } else if (ai.mind === "skittish" && (distance < 78 || localLight > 0.52)) {
+        mode = "retreat";
+      }
+
+      const speedMult = mode === "pressure" ? 1.22
+        : mode === "stalk" ? 0.72
+        : mode === "circle" ? 0.88
+        : mode === "guard" ? 0.5
+        : mode === "wait" ? 0.25
+        : mode === "retreat" ? 1.05
+        : 1;
+      enemy.intent = { mode, dx, dy, dir, distance, localLight, hpRatio, playerWeak, allies, speedMult };
+      enemy.nextThinkAt = now + Phaser.Math.Between(240, 420);
+      if (enemy.lastIntentMode !== mode && now > (enemy.intentToastAt || 0)) {
+        enemy.intentToastAt = now + 4200;
+        enemy.lastIntentMode = mode;
+        if (mode === "pressure" && distance < 260) this.floatText(enemy.x - 18, enemy.y - 26, "HUNTS", "#f0c75e");
+        if (mode === "retreat" && distance < 220) this.floatText(enemy.x - 16, enemy.y - 24, "FLEES", "#9efff0");
+      }
+      return enemy.intent;
+    }
+
     updateEnemies(dt) {
       if (this.enemyClock > 0.6) {
         this.enemyClock = 0;
@@ -1777,24 +1834,27 @@
         if (!enemy.active) continue;
         if (enemy.stunUntil && now < enemy.stunUntil) continue;
 
-        const dir = Math.sign(this.player.x - enemy.x) || 1;
+        const intent = this.enemyInstinct(enemy, now);
+        const dir = intent.mode === "retreat" ? -intent.dir : intent.dir;
+        const speed = enemy.speed * (intent.speedMult || 1);
         switch (enemy.kind) {
           case "bat": {
-            const dx = this.player.x - enemy.x;
-            const dy = this.player.y - 6 - enemy.y;
+            const orbit = intent.mode === "circle" ? Math.sin(now / 260 + enemy.bobSeed) * 90 : 0;
+            const dx = intent.mode === "retreat" ? -intent.dx + orbit : this.player.x + orbit - enemy.x;
+            const dy = intent.mode === "retreat" ? -intent.dy - 28 : this.player.y - 6 - enemy.y;
             const dist = Math.max(20, Math.hypot(dx, dy));
-            enemy.setVelocityX((dx / dist) * enemy.speed);
-            enemy.setVelocityY((dy / dist) * enemy.speed * 0.8 + Math.sin(now / 170 + enemy.bobSeed) * 46);
+            enemy.setVelocityX((dx / dist) * speed);
+            enemy.setVelocityY((dy / dist) * speed * 0.8 + Math.sin(now / 170 + enemy.bobSeed) * 46);
             enemy.setFlipX(dx < 0);
             break;
           }
           case "slime": {
             if (enemy.body.blocked.down) {
               enemy.setVelocityX(enemy.body.velocity.x * 0.8);
-              if (now > enemy.nextHopAt) {
-                enemy.nextHopAt = now + 900 + Math.random() * 800;
-                enemy.setVelocityX(dir * 175);
-                enemy.setVelocityY(-365);
+              if (intent.mode !== "wait" && now > enemy.nextHopAt) {
+                enemy.nextHopAt = now + (intent.mode === "pressure" ? 620 : 900) + Math.random() * 700;
+                enemy.setVelocityX(dir * (intent.mode === "retreat" ? 145 : 175));
+                enemy.setVelocityY(intent.mode === "pressure" ? -390 : -365);
               }
             }
             break;
@@ -1804,31 +1864,31 @@
             if (enemy.body.blocked.down) {
               enemy.setVelocityX(enemy.body.velocity.x * 0.72);
               if (now > enemy.nextHopAt) {
-                enemy.nextHopAt = now + 760 + Math.random() * 520;
-                enemy.setVelocityX(dir * 265);
+                enemy.nextHopAt = now + (intent.playerWeak ? 560 : 760) + Math.random() * 520;
+                enemy.setVelocityX(dir * (intent.mode === "retreat" ? 190 : 265));
                 enemy.setVelocityY(-430);
               }
             }
             if (now > enemy.nextSpecialAt) {
-              enemy.nextSpecialAt = now + 5200 + Math.random() * 2600;
+              enemy.nextSpecialAt = now + (intent.playerWeak ? 3600 : 5200) + Math.random() * 2600;
               this.summonMinion(enemy, Math.random() < 0.55 ? "crawler" : "slime");
             }
             break;
           }
           case "warden": {
-            enemy.setVelocityX(dir * enemy.speed);
+            enemy.setVelocityX(dir * speed);
             enemy.setFlipX(dir < 0);
             if (enemy.body.blocked.down && (enemy.body.blocked.left || enemy.body.blocked.right) && Math.random() < 0.04) {
               enemy.setVelocityY(-315);
             }
             if (now > enemy.nextSpecialAt) {
-              enemy.nextSpecialAt = now + 2600 + Math.random() * 1600;
+              enemy.nextSpecialAt = now + (intent.playerWeak ? 1900 : 2600) + Math.random() * 1600;
               this.bossShockwave(enemy);
             }
             break;
           }
           case "golem": {
-            enemy.setVelocityX(dir * enemy.speed);
+            enemy.setVelocityX(dir * speed);
             enemy.setFlipX(dir < 0);
             if (enemy.body.blocked.down && (enemy.body.blocked.left || enemy.body.blocked.right) && Math.random() < 0.03) {
               enemy.setVelocityY(-300);
@@ -1836,10 +1896,10 @@
             break;
           }
           default: { // crawler
-            enemy.setVelocityX(dir * enemy.speed);
+            enemy.setVelocityX(dir * speed);
             enemy.setFlipX(dir < 0);
-            if (enemy.body.blocked.down && ((this.player.y < enemy.y - 40 && Math.random() < 0.012) || ((enemy.body.blocked.left || enemy.body.blocked.right) && Math.random() < 0.06))) {
-              enemy.setVelocityY(-330);
+            if (enemy.body.blocked.down && intent.mode !== "wait" && ((this.player.y < enemy.y - 40 && Math.random() < (intent.mode === "pressure" ? 0.028 : 0.012)) || ((enemy.body.blocked.left || enemy.body.blocked.right) && Math.random() < 0.06))) {
+              enemy.setVelocityY(intent.mode === "pressure" ? -360 : -330);
             }
           }
         }
@@ -2200,14 +2260,30 @@
       return pool[Math.floor(Math.random() * pool.length)];
     }
 
+    eventCopyFor(id, cfg) {
+      const phaseIndex = ML.LoreSystem?.phaseIndex?.(this.sim) || 0;
+      const variants = (cfg.variants || []).filter((variant) => phaseIndex >= (variant.minPhase || 0));
+      if (!variants.length) return { id, name: cfg.name, note: cfg.note, float: null };
+      const seed = ((this.sim.seed || 0) + Math.floor((this.sim.time || 0) * 13) + (this.sim.stats?.events || 0) * 17 + id.length * 31) >>> 0;
+      const variant = variants[seed % variants.length];
+      return {
+        id,
+        name: variant.name || cfg.name,
+        note: variant.note || cfg.note,
+        float: variant.float || null
+      };
+    }
+
     startCaveEvent(kind = null) {
       const id = kind || this.chooseCaveEvent();
       const cfg = ML.CAVE_EVENTS?.[id];
       if (!cfg) return false;
+      const copy = this.eventCopyFor(id, cfg);
       this.caveEvent = {
         id,
-        name: cfg.name,
-        note: cfg.note,
+        name: copy.name,
+        note: copy.note,
+        float: copy.float,
         started: this.time.now,
         until: this.time.now + cfg.duration
       };
@@ -2221,9 +2297,10 @@
       }
       if (id === "oreSurge") this.emitDust(this.player.x, this.player.y + 16, 8);
       if (id === "lanternDraft") this.floatText(this.player.x - 22, this.player.y - 40, "DRAFT", "#9edbe2");
+      if (copy.float) this.floatText(this.player.x - 30, this.player.y - 56, copy.float, "#9efff0");
 
       ML.audio.play("event");
-      ML.showToast(`${cfg.name}: ${cfg.note}`, 3600);
+      ML.showToast(`${copy.name}: ${copy.note}`, 3900);
       ML.renderEvent(this);
       this.checkAchievements();
       return true;
@@ -2756,8 +2833,18 @@
 
     checkLore(reason = "explore", context = {}) {
       if (!ML.LoreSystem) return [];
+      const beforePhase = ML.LoreSystem.phase?.(this.sim);
       const payload = Object.assign({ reason, biome: this.currentBiome() }, context);
       const unlocked = ML.LoreSystem.evaluate(this.sim, payload);
+      const afterPhase = ML.LoreSystem.phase?.(this.sim);
+      if (afterPhase?.id && afterPhase.id !== (beforePhase?.id || this.lastStoryPhaseId)) {
+        this.lastStoryPhaseId = afterPhase.id;
+        if (!context.silent) {
+          this.setAction(afterPhase.tone || "Signal shift", 1600);
+          this.floatText(this.player.x - 34, this.player.y - 56, "SIGNAL SHIFT", "#9efff0");
+          ML.showToast(`${afterPhase.title}: ${afterPhase.summary}`, 4600);
+        }
+      }
       if (!unlocked.length) {
         ML.renderMystery?.(this.sim);
         return [];

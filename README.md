@@ -80,6 +80,8 @@ Opening bedrock seams extends the world and moves the next generated abyss secti
 - Campfire rest points with warm light, services, safe respawn anchors, and recall support.
 - Secret vault rooms with chests, rare relic materials, boss rooms, and deeper camp points.
 - Dynamic cave events: ore surge, lantern draft, depth swarm, and cave tremor.
+- Story-phase event variants: familiar cave events start as mining hazards, then slowly read like signals from a broken machine.
+- Instinct-based enemy behavior: mobs react to light, weakness, allies, distance, and their own health instead of only walking at the player.
 - Situational music modes for surface, night, caves, danger, treasure, camp, deep zones, and bosses.
 - Hidden field-note system with staged long-term goals, lore reveals, and a mystery HUD that appears only after the first impossible clue.
 - Shadow pressure system with lamp-cell drain, energy pressure, stronger darkness feedback, and a non-hostile hidden Watcher NPC.

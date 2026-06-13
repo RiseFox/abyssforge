@@ -146,8 +146,13 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     sim.ward = true;
     sim.inventory.mushroom = 5;
     sim.inventory.crystal = 1;
+    sim.stats.events = 3;
+    sim.stats.enemies = 10;
+    sim.stats.worldExpansions = 2;
     window.ML.LoreSystem?.evaluate?.(sim, { biome: window.ML.BIOMES?.obsidianabyss, bossKind: "warden", watcher: true, shadowPeak: true });
     const loreIntel = window.ML.LoreSystem?.intel?.(sim) || {};
+    const eventVariantCount = Object.values(window.ML.CAVE_EVENTS || {}).filter((event) => (event.variants || []).length >= 3).length;
+    const enemyAiProfiles = Object.values(window.ML.ENEMIES || {}).filter((enemy) => enemy.ai?.mind).length;
     const scene = window.ML.sceneRef;
     const biomeSamples = [];
     const biomeIds = new Set();
@@ -208,14 +213,19 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       achievements: window.ML.ACHIEVEMENTS.length,
       contracts: window.ML.CONTRACTS.length,
       caveEvents: Object.keys(window.ML.CAVE_EVENTS || {}).length,
+      eventVariantCount,
       biomes: Object.keys(window.ML.BIOMES || {}).length,
       strataProfiles: (window.ML.STRATA_PROFILES || []).length,
+      storyPhases: (window.ML.STORY_PHASES || []).length,
       biomeSystem: Boolean(window.ML.BiomeSystem?.biomeAt && window.ML.BiomeSystem?.current),
       stratumSystem: typeof sim.stratumAt === "function" && typeof sim.stratumForDepth === "function" && typeof sim.weightedPick === "function",
+      enemyAiProfiles,
       loreNotes: Object.keys(window.ML.LORE_NOTES || {}).length,
       loreGoals: Object.keys(window.ML.HIDDEN_GOALS || {}).length,
       loreSystem,
       loreAwakened: Boolean(loreIntel.awakened),
+      storyPhase: loreIntel.phase?.id || null,
+      storyPhaseIndex: loreIntel.phaseIndex || 0,
       loreDecoded: loreIntel.noteCount || 0,
       loreGoalDone: Boolean(loreIntel.done),
       watcherTexture: Boolean(scene?.textures?.exists?.("watcher")),
@@ -223,6 +233,8 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       mobWakeTexture: Boolean(scene?.textures?.exists?.("mobWake")),
       watcherRuntime: typeof scene?.spawnWatcherSighting === "function" && typeof scene?.updateShadowPressure === "function" && typeof scene?.dismissWatcher === "function" && typeof scene?.leaveWatcherTrace === "function",
       mobWakeRuntime: typeof scene?.mobWakeInfo === "function" && typeof scene?.queueMobMaterialize === "function" && typeof scene?.updatePendingMobSpawns === "function" && typeof scene?.cancelPendingMobSpawn === "function",
+      smartMobRuntime: typeof scene?.enemyInstinct === "function",
+      eventCopyRuntime: typeof scene?.eventCopyFor === "function",
       lampRuntime: typeof sim.drainLamp === "function" && typeof sim.lampOutput === "function" && typeof sim.refillLamp === "function",
       lampStart,
       lampDrainState: lampDrain?.state,
@@ -355,16 +367,20 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.achievements < 37
     || progressionCheck.contracts < 5
     || progressionCheck.caveEvents < 4
+    || progressionCheck.eventVariantCount < 4
     || progressionCheck.biomes < 8
     || progressionCheck.strataProfiles < 5
+    || progressionCheck.storyPhases < 5
     || !progressionCheck.biomeSystem
     || !progressionCheck.stratumSystem
+    || progressionCheck.enemyAiProfiles < 7
     || progressionCheck.sampleBiomeCount < 6
     || progressionCheck.sampleStratumCount < 4
-    || progressionCheck.loreNotes < 13
+    || progressionCheck.loreNotes < 16
     || progressionCheck.loreGoals < 7
     || !progressionCheck.loreSystem
     || !progressionCheck.loreAwakened
+    || progressionCheck.storyPhaseIndex < 4
     || progressionCheck.loreDecoded < 10
     || !progressionCheck.loreGoalDone
     || !progressionCheck.watcherTexture
@@ -372,6 +388,8 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || !progressionCheck.mobWakeTexture
     || !progressionCheck.watcherRuntime
     || !progressionCheck.mobWakeRuntime
+    || !progressionCheck.smartMobRuntime
+    || !progressionCheck.eventCopyRuntime
     || !progressionCheck.lampRuntime
     || progressionCheck.lampStart < 0.99
     || progressionCheck.lampAfterDrain >= progressionCheck.lampStart

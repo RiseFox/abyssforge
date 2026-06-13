@@ -515,34 +515,54 @@ window.ML = window.ML || {};
     oreSurge: {
       name: "Ore surge",
       note: "Fresh seams loosen and mined blocks can spill extra material.",
-      duration: 18000
+      duration: 18000,
+      variants: [
+        { minPhase: 1, name: "Ledger seam", note: "Ore breaks along lines that match old contract marks.", float: "LEDGER" },
+        { minPhase: 3, name: "Supply memory", note: "The wall opens like it expected your tool and feeds the route with metal.", float: "REMEMBER" },
+        { minPhase: 4, name: "Forge bleed", note: "The strata push useful ore toward you, as if the machine is correcting the path.", float: "FORGE" }
+      ]
     },
     lanternDraft: {
       name: "Lantern draft",
       note: "Warm air feeds lamps and recovery for a short push.",
-      duration: 16000
+      duration: 16000,
+      variants: [
+        { minPhase: 1, name: "Wayfire breath", note: "Warm air rolls from old camp marks and steadies your lamp.", float: "WAYFIRE" },
+        { minPhase: 2, name: "Watcher hush", note: "The dark pulls back for a moment, like something asked it to wait.", float: "HUSH" },
+        { minPhase: 4, name: "Rescue draft", note: "A buried system vents clean air through the broken route.", float: "AIR" }
+      ]
     },
     swarm: {
       name: "Depth swarm",
       note: "Noise in the rock wakes a pack near your tunnel.",
-      duration: 22000
+      duration: 22000,
+      variants: [
+        { minPhase: 1, name: "Listening swarm", note: "Your last hits echo too cleanly. Something followed the rhythm.", float: "LISTEN" },
+        { minPhase: 2, name: "Marked tunnel", note: "Creatures do not wander here. They arrive where the mine points.", float: "MARKED" },
+        { minPhase: 4, name: "Immune response", note: "The forge treats your route like damage and sends bodies to seal it.", float: "RESPONSE" }
+      ]
     },
     tremor: {
       name: "Cave tremor",
       note: "The ceiling shakes loose stones into the tunnel.",
-      duration: 14000
+      duration: 14000,
+      variants: [
+        { minPhase: 1, name: "Fault reply", note: "The ceiling answers your route with timed fractures.", float: "FAULT" },
+        { minPhase: 3, name: "False floor", note: "The shelf below you settles like a door deciding whether to open.", float: "SHIFT" },
+        { minPhase: 4, name: "Forge pulse", note: "The whole layer beats once, and loose stone drops where you planned to stand.", float: "PULSE" }
+      ]
     }
   };
 
   // Enemy archetypes. "deep" variants kick in below 150 m.
   const ENEMIES = {
-    mossling: { texture: "mossling", bodyW: 22, bodyH: 13, offX: 3, offY: 5, hp: 2, deepHp: 2, speed: 72, deepSpeed: 72, touch: 5, fly: false },
-    crawler: { texture: "crawler", bodyW: 24, bodyH: 14, offX: 3, offY: 4, hp: 2, deepHp: 4, speed: 84, deepSpeed: 118, touch: 8, fly: false },
-    bat: { texture: "bat", bodyW: 20, bodyH: 12, offX: 3, offY: 4, hp: 2, deepHp: 3, speed: 120, deepSpeed: 145, touch: 6, fly: true },
-    slime: { texture: "slime", bodyW: 22, bodyH: 13, offX: 3, offY: 6, hp: 3, deepHp: 5, speed: 0, deepSpeed: 0, touch: 9, fly: false },
-    golem: { texture: "golem", bodyW: 26, bodyH: 30, offX: 3, offY: 4, hp: 10, deepHp: 13, speed: 44, deepSpeed: 52, touch: 17, fly: false, heavy: true },
-    broodmother: { texture: "broodmother", bodyW: 44, bodyH: 28, offX: 6, offY: 10, hp: 30, deepHp: 38, speed: 76, deepSpeed: 92, touch: 20, fly: false, heavy: true, boss: true },
-    warden: { texture: "warden", bodyW: 42, bodyH: 48, offX: 7, offY: 8, hp: 52, deepHp: 64, speed: 50, deepSpeed: 66, touch: 28, fly: false, heavy: true, boss: true }
+    mossling: { texture: "mossling", bodyW: 22, bodyH: 13, offX: 3, offY: 5, hp: 2, deepHp: 2, speed: 72, deepSpeed: 72, touch: 5, fly: false, ai: { mind: "skittish", lightFear: 0.55, courage: 0.18, patience: 0.3 } },
+    crawler: { texture: "crawler", bodyW: 24, bodyH: 14, offX: 3, offY: 4, hp: 2, deepHp: 4, speed: 84, deepSpeed: 118, touch: 8, fly: false, ai: { mind: "stalker", lightFear: 0.18, courage: 0.68, patience: 0.74 } },
+    bat: { texture: "bat", bodyW: 20, bodyH: 12, offX: 3, offY: 4, hp: 2, deepHp: 3, speed: 120, deepSpeed: 145, touch: 6, fly: true, ai: { mind: "harrier", lightFear: 0.32, courage: 0.58, patience: 0.52 } },
+    slime: { texture: "slime", bodyW: 22, bodyH: 13, offX: 3, offY: 6, hp: 3, deepHp: 5, speed: 0, deepSpeed: 0, touch: 9, fly: false, ai: { mind: "ambusher", lightFear: 0.36, courage: 0.5, patience: 0.86 } },
+    golem: { texture: "golem", bodyW: 26, bodyH: 30, offX: 3, offY: 4, hp: 10, deepHp: 13, speed: 44, deepSpeed: 52, touch: 17, fly: false, heavy: true, ai: { mind: "guardian", lightFear: 0.08, courage: 0.92, patience: 0.62 } },
+    broodmother: { texture: "broodmother", bodyW: 44, bodyH: 28, offX: 6, offY: 10, hp: 30, deepHp: 38, speed: 76, deepSpeed: 92, touch: 20, fly: false, heavy: true, boss: true, ai: { mind: "brood", lightFear: 0, courage: 1, patience: 0.9 } },
+    warden: { texture: "warden", bodyW: 42, bodyH: 48, offX: 7, offY: 8, hp: 52, deepHp: 64, speed: 50, deepSpeed: 66, touch: 28, fly: false, heavy: true, boss: true, ai: { mind: "warden", lightFear: 0, courage: 1, patience: 1 } }
   };
 
   const MOB_SPAWN_RULES = {

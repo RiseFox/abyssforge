@@ -82,6 +82,27 @@
       condition: (sim, context) => context.biome?.id === "obsidianabyss" || (sim.inventory.obsidian || 0) >= 1
     },
     {
+      id: "eventLanguage",
+      title: "The Mine Changes Names",
+      tag: "Events",
+      body: "The same tremor does not feel like weather anymore. The mine repeats events with intent, like a damaged system choosing words.",
+      condition: (sim) => (sim.stats.events || 0) >= 3
+    },
+    {
+      id: "creatureInstincts",
+      title: "Creature Instincts",
+      tag: "Mobs",
+      body: "Cave life does not simply charge. Some retreat from lamp glare, some wait for weakness, and some herd you toward old machinery.",
+      condition: (sim) => (sim.stats.enemies || 0) >= 10 || (sim.stats.deepest || 0) >= 120
+    },
+    {
+      id: "voidglassRepeat",
+      title: "Voidglass Repeat",
+      tag: "Abyss",
+      body: "The lower shelf repeats routes that should not know each other. It is not endless stone; it is a failing memory loop.",
+      condition: (sim) => (sim.stats.worldExpansions || 0) >= 2
+    },
+    {
       id: "wardenName",
       title: "Warden's Name",
       tag: "Boss",
@@ -150,6 +171,50 @@
     }
   ];
 
+  const STORY_PHASES = [
+    {
+      id: "contract",
+      title: "Guild contract",
+      tone: "Mine, craft, survive",
+      summary: "The run still looks like a normal paid descent."
+    },
+    {
+      id: "signal",
+      title: "Buried signal",
+      tone: "The shaft is too precise",
+      summary: "The ledger starts contradicting the route below the starter camp.",
+      condition: (sim) => (sim.stats.deepest || 0) >= 40 || knownNotes(sim).length >= 1
+    },
+    {
+      id: "witness",
+      title: "Something remembers",
+      tone: "The mine watches back",
+      summary: "Low light, wayfires, and the silhouette begin to connect.",
+      condition: (sim) => (sim.stats.watcherSightings || 0) >= 1 || knownNotes(sim).length >= 4
+    },
+    {
+      id: "conspiracy",
+      title: "False expedition",
+      tone: "Caches were planted for you",
+      summary: "The caches, contracts, and camps stop looking like coincidence.",
+      condition: (sim) => (sim.stats.secrets || 0) >= 3 || (sim.stats.camps || 0) >= 2 || knownNotes(sim).length >= 7
+    },
+    {
+      id: "abyss",
+      title: "Forge network",
+      tone: "The cave is a machine",
+      summary: "The descent opens old strata that behave like damaged systems.",
+      condition: (sim) => (sim.stats.worldExpansions || 0) >= 1 || (sim.stats.deepest || 0) >= 220 || knownNotes(sim).length >= 10
+    },
+    {
+      id: "truth",
+      title: "Rescue engine",
+      tone: "The forge was not built for ore",
+      summary: "The mine reveals itself as a broken rescue machine still trying to finish its work.",
+      condition: (sim) => truthProgress(sim).done
+    }
+  ];
+
   function progress(value, target, unit) {
     const current = Math.max(0, Math.min(target, Math.floor(value)));
     return {
@@ -204,6 +269,19 @@
     return HIDDEN_GOALS.filter((goal) => goal.progress(sim).done);
   }
 
+  function phaseIndex(sim) {
+    let index = 0;
+    for (let i = 1; i < STORY_PHASES.length; i += 1) {
+      const phase = STORY_PHASES[i];
+      if (phase.condition?.(sim)) index = i;
+    }
+    return index;
+  }
+
+  function phase(sim) {
+    return STORY_PHASES[phaseIndex(sim)] || STORY_PHASES[0];
+  }
+
   function evaluate(sim, context = {}) {
     const lore = ensure(sim);
     const biome = context.biome || null;
@@ -235,6 +313,8 @@
     const completed = completedGoals(sim);
     return {
       awakened: lore.awakened,
+      phase: phase(sim),
+      phaseIndex: phaseIndex(sim),
       noteCount: notes.length,
       totalNotes: LORE_NOTES.length,
       notes,
@@ -250,6 +330,7 @@
   Object.assign(ML, {
     LORE_NOTES,
     HIDDEN_GOALS,
+    STORY_PHASES,
     LoreSystem: {
       initialState,
       ensure,
@@ -257,7 +338,9 @@
       intel,
       knownNotes,
       activeGoal,
-      completedGoals
+      completedGoals,
+      phase,
+      phaseIndex
     }
   });
 })();
