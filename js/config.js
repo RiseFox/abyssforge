@@ -421,6 +421,10 @@ window.ML = window.ML || {};
     { id: "firstWatcher", name: "Watched From the Dark", note: "Notice the hidden observer beyond your light.", stat: "watcherSightings", at: 1 },
     { id: "watcherTrace", name: "Cold Footprint", note: "Find what the shadow leaves behind.", stat: "watcherTraces", at: 1 },
     { id: "watcherTrail", name: "The Silent Guide", note: "Survive three shadow watcher sightings.", stat: "watcherSightings", at: 3 },
+    { id: "frameCrack", name: "Frame Crack", note: "See the mine react to the observer beyond the glass.", stat: "observerAnomalies", at: 1 },
+    { id: "aliveAvatar", name: "Not Just Hands", note: "Let the miner reveal a thought of his own.", stat: "heroThoughts", at: 1 },
+    { id: "lookedBack", name: "It Looked Back", note: "Make a cave creature notice the watcher behind you.", stat: "mobAwareness", at: 1 },
+    { id: "spaceWindow", name: "Window In The Stone", note: "Witness a space-window anomaly in the mine.", stat: "spatialRifts", at: 1 },
     { id: "forgeTruth", name: "The Forge Remembered", note: "Assemble the final truth of the abyss forge.", loreGoal: "truth" }
   ];
 
@@ -554,6 +558,80 @@ window.ML = window.ML || {};
     }
   };
 
+  const OBSERVER_MOMENTS = {
+    idle: {
+      minPhase: 2,
+      stat: "heroThoughts",
+      action: "Listening",
+      audio: "secret",
+      cooldownMin: 18000,
+      cooldownMax: 32000,
+      pulse: 1400,
+      lines: [
+        { minPhase: 2, float: "HE WAITS", note: "The miner shifts his grip before your next command." },
+        { minPhase: 3, float: "NOT ALONE", note: "He looks past the lantern, toward where the orders come from." },
+        { minPhase: 5, float: "I HEAR YOU", note: "For one breath, the miner seems to hear the room outside the mine." }
+      ]
+    },
+    lowLight: {
+      minPhase: 2,
+      stat: "heroThoughts",
+      action: "Resisting",
+      audio: "event",
+      cooldownMin: 16000,
+      cooldownMax: 30000,
+      pulse: 1200,
+      lines: [
+        { minPhase: 2, float: "BREATHE", note: "He steadies himself without being told." },
+        { minPhase: 3, float: "DONT LOOK AWAY", note: "The dark waits for your attention to slip." },
+        { minPhase: 5, float: "KEEP ME HERE", note: "The body on screen fights to stay inside the light." }
+      ]
+    },
+    pain: {
+      minPhase: 3,
+      stat: "heroThoughts",
+      action: "Refuses",
+      audio: "hurt",
+      cooldownMin: 19000,
+      cooldownMax: 34000,
+      pulse: 900,
+      lines: [
+        { minPhase: 3, float: "NO", note: "He braces before the next impact lands." },
+        { minPhase: 4, float: "STILL HERE", note: "The miner does not fall until you let him." },
+        { minPhase: 5, float: "HOLD THE FRAME", note: "The screen shakes, but he holds himself inside it." }
+      ]
+    },
+    mobStare: {
+      minPhase: 3,
+      stat: "mobAwareness",
+      action: "Seen",
+      audio: "event",
+      cooldownMin: 15000,
+      cooldownMax: 28000,
+      pulse: 900,
+      lines: [
+        { minPhase: 3, float: "LOOKS BACK", note: "The creature stops chasing the miner and stares through him." },
+        { minPhase: 4, float: "IT KNOWS", note: "It tracks the camera, not only the body." },
+        { minPhase: 5, float: "WRONG TARGET", note: "For a second, the cave life hunts the watcher behind the glass." }
+      ]
+    },
+    spatialRift: {
+      minPhase: 4,
+      stat: "spatialRifts",
+      action: "Frame tear",
+      audio: "secret",
+      cooldownMin: 26000,
+      cooldownMax: 46000,
+      pulse: 1800,
+      camera: 0.003,
+      lines: [
+        { minPhase: 4, float: "FRAME TEAR", note: "A rectangular wound opens in the air, like the mine found the edge of the screen." },
+        { minPhase: 5, float: "SPACE WINDOW", note: "The stone shows a room that is not underground." },
+        { minPhase: 6, float: "YOU ARE SEEN", note: "The window turns toward the player, not the miner." }
+      ]
+    }
+  };
+
   // Enemy archetypes. "deep" variants kick in below 150 m.
   const ENEMIES = {
     mossling: { texture: "mossling", bodyW: 22, bodyH: 13, offX: 3, offY: 5, hp: 2, deepHp: 2, speed: 72, deepSpeed: 72, touch: 5, fly: false, ai: { mind: "skittish", lightFear: 0.55, courage: 0.18, patience: 0.3 } },
@@ -675,6 +753,7 @@ window.ML = window.ML || {};
     ACHIEVEMENTS,
     CONTRACTS,
     CAVE_EVENTS,
+    OBSERVER_MOMENTS,
     ENEMIES,
     MOB_SPAWN_RULES
   });

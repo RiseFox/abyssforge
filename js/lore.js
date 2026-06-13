@@ -103,6 +103,27 @@
       condition: (sim) => (sim.stats.worldExpansions || 0) >= 2
     },
     {
+      id: "borrowedHands",
+      title: "Borrowed Hands",
+      tag: "Frame",
+      body: "The miner sometimes moves before command and sometimes waits after it. He is learning the rhythm of the hand outside the frame.",
+      condition: (sim) => (sim.stats.heroThoughts || 0) >= 1
+    },
+    {
+      id: "creaturesSeeLens",
+      title: "The Creatures See The Lens",
+      tag: "Frame",
+      body: "Some mobs no longer hunt only the warm body. They pause under the camera as if the lens has a scent.",
+      condition: (sim) => (sim.stats.mobAwareness || 0) >= 1
+    },
+    {
+      id: "glassCoordinate",
+      title: "Glass Coordinate",
+      tag: "Frame",
+      body: "A space-window opened without a tunnel behind it. The forge is not drawing maps through stone anymore; it is drawing maps through attention.",
+      condition: (sim, context) => context.spatialRift || (sim.stats.spatialRifts || 0) >= 1
+    },
+    {
       id: "wardenName",
       title: "Warden's Name",
       tag: "Boss",
@@ -164,6 +185,20 @@
       progress: (sim) => progress((sim.stats.bosses || 0), 2, "seals")
     },
     {
+      id: "frame",
+      title: "Test the edge of the frame",
+      hint: "The mine reacts to attention. Survive four observer anomalies and one space-window.",
+      progress: (sim) => {
+        const checks = [
+          (sim.stats.observerAnomalies || 0) >= 4,
+          (sim.stats.heroThoughts || 0) >= 1,
+          (sim.stats.mobAwareness || 0) >= 1,
+          (sim.stats.spatialRifts || 0) >= 1
+        ];
+        return progress(checks.filter(Boolean).length, checks.length, "breaks");
+      }
+    },
+    {
       id: "truth",
       title: "Open the Warden's forge",
       hint: "The final truth needs depth, vaults, seals, and starforged mining power.",
@@ -205,6 +240,13 @@
       tone: "The cave is a machine",
       summary: "The descent opens old strata that behave like damaged systems.",
       condition: (sim) => (sim.stats.worldExpansions || 0) >= 1 || (sim.stats.deepest || 0) >= 220 || knownNotes(sim).length >= 10
+    },
+    {
+      id: "frame",
+      title: "Glass layer",
+      tone: "The frame is not sealed",
+      summary: "The miner, the creatures, and the forge begin reacting to the player beyond the screen.",
+      condition: (sim) => (sim.stats.observerAnomalies || 0) >= 4 || (sim.stats.spatialRifts || 0) >= 1
     },
     {
       id: "truth",

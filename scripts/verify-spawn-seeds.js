@@ -149,10 +149,15 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     sim.stats.events = 3;
     sim.stats.enemies = 10;
     sim.stats.worldExpansions = 2;
+    sim.stats.observerAnomalies = 4;
+    sim.stats.heroThoughts = 1;
+    sim.stats.mobAwareness = 1;
+    sim.stats.spatialRifts = 1;
     window.ML.LoreSystem?.evaluate?.(sim, { biome: window.ML.BIOMES?.obsidianabyss, bossKind: "warden", watcher: true, shadowPeak: true });
     const loreIntel = window.ML.LoreSystem?.intel?.(sim) || {};
     const eventVariantCount = Object.values(window.ML.CAVE_EVENTS || {}).filter((event) => (event.variants || []).length >= 3).length;
     const enemyAiProfiles = Object.values(window.ML.ENEMIES || {}).filter((enemy) => enemy.ai?.mind).length;
+    const observerMomentCount = Object.keys(window.ML.OBSERVER_MOMENTS || {}).length;
     const scene = window.ML.sceneRef;
     const biomeSamples = [];
     const biomeIds = new Set();
@@ -177,6 +182,12 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const trace = scene?.leaveWatcherTrace?.(scene.player.x + 280, scene.player.y, "test");
     const traceAfter = scene?.watcherTraceMarks?.length || 0;
     const watcherSpot = scene?.findWatcherSpot?.({ force: true });
+    const observerBefore = scene?.sim?.stats?.observerAnomalies || 0;
+    const forcedObserver = scene?.triggerObserverMoment?.("idle", { force: true, silent: true });
+    const forcedMobStare = scene?.triggerObserverMoment?.("mobStare", { force: true, silent: true, enemy: scene.player });
+    const forcedRift = scene?.triggerObserverMoment?.("spatialRift", { force: true, silent: true, x: scene.player.x + 96, y: scene.player.y - 80 });
+    const observerAfter = scene?.sim?.stats?.observerAnomalies || 0;
+    const riftCount = scene?.observerRifts?.length || 0;
     const sceneSim = scene?.sim;
     const stagedMob = sceneSim?.mobs?.find?.((mob) => !mob.boss && !scene.activeMobIds?.has?.(mob.id));
     const stagedSpot = stagedMob ? scene.findMobSpot?.(stagedMob) : null;
@@ -214,6 +225,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       contracts: window.ML.CONTRACTS.length,
       caveEvents: Object.keys(window.ML.CAVE_EVENTS || {}).length,
       eventVariantCount,
+      observerMomentCount,
       biomes: Object.keys(window.ML.BIOMES || {}).length,
       strataProfiles: (window.ML.STRATA_PROFILES || []).length,
       storyPhases: (window.ML.STORY_PHASES || []).length,
@@ -235,6 +247,16 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       mobWakeRuntime: typeof scene?.mobWakeInfo === "function" && typeof scene?.queueMobMaterialize === "function" && typeof scene?.updatePendingMobSpawns === "function" && typeof scene?.cancelPendingMobSpawn === "function",
       smartMobRuntime: typeof scene?.enemyInstinct === "function",
       eventCopyRuntime: typeof scene?.eventCopyFor === "function",
+      observerRuntime: typeof scene?.triggerObserverMoment === "function" && typeof scene?.spawnObserverRift === "function" && typeof scene?.isEnemyObserved === "function",
+      forcedObserver: Boolean(forcedObserver),
+      forcedMobStare: Boolean(forcedMobStare),
+      forcedRift: Boolean(forcedRift),
+      observerDelta: observerAfter - observerBefore,
+      observerRifts: riftCount,
+      observerAnomalies: scene?.sim?.stats?.observerAnomalies || 0,
+      heroThoughts: scene?.sim?.stats?.heroThoughts || 0,
+      mobAwareness: scene?.sim?.stats?.mobAwareness || 0,
+      spatialRifts: scene?.sim?.stats?.spatialRifts || 0,
       lampRuntime: typeof sim.drainLamp === "function" && typeof sim.lampOutput === "function" && typeof sim.refillLamp === "function",
       lampStart,
       lampDrainState: lampDrain?.state,
@@ -364,20 +386,21 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
   await browser.close();
 
   const progressionFailed = progressionCheck.recipes < 34
-    || progressionCheck.achievements < 37
+    || progressionCheck.achievements < 45
     || progressionCheck.contracts < 5
     || progressionCheck.caveEvents < 4
     || progressionCheck.eventVariantCount < 4
+    || progressionCheck.observerMomentCount < 5
     || progressionCheck.biomes < 8
     || progressionCheck.strataProfiles < 5
-    || progressionCheck.storyPhases < 5
+    || progressionCheck.storyPhases < 7
     || !progressionCheck.biomeSystem
     || !progressionCheck.stratumSystem
     || progressionCheck.enemyAiProfiles < 7
     || progressionCheck.sampleBiomeCount < 6
     || progressionCheck.sampleStratumCount < 4
-    || progressionCheck.loreNotes < 16
-    || progressionCheck.loreGoals < 7
+    || progressionCheck.loreNotes < 19
+    || progressionCheck.loreGoals < 8
     || !progressionCheck.loreSystem
     || !progressionCheck.loreAwakened
     || progressionCheck.storyPhaseIndex < 4
@@ -390,6 +413,16 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || !progressionCheck.mobWakeRuntime
     || !progressionCheck.smartMobRuntime
     || !progressionCheck.eventCopyRuntime
+    || !progressionCheck.observerRuntime
+    || !progressionCheck.forcedObserver
+    || !progressionCheck.forcedMobStare
+    || !progressionCheck.forcedRift
+    || progressionCheck.observerDelta < 3
+    || progressionCheck.observerRifts < 1
+    || progressionCheck.observerAnomalies < 3
+    || progressionCheck.heroThoughts < 1
+    || progressionCheck.mobAwareness < 1
+    || progressionCheck.spatialRifts < 1
     || !progressionCheck.lampRuntime
     || progressionCheck.lampStart < 0.99
     || progressionCheck.lampAfterDrain >= progressionCheck.lampStart

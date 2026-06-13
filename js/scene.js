@@ -83,6 +83,14 @@
       this.caveEvent = null;
       this.nextCaveEventAt = 0;
       this.eventPulseAt = 0;
+      this.nextObserverMomentAt = 8000;
+      this.nextHeroThoughtAt = 12000;
+      this.nextSpatialRiftAt = 26000;
+      this.lastObserverCheckAt = 0;
+      this.lastObserverInputAt = 0;
+      this.lastObserverMoveAt = 0;
+      this.observerPulseUntil = 0;
+      this.observerRifts = [];
       this.nextRecallAt = 0;
       this.physics.world.resume();
       this.sim.ensureContract();
@@ -365,6 +373,10 @@
       const up = this.keys.up.isDown || this.keys.altUp.isDown;
       const down = this.keys.down.isDown || this.keys.altDown.isDown;
       const jumpPressed = Phaser.Input.Keyboard.JustDown(this.keys.jump) || ML.mobile.jumpTap;
+      const pointer = this.input.activePointer;
+      if (left || right || up || down || jumpPressed || pointer.isDown || ML.mobile.mineTap || ML.mobile.placeTap || ML.mobile.attackTap) {
+        this.lastObserverInputAt = this.time.now;
+      }
       ML.mobile.jumpTap = false;
 
       const tileX = Math.floor(this.player.x / TILE);
@@ -450,7 +462,6 @@
       }
       this.applyBiomeEnergy(dt, onFloor, inLava);
 
-      const pointer = this.input.activePointer;
       if (pointer.isDown && pointer.leftButtonDown() && !this.findEnemyAtPointer(pointer)) {
         ML.mobile.mineTap = false;
         this.handleMining(delta);
@@ -476,6 +487,7 @@
       this.updateCaveEvents(dt);
       this.updateLampBattery(dt);
       this.updateHazards(dt, inLava);
+      this.updateObserverAwareness(dt, { vx, left, right, up, down, jumpPressed, onFloor, onLadder, pointer });
       this.updateSky();
       this.drawAnimatedTileFx();
       this.drawDarkness();
@@ -814,6 +826,163 @@
       }
     }
 
+    // ---- Observer anomalies --------------------------------------------------
+
+    observerPhaseIndex() {
+      return ML.LoreSystem?.phaseIndex?.(this.sim) || 0;
+    }
+
+    observerUnlocked(minPhase = 2) {
+      const phase = this.observerPhaseIndex();
+      return phase >= minPhase || ((this.sim.stats.watcherSightings || 0) > 0 && minPhase <= 3);
+    }
+
+    observerMomentLine(kind, cfg, phase) {
+      const lines = (cfg.lines || []).filter((line) => phase >= (line.minPhase ?? cfg.minPhase ?? 0));
+      const pool = lines.length ? lines : (cfg.lines || []);
+      if (!pool.length) return { float: kind.toUpperCase(), note: cfg.action || "Something notices." };
+      const seed = ((this.sim.seed || 0)
+        + Math.floor((this.sim.time || 0) * 19)
+        + (this.sim.stats.observerAnomalies || 0) * 29
+        + kind.length * 43) >>> 0;
+      return pool[seed % pool.length];
+    }
+
+    observerRiftPosition(options = {}) {
+      if (Number.isFinite(options.x) && Number.isFinite(options.y)) return { x: options.x, y: options.y };
+      const dir = this.player.flipX ? -1 : 1;
+      const x = clamp(this.player.x + dir * Phaser.Math.Between(92, 150), 32, WORLD_W * TILE - 32);
+      const y = clamp(this.player.y - Phaser.Math.Between(52, 132), 42, this.worldHeightTiles() * TILE - 42);
+      return { x, y };
+    }
+
+    spawnObserverRift(x, y, line = {}) {
+      const rift = this.add.graphics({ x, y })
+        .setDepth(84)
+        .setAlpha(0)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      const warm = line.float === "SPACE WINDOW" ? 0xf0c75e : 0x9efff0;
+      rift.fillStyle(0x0b0e1d, 0.28);
+      rift.fillRect(-19, -28, 38, 56);
+      rift.lineStyle(2, warm, 0.78);
+      rift.strokeRect(-18, -27, 36, 54);
+      rift.lineStyle(1, 0xd8b6ff, 0.54);
+      rift.strokeRect(-10, -19, 20, 38);
+      rift.lineBetween(-23, -7, -10, -7);
+      rift.lineBetween(10, 8, 24, 8);
+      rift.lineBetween(-3, -33, -3, -22);
+      rift.lineBetween(4, 22, 4, 33);
+      this.observerRifts.push(rift);
+      while (this.observerRifts.length > 3) {
+        const old = this.observerRifts.shift();
+        old?.destroy();
+      }
+      this.tweens.add({
+        targets: rift,
+        alpha: { from: 0.86, to: 0 },
+        scaleX: { from: 0.62, to: 1.24 },
+        scaleY: { from: 0.86, to: 1.08 },
+        angle: Phaser.Math.Between(-2, 2),
+        duration: 1280,
+        ease: "Sine.easeOut",
+        onComplete: () => {
+          this.observerRifts = this.observerRifts.filter((entry) => entry !== rift);
+          rift.destroy();
+        }
+      });
+      return rift;
+    }
+
+    triggerObserverMoment(kind, options = {}) {
+      if (this.dead || !this.player) return false;
+      const cfg = ML.OBSERVER_MOMENTS?.[kind];
+      if (!cfg) return false;
+      const now = this.time.now || 0;
+      const phase = this.observerPhaseIndex();
+      if (!options.force) {
+        if (!this.observerUnlocked(cfg.minPhase || 2)) return false;
+        if (now < this.nextObserverMomentAt) return false;
+      }
+
+      const line = this.observerMomentLine(kind, cfg, phase);
+      this.sim.stats.observerAnomalies = (this.sim.stats.observerAnomalies || 0) + 1;
+      if (cfg.stat) this.sim.stats[cfg.stat] = (this.sim.stats[cfg.stat] || 0) + 1;
+      this.observerPulseUntil = Math.max(this.observerPulseUntil || 0, now + (cfg.pulse || 900));
+
+      const min = cfg.cooldownMin || 16000;
+      const max = Math.max(min, cfg.cooldownMax || min);
+      if (!options.force) {
+        this.nextObserverMomentAt = now + Phaser.Math.Between(min, max);
+        if (kind === "idle" || kind === "lowLight" || kind === "pain") {
+          this.nextHeroThoughtAt = now + Phaser.Math.Between(18000, 34000);
+        }
+        if (kind === "spatialRift") {
+          this.nextSpatialRiftAt = now + Phaser.Math.Between(32000, 56000);
+        }
+      }
+
+      if (kind === "spatialRift") {
+        const spot = this.observerRiftPosition(options);
+        this.spawnObserverRift(spot.x, spot.y, line);
+      }
+
+      if (!options.silent) {
+        this.setAction(cfg.action || "Observed", 1400);
+        const fxX = options.enemy?.x ?? this.player.x;
+        const fxY = options.enemy?.y ?? this.player.y;
+        this.floatText(fxX - 34, fxY - 42, line.float || cfg.action || "SEEN", kind === "pain" ? "#ffb36a" : "#9efff0");
+        if (line.note) ML.showToast(line.note, 3300);
+        if (cfg.camera) this.cameras.main.shake(140, cfg.camera);
+        ML.audio.play(cfg.audio || "event");
+      }
+
+      this.checkLore(kind, { observer: true, spatialRift: kind === "spatialRift", silent: options.silent });
+      this.checkAchievements();
+      return true;
+    }
+
+    isEnemyObserved(enemy) {
+      if (!enemy?.active || !this.observerUnlocked(3)) return false;
+      const cam = this.cameras.main;
+      const sx = enemy.x - cam.scrollX;
+      const sy = enemy.y - cam.scrollY;
+      if (sx < 42 || sx > cam.width - 42 || sy < 46 || sy > cam.height - 130) return false;
+      const centered = Math.hypot((sx - cam.width / 2) / cam.width, (sy - cam.height / 2) / cam.height) < 0.34;
+      const pointer = this.input?.activePointer;
+      const pointerNear = pointer && Phaser.Math.Distance.Between(pointer.worldX, pointer.worldY, enemy.x, enemy.y) < 78;
+      return Boolean(centered || pointerNear);
+    }
+
+    updateObserverAwareness(_dt, state = {}) {
+      if (this.dead || this.pausedByUI || !this.observerUnlocked(2)) return;
+      const now = this.time.now || 0;
+      const moving = Math.abs(state.vx || 0) > 5 || state.up || state.down || state.jumpPressed;
+      if (moving) this.lastObserverMoveAt = now;
+
+      if (!moving && state.onFloor && !state.onLadder && state.pointer && now - (this.lastObserverInputAt || 0) > 1200) {
+        const dx = state.pointer.worldX - this.player.x;
+        if (Math.abs(dx) > 18) this.player.setFlipX(dx < 0);
+      }
+      if (now - (this.lastObserverCheckAt || 0) < 220) return;
+      this.lastObserverCheckAt = now;
+
+      const idleMs = now - Math.max(this.lastObserverInputAt || 0, this.lastObserverMoveAt || 0);
+      if (idleMs > 6500 && now > this.nextHeroThoughtAt && this.depthMeters() > 8 && !this.hasNearbyDanger()) {
+        this.triggerObserverMoment("idle");
+      }
+
+      const light = this.playerLight();
+      if (light < 0.28 && (this.shadowPressure || 0) > 42 && now > this.nextHeroThoughtAt) {
+        this.triggerObserverMoment("lowLight");
+      }
+
+      const phase = this.observerPhaseIndex();
+      const dangerousFrame = (this.shadowPressure || 0) > 62 || this.watcher?.visible || this.caveEvent?.id === "swarm" || this.caveEvent?.id === "tremor";
+      if (phase >= 4 && dangerousFrame && this.depthMeters() > 55 && now > this.nextSpatialRiftAt) {
+        this.triggerObserverMoment("spatialRift");
+      }
+    }
+
     // ---- Player feedback -----------------------------------------------------
 
     trackFall(onFloor, onLadder) {
@@ -870,6 +1039,9 @@
       this.lastDamageAt = this.time.now;
       this.sim.health = clamp(this.sim.health - amount, 0, this.sim.maxHealth);
       ML.flashDamage();
+      if (this.sim.health > 0 && this.sim.health / Math.max(1, this.sim.maxHealth) < 0.34) {
+        this.triggerObserverMoment("pain");
+      }
       if (this.sim.health <= 0) this.failDescent(cause);
     }
 
@@ -1778,6 +1950,7 @@
       const playerWeak = (this.sim.health / Math.max(1, this.sim.maxHealth) < 0.34)
         || (this.sim.energy / Math.max(1, this.sim.maxEnergy) < 0.24)
         || (this.shadowPressure || 0) > 58;
+      const observed = this.isEnemyObserved(enemy);
       let allies = 0;
       for (const other of this.enemies.getChildren()) {
         if (!other.active || other === enemy || other.kind !== enemy.kind) continue;
@@ -1787,6 +1960,8 @@
       let mode = "press";
       if (cfg.boss) {
         mode = distance > 260 ? "guard" : playerWeak ? "pressure" : "press";
+      } else if (observed && !playerWeak && distance > 82 && distance < 360 && ["stalker", "ambusher", "guardian", "harrier"].includes(ai.mind)) {
+        mode = "watch";
       } else if (hpRatio < 0.38 && (ai.courage || 0.5) < 0.75 && localLight > 0.34) {
         mode = "retreat";
       } else if (localLight > (0.48 + (ai.courage || 0.5) * 0.22) && (ai.lightFear || 0) > 0.28) {
@@ -1808,15 +1983,20 @@
         : mode === "circle" ? 0.88
         : mode === "guard" ? 0.5
         : mode === "wait" ? 0.25
+        : mode === "watch" ? 0
         : mode === "retreat" ? 1.05
         : 1;
-      enemy.intent = { mode, dx, dy, dir, distance, localLight, hpRatio, playerWeak, allies, speedMult };
+      enemy.intent = { mode, dx, dy, dir, distance, localLight, hpRatio, playerWeak, allies, observed, speedMult };
       enemy.nextThinkAt = now + Phaser.Math.Between(240, 420);
       if (enemy.lastIntentMode !== mode && now > (enemy.intentToastAt || 0)) {
         enemy.intentToastAt = now + 4200;
         enemy.lastIntentMode = mode;
         if (mode === "pressure" && distance < 260) this.floatText(enemy.x - 18, enemy.y - 26, "HUNTS", "#f0c75e");
         if (mode === "retreat" && distance < 220) this.floatText(enemy.x - 16, enemy.y - 24, "FLEES", "#9efff0");
+        if (mode === "watch") {
+          this.floatText(enemy.x - 24, enemy.y - 28, "SEES", "#d8b6ff");
+          this.triggerObserverMoment("mobStare", { enemy });
+        }
       }
       return enemy.intent;
     }
@@ -1836,7 +2016,13 @@
 
         const intent = this.enemyInstinct(enemy, now);
         const dir = intent.mode === "retreat" ? -intent.dir : intent.dir;
-        const speed = enemy.speed * (intent.speedMult || 1);
+        const speed = enemy.speed * (Number.isFinite(intent.speedMult) ? intent.speedMult : 1);
+        if (intent.mode === "watch") {
+          enemy.setVelocityX(0);
+          if (ENEMIES[enemy.kind]?.fly) enemy.setVelocityY(Math.sin(now / 180 + enemy.bobSeed) * 24);
+          enemy.setFlipX(intent.dx < 0);
+          continue;
+        }
         switch (enemy.kind) {
           case "bat": {
             const orbit = intent.mode === "circle" ? Math.sin(now / 260 + enemy.bobSeed) * 90 : 0;

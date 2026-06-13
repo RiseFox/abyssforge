@@ -82,6 +82,7 @@ Opening bedrock seams extends the world and moves the next generated abyss secti
 - Dynamic cave events: ore surge, lantern draft, depth swarm, and cave tremor.
 - Story-phase event variants: familiar cave events start as mining hazards, then slowly read like signals from a broken machine.
 - Instinct-based enemy behavior: mobs react to light, weakness, allies, distance, and their own health instead of only walking at the player.
+- Observer anomaly layer: the miner can hesitate, mobs can stare through the camera, and rare space-window tears expose the frame behind the world.
 - Situational music modes for surface, night, caves, danger, treasure, camp, deep zones, and bosses.
 - Hidden field-note system with staged long-term goals, lore reveals, and a mystery HUD that appears only after the first impossible clue.
 - Shadow pressure system with lamp-cell drain, energy pressure, stronger darkness feedback, and a non-hostile hidden Watcher NPC.
