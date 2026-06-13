@@ -229,6 +229,24 @@
     picks.refresh();
 
     // ---- Enemies ----------------------------------------------------------
+    const mossling = freshCanvasTexture("mossling", 28, 18);
+    const mc = mossling.getContext();
+    mc.clearRect(0, 0, 28, 18);
+    mc.fillStyle = "#2f4a2c";
+    mc.fillRect(4, 9, 20, 6);
+    mc.fillStyle = "#6f9152";
+    mc.fillRect(7, 5, 14, 8);
+    mc.fillStyle = "#9fbe69";
+    mc.fillRect(9, 3, 4, 3);
+    mc.fillRect(17, 4, 5, 3);
+    mc.fillStyle = "#1c2719";
+    mc.fillRect(10, 9, 3, 3);
+    mc.fillRect(18, 9, 3, 3);
+    mc.fillStyle = "#7a4f29";
+    mc.fillRect(5, 14, 5, 2);
+    mc.fillRect(18, 14, 5, 2);
+    mossling.refresh();
+
     const crawler = freshCanvasTexture("crawler", 30, 18);
     const cc = crawler.getContext();
     cc.clearRect(0, 0, 30, 18);

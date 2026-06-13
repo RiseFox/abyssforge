@@ -370,12 +370,98 @@ window.ML = window.ML || {};
 
   // Enemy archetypes. "deep" variants kick in below 150 m.
   const ENEMIES = {
+    mossling: { texture: "mossling", bodyW: 22, bodyH: 13, offX: 3, offY: 5, hp: 2, deepHp: 2, speed: 72, deepSpeed: 72, touch: 5, fly: false },
     crawler: { texture: "crawler", bodyW: 24, bodyH: 14, offX: 3, offY: 4, hp: 2, deepHp: 4, speed: 84, deepSpeed: 118, touch: 8, fly: false },
     bat: { texture: "bat", bodyW: 20, bodyH: 12, offX: 3, offY: 4, hp: 2, deepHp: 3, speed: 120, deepSpeed: 145, touch: 6, fly: true },
     slime: { texture: "slime", bodyW: 22, bodyH: 13, offX: 3, offY: 6, hp: 3, deepHp: 5, speed: 0, deepSpeed: 0, touch: 9, fly: false },
     golem: { texture: "golem", bodyW: 26, bodyH: 30, offX: 3, offY: 4, hp: 10, deepHp: 13, speed: 44, deepSpeed: 52, touch: 17, fly: false, heavy: true },
     broodmother: { texture: "broodmother", bodyW: 44, bodyH: 28, offX: 6, offY: 10, hp: 30, deepHp: 38, speed: 76, deepSpeed: 92, touch: 20, fly: false, heavy: true, boss: true },
     warden: { texture: "warden", bodyW: 42, bodyH: 48, offX: 7, offY: 8, hp: 52, deepHp: 64, speed: 50, deepSpeed: 66, touch: 28, fly: false, heavy: true, boss: true }
+  };
+
+  const MOB_SPAWN_RULES = {
+    mossling: {
+      label: "Surface night scavenger",
+      layer: "surface",
+      surfaceOnly: true,
+      natural: false,
+      nightRaid: true,
+      minDepth: -2,
+      maxDepth: 2,
+      biomes: ["surface"],
+      openSky: true,
+      note: "Only creeps over grass at night; it burrows away by dawn."
+    },
+    crawler: {
+      label: "Root and stone tunnel crawler",
+      layer: "underground",
+      natural: true,
+      event: true,
+      summoned: true,
+      minDepth: 18,
+      maxDepth: 150,
+      biomes: ["rootline", "stonewarrens", "fungalhollow", "ironfault"],
+      ceiling: true,
+      ceilingRange: 8,
+      note: "Lives under roots and working mine tunnels, never under open sky."
+    },
+    slime: {
+      label: "Wet cave slime",
+      layer: "underground",
+      natural: true,
+      event: true,
+      summoned: true,
+      minDepth: 28,
+      maxDepth: 175,
+      biomes: ["rootline", "fungalhollow", "stonewarrens", "ironfault", "crystalvein"],
+      preferredBiomes: ["fungalhollow"],
+      ceiling: true,
+      ceilingRange: 7,
+      maxLight: 6.9,
+      note: "Requires enclosed damp caves; bright camp rooms keep it away."
+    },
+    bat: {
+      label: "Cave air hunter",
+      layer: "underground",
+      natural: true,
+      event: true,
+      minDepth: 36,
+      maxDepth: 210,
+      biomes: ["stonewarrens", "fungalhollow", "ironfault", "deepstone", "crystalvein"],
+      ceiling: true,
+      ceilingRange: 6,
+      minAir: 3,
+      note: "Spawns only in enclosed air pockets with ceiling cover."
+    },
+    golem: {
+      label: "Deep pressure golem",
+      layer: "deep",
+      natural: true,
+      event: true,
+      minDepth: 118,
+      maxDepth: 270,
+      biomes: ["deepstone", "crystalvein", "obsidianabyss"],
+      ceiling: true,
+      ceilingRange: 9,
+      floorWidth: 3,
+      note: "Heavy deep mob, restricted to stable deep floors."
+    },
+    broodmother: {
+      label: "Hidden vault boss",
+      layer: "vault",
+      boss: true,
+      minDepth: 105,
+      biomes: ["ironfault", "deepstone", "crystalvein"],
+      note: "Only wakes in a sealed boss vault."
+    },
+    warden: {
+      label: "Obsidian vault boss",
+      layer: "vault",
+      boss: true,
+      minDepth: 185,
+      biomes: ["obsidianabyss", "deepstone", "crystalvein"],
+      note: "Only wakes in the deepest sealed vault."
+    }
   };
 
   Object.assign(window.ML, {
@@ -404,6 +490,7 @@ window.ML = window.ML || {};
     ACHIEVEMENTS,
     CONTRACTS,
     CAVE_EVENTS,
-    ENEMIES
+    ENEMIES,
+    MOB_SPAWN_RULES
   });
 })();

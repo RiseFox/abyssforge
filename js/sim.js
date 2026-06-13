@@ -3,7 +3,7 @@
 (() => {
   "use strict";
   const ML = window.ML;
-  const { TILE, WORLD_W, WORLD_H, AIR, Tile, BLOCKS, clamp, mulberry32 } = ML;
+  const { TILE, WORLD_W, WORLD_H, AIR, Tile, BLOCKS, ENEMIES, MOB_SPAWN_RULES, clamp, mulberry32 } = ML;
 
   class MinerSim {
     constructor() {
@@ -53,6 +53,7 @@
         this.mobs = this.generateMobs();
         this.mobBaseline = this.mobs.length;
       }
+      this.repairMobEcology();
       if (!this.mobSeq) this.mobSeq = this.mobs.reduce((max, m) => Math.max(max, m.id), 0) + 1;
       if (!this.mobBaseline) this.mobBaseline = Math.max(this.mobs.length, 1);
       this.contractSeq = this.contractSeq || 0;
@@ -324,10 +325,199 @@
     // Mobs are part of the world, decided at generation time like ores: they
     // live at fixed homes in the caves and only get a sprite when the player
     // comes near. Killed mobs are gone for good (minus a small dawn repop).
-    pickMobKind(depth, roll) {
-      if (depth > 150) return roll < 0.28 ? "golem" : roll < 0.56 ? "crawler" : roll < 0.8 ? "slime" : "bat";
-      if (depth > 60) return roll < 0.45 ? "crawler" : roll < 0.72 ? "slime" : "bat";
-      return roll < 0.62 ? "crawler" : "slime";
+    mobDepthAt(x, y) {
+      const tx = clamp(Math.floor(x), 0, WORLD_W - 1);
+      return Math.floor(y) - (this.surface?.[tx] || 24);
+    }
+
+    mobBiomeIdAt(x, y) {
+      return ML.BiomeSystem?.biomeAt?.(this, x, y)?.id || "surface";
+    }
+
+    mobSpawnRule(kind) {
+      return MOB_SPAWN_RULES?.[kind] || null;
+    }
+
+    insideSecretAt(x, y) {
+      return (this.secrets || []).find((secret) =>
+        x >= secret.x && x < secret.x + secret.w && y >= secret.y && y < secret.y + secret.h
+      ) || null;
+    }
+
+    openSkyAt(x, y) {
+      for (let yy = Math.floor(y); yy >= 0; yy -= 1) {
+        const tile = this.tileAt(x, yy);
+        if (tile !== AIR && BLOCKS[tile]?.solid) return false;
+      }
+      return true;
+    }
+
+    airPocketHeightAt(x, y, max = 5) {
+      let height = 0;
+      for (let yy = Math.floor(y); yy > 1 && height < max; yy -= 1) {
+        if (this.tileAt(x, yy) !== AIR) break;
+        height += 1;
+      }
+      return height;
+    }
+
+    hasCeilingAbove(x, y, range = 8) {
+      for (let yy = Math.floor(y) - 1; yy >= Math.max(0, y - range); yy -= 1) {
+        const tile = this.tileAt(x, yy);
+        if (tile !== AIR && BLOCKS[tile]?.solid) return true;
+      }
+      return false;
+    }
+
+    floorWidthAt(x, floorY, maxRadius = 3) {
+      let width = 1;
+      for (const dir of [-1, 1]) {
+        for (let step = 1; step <= maxRadius; step += 1) {
+          const tile = this.tileAt(x + dir * step, floorY);
+          if (tile === AIR || !BLOCKS[tile]?.solid) break;
+          width += 1;
+        }
+      }
+      return width;
+    }
+
+    localBlockLightAt(x, y) {
+      if (!Array.isArray(this.lights)) return 0;
+      let best = 0;
+      for (const light of this.lights) {
+        const block = BLOCKS[light.t];
+        if (!block?.light) continue;
+        const distance = Math.hypot(light.x - x, light.y - y);
+        if (distance > block.light) continue;
+        best = Math.max(best, block.light - distance);
+      }
+      return best;
+    }
+
+    mobHomeY(kind, floorY) {
+      return ENEMIES[kind]?.fly ? floorY - 1 : floorY;
+    }
+
+    canSpawnMobAt(kind, x, y, context = {}) {
+      const cfg = ENEMIES?.[kind];
+      const rule = this.mobSpawnRule(kind);
+      if (!cfg || !rule) return false;
+      x = clamp(Math.floor(x), 1, WORLD_W - 2);
+      y = clamp(Math.floor(y), 1, WORLD_H - 2);
+      const depth = this.mobDepthAt(x, y);
+      const biomeId = this.mobBiomeIdAt(x, y);
+
+      if (rule.boss) {
+        if (!context.boss && !context.secret) return false;
+        if (depth < (rule.minDepth ?? 0)) return false;
+        return Boolean(this.insideSecretAt(x, y));
+      }
+
+      if (rule.surfaceOnly) {
+        if (!context.surface && !context.temporary && !context.nightRaid) return false;
+        if (depth < (rule.minDepth ?? -2) || depth > (rule.maxDepth ?? 2)) return false;
+        if (rule.biomes && !rule.biomes.includes(biomeId)) return false;
+        if (this.tileAt(x, y) !== AIR) return false;
+        const below = this.tileAt(x, y + 1);
+        if (below === AIR || !BLOCKS[below]?.solid) return false;
+        if (rule.openSky && !this.openSkyAt(x, y)) return false;
+        return true;
+      }
+
+      if (context.surface || biomeId === "surface" || depth < (rule.minDepth ?? 0)) return false;
+      if (rule.maxDepth !== undefined && depth > rule.maxDepth) return false;
+      if (rule.biomes && !rule.biomes.includes(biomeId)) return false;
+      if (this.openSkyAt(x, y)) return false;
+      if (rule.ceiling && !this.hasCeilingAbove(x, y, rule.ceilingRange || 8)) return false;
+      if (rule.maxLight !== undefined && this.localBlockLightAt(x, y) > rule.maxLight) return false;
+      if (this.insideSecretAt(x, y) && !context.boss && !context.event && !context.summoned) return false;
+
+      if (cfg.fly) {
+        if (this.tileAt(x, y) !== AIR) return false;
+        return this.airPocketHeightAt(x, y, rule.minAir || 2) >= (rule.minAir || 2);
+      }
+
+      if (this.tileAt(x, y) !== AIR || this.tileAt(x, y - 1) !== AIR) return false;
+      const below = this.tileAt(x, y + 1);
+      if (below === AIR || !BLOCKS[below]?.solid) return false;
+      if (rule.floorWidth && this.floorWidthAt(x, y + 1, rule.floorWidth) < rule.floorWidth) return false;
+      return true;
+    }
+
+    pickMobKind(depth, roll, context = {}) {
+      const biomeId = context.biomeId || "stonewarrens";
+      if (depth > 150) {
+        if (biomeId === "obsidianabyss" || biomeId === "deepstone") return roll < 0.46 ? "golem" : roll < 0.7 ? "crawler" : roll < 0.86 ? "bat" : "slime";
+        if (biomeId === "crystalvein") return roll < 0.34 ? "golem" : roll < 0.62 ? "bat" : roll < 0.82 ? "crawler" : "slime";
+        return roll < 0.28 ? "golem" : roll < 0.56 ? "crawler" : roll < 0.8 ? "slime" : "bat";
+      }
+      if (depth > 60) {
+        if (biomeId === "fungalhollow") return roll < 0.5 ? "slime" : roll < 0.78 ? "crawler" : "bat";
+        if (biomeId === "ironfault") return roll < 0.5 ? "crawler" : roll < 0.72 ? "bat" : "slime";
+        return roll < 0.45 ? "crawler" : roll < 0.72 ? "slime" : "bat";
+      }
+      if (biomeId === "fungalhollow") return roll < 0.68 ? "slime" : "crawler";
+      return roll < 0.68 ? "crawler" : "slime";
+    }
+
+    mobCandidatesForDepth(depth) {
+      if (depth > 150) return ["golem", "crawler", "bat", "slime"];
+      if (depth > 80) return ["crawler", "slime", "bat", "golem"];
+      return ["crawler", "slime", "bat"];
+    }
+
+    pickMobForSpot(x, floorY, rand = Math.random, context = {}) {
+      const depth = this.mobDepthAt(x, floorY);
+      const biomeId = this.mobBiomeIdAt(x, floorY);
+      const first = this.pickMobKind(depth, rand(), { biomeId });
+      const candidates = [first, ...this.mobCandidatesForDepth(depth)].filter((kind, index, list) => kind && list.indexOf(kind) === index);
+      for (const kind of candidates) {
+        const y = this.mobHomeY(kind, floorY);
+        if (this.canSpawnMobAt(kind, x, y, context)) return { kind, y };
+      }
+      return null;
+    }
+
+    findValidMobHome(mob, radius = 6, context = {}) {
+      for (let r = 0; r <= radius; r += 1) {
+        for (let ox = -r; ox <= r; ox += 1) {
+          for (let oy = -r; oy <= r; oy += 1) {
+            if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue;
+            const x = clamp((mob.x || 1) + ox, 1, WORLD_W - 2);
+            const y = clamp((mob.y || 1) + oy, 1, WORLD_H - 2);
+            if (this.canSpawnMobAt(mob.kind, x, y, context)) return { x, y };
+          }
+        }
+      }
+      return null;
+    }
+
+    repairMobEcology() {
+      if (!Array.isArray(this.mobs)) return;
+      const repaired = [];
+      for (const mob of this.mobs) {
+        if (!ENEMIES[mob.kind]) continue;
+        const context = {
+          boss: Boolean(mob.boss),
+          secret: Boolean(mob.secretId),
+          event: Boolean(mob.event),
+          summoned: Boolean(mob.summoned),
+          surface: Boolean(mob.surf),
+          temporary: Boolean(mob.surf),
+          nightRaid: Boolean(mob.surf)
+        };
+        if (this.canSpawnMobAt(mob.kind, mob.x, mob.y, context)) {
+          repaired.push(mob);
+          continue;
+        }
+        const home = this.findValidMobHome(mob, mob.boss ? 10 : 6, context);
+        if (home) {
+          mob.x = home.x;
+          mob.y = home.y;
+          repaired.push(mob);
+        }
+      }
+      this.mobs = repaired;
     }
 
     generateMobs(rand = Math.random) {
@@ -347,9 +537,11 @@
           const depth = y - surfaceY;
           const density = depth > 150 ? 0.06 : depth > 60 ? 0.045 : 0.03;
           if (rand() >= density) continue;
-          const kind = this.pickMobKind(depth, rand());
+          const picked = this.pickMobForSpot(x, y, rand, { natural: true });
+          if (!picked) continue;
+          const kind = picked.kind;
           const elite = depth > 75 && rand() < (depth > 150 ? 0.08 : 0.045);
-          mobs.push({ id: this.mobSeq++, x, y: kind === "bat" ? y - 1 : y, kind, elite });
+          mobs.push({ id: this.mobSeq++, x, y: picked.y, kind, elite });
           y += 5; // keep packs from clumping in one column
         }
       }

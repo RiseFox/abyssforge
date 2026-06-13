@@ -11,6 +11,7 @@
   const SKY_NIGHT = { r: 0x0b, g: 0x0e, b: 0x1d };
 
   const DEATH_CAUSES = {
+    mossling: "A night mossling caught you on the surface.",
     crawler: "A cave crawler got you.",
     bat: "Bats picked you apart in the dark.",
     slime: "Dissolved by a cave slime.",
@@ -848,6 +849,7 @@
 
     enemyName(kind, enemy = null) {
       const names = {
+        mossling: "Mossling",
         crawler: "Crawler",
         bat: "Bat",
         slime: "Slime",
@@ -1468,6 +1470,7 @@
           return { silk: 7, fang: 3, relic: 1, gel: 6, coin: 24 + Math.floor(Math.random() * 12) };
         case "warden":
           return { core: 1, relic: 2, fang: 2, obsidian: 4, crystal: 3, coin: 38 + Math.floor(Math.random() * 20) };
+        case "mossling": return r < 0.62 ? { wood: 1, coin: 1 } : { mushroom: 1, coin: 1 };
         case "bat": return r < 0.3 ? { crystal: 1, coin: 2 } : { coal: 1, coin: 1 };
         case "slime": return r < 0.72 ? { gel: 2 + Math.floor(Math.random() * 2), coin: 1 } : { mushroom: 1, gel: 1, coin: 1 };
         case "golem": {
@@ -1584,7 +1587,7 @@
       const dir = this.player.x < enemy.x ? -1 : 1;
       const tx = clamp(Math.floor(enemy.x / TILE) + dir * 2, 2, WORLD_W - 3);
       const ty = clamp(Math.floor(enemy.y / TILE), 2, WORLD_H - 3);
-      if (this.sim.tileAt(tx, ty) !== AIR || this.sim.tileAt(tx, ty + 1) === AIR || !BLOCKS[this.sim.tileAt(tx, ty + 1)]?.solid) return;
+      if (!this.sim.canSpawnMobAt(kind, tx, ty, { summoned: true })) return;
       const mob = this.sim.addMob(tx, ty, kind, { summoned: true });
       this.materializeMob(mob);
       this.floatText(enemy.x - 20, enemy.y - 34, "Summon", "#d8b6ff");
@@ -1651,10 +1654,15 @@
 
     findMobSpot(mob) {
       const ok = (x, y) => {
-        if (this.sim.tileAt(x, y) !== AIR) return false;
-        if (ENEMIES[mob.kind].fly) return true;
-        const below = this.sim.tileAt(x, y + 1);
-        return below !== AIR && BLOCKS[below]?.solid;
+        return this.sim.canSpawnMobAt(mob.kind, x, y, {
+          boss: Boolean(mob.boss),
+          secret: Boolean(mob.secretId),
+          event: Boolean(mob.event),
+          summoned: Boolean(mob.summoned),
+          surface: Boolean(mob.surf),
+          temporary: Boolean(mob.surf),
+          nightRaid: Boolean(mob.surf)
+        });
       };
       if (ok(mob.x, mob.y)) return { x: mob.x, y: mob.y };
       // The home may have been mined out or built over — look nearby.
@@ -1725,8 +1733,8 @@
       enemy.destroy();
     }
 
-    // At night a few crawlers creep onto the surface far away and walk in;
-    // survivors burrow away at dawn.
+    // At night a few surface scavengers creep over open grass far away;
+    // survivors burrow away at dawn. Cave-only mobs never use this path.
     maybeNightRaid() {
       if (this.surfaceBrightness() >= 0.4) return;
       if (this.sim.mobs.filter((m) => m.surf).length >= 3) return;
@@ -1735,8 +1743,8 @@
       const dir = Math.random() < 0.5 ? -1 : 1;
       const x = clamp(px + dir * (38 + Math.floor(Math.random() * 18)), 4, WORLD_W - 5);
       const y = (this.sim.surface[x] || 24) - 1;
-      if (this.sim.tileAt(x, y) !== AIR) return;
-      this.sim.addMob(x, y, "crawler", { surf: true });
+      if (!this.sim.canSpawnMobAt("mossling", x, y, { surface: true, temporary: true, nightRaid: true })) return;
+      this.sim.addMob(x, y, "mossling", { surf: true, nightRaid: true });
     }
 
     despawnSurfaceMobs() {
@@ -1767,11 +1775,9 @@
         const y = surfaceY + 16 + Math.floor(Math.random() * Math.max(1, WORLD_H - surfaceY - 24));
         if (Math.abs(x - px) < 40 && Math.abs(y - py) < 26) continue;
         if (Math.abs(x - this.sim.shaft.x) <= 10 && y <= this.sim.shaft.y + 24) continue;
-        if (this.sim.tileAt(x, y) !== AIR || this.sim.tileAt(x, y - 1) !== AIR) continue;
-        const below = this.sim.tileAt(x, y + 1);
-        if (below === AIR || !BLOCKS[below]?.solid) continue;
-        const kind = this.sim.pickMobKind(y - surfaceY, Math.random());
-        this.sim.addMob(x, kind === "bat" ? y - 1 : y, kind);
+        const picked = this.sim.pickMobForSpot(x, y, Math.random, { natural: true });
+        if (!picked) continue;
+        this.sim.addMob(x, picked.y, picked.kind);
         added += 1;
       }
     }
@@ -1873,7 +1879,6 @@
 
     spawnEventMob(kind, elite = false) {
       if (this.enemies.countActive(true) >= 14) return false;
-      const fly = ENEMIES[kind]?.fly;
       const px = Math.floor(this.player.x / TILE);
       const py = Math.floor(this.player.y / TILE);
       for (let tries = 0; tries < 32; tries += 1) {
@@ -1881,12 +1886,15 @@
         const x = clamp(px + dir * Phaser.Math.Between(5, 11), 3, WORLD_W - 4);
         const y = clamp(py + Phaser.Math.Between(-4, 5), 5, WORLD_H - 6);
         if (Math.abs(x - px) < 4 && Math.abs(y - py) < 3) continue;
-        if (this.sim.tileAt(x, y) !== AIR) continue;
-        if (!fly) {
-          const below = this.sim.tileAt(x, y + 1);
-          if (below === AIR || !BLOCKS[below]?.solid) continue;
+        let spawnKind = kind;
+        let spawnY = y;
+        if (!this.sim.canSpawnMobAt(spawnKind, x, spawnY, { event: true })) {
+          const picked = this.sim.pickMobForSpot(x, y, Math.random, { event: true });
+          if (!picked) continue;
+          spawnKind = picked.kind;
+          spawnY = picked.y;
         }
-        const mob = this.sim.addMob(x, y, kind, { event: true, elite });
+        const mob = this.sim.addMob(x, spawnY, spawnKind, { event: true, elite });
         this.materializeMob(mob);
         return true;
       }

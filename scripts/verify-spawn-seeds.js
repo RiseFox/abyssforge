@@ -23,6 +23,8 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
   const seedCheck = await page.evaluate((seedCount) => {
     const { TILE, AIR, Tile, BLOCKS } = window.ML;
     const failures = [];
+    const ecologyFailures = [];
+    const ecologyCounts = {};
 
     for (let seed = 1; seed <= seedCount; seed += 1) {
       const actualSeed = seed * 7919;
@@ -38,13 +40,51 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       const campfireCount = sim.lights.filter((light) => light.t === Tile.CAMPFIRE).length;
       const secretCount = sim.secrets?.length || 0;
       const bossCount = sim.mobs.filter((mob) => window.ML.ENEMIES[mob.kind]?.boss).length;
+      let surfaceSpot = null;
 
       if (!stable || !support || !campReady || campfireCount < 1 || floor === AIR || floor === Tile.PLATFORM || !BLOCKS[floor]?.solid || footY !== floorY || secretCount < 5 || bossCount < 2) {
         failures.push({ seed: actualSeed, spawn: sim.spawn, shaft: sim.shaft, floorY, floor, safe, footY, stable, support, campReady, campfireCount, secretCount, bossCount });
       }
+
+      for (const mob of sim.mobs) {
+        const rule = window.ML.MOB_SPAWN_RULES[mob.kind];
+        const depth = sim.mobDepthAt(mob.x, mob.y);
+        const biome = sim.mobBiomeIdAt(mob.x, mob.y);
+        const context = {
+          boss: Boolean(mob.boss),
+          secret: Boolean(mob.secretId),
+          event: Boolean(mob.event),
+          summoned: Boolean(mob.summoned),
+          surface: Boolean(mob.surf),
+          temporary: Boolean(mob.surf),
+          nightRaid: Boolean(mob.surf)
+        };
+        const valid = sim.canSpawnMobAt(mob.kind, mob.x, mob.y, context);
+        const layer = rule?.layer || "unknown";
+        ecologyCounts[layer] = (ecologyCounts[layer] || 0) + 1;
+        const caveOnSurface = rule && !rule.surfaceOnly && !rule.boss && (depth < rule.minDepth || biome === "surface" || sim.openSkyAt(mob.x, mob.y));
+        const invalidSurfaceKind = mob.surf && mob.kind !== "mossling";
+        if ((!rule || !valid || caveOnSurface || invalidSurfaceKind) && ecologyFailures.length < 20) {
+          ecologyFailures.push({ seed: actualSeed, mob, layer, depth, biome, valid, caveOnSurface, invalidSurfaceKind });
+        }
+      }
+
+      for (let x = 4; x < window.ML.WORLD_W - 4 && !surfaceSpot; x += 1) {
+        const y = (sim.surface[x] || 24) - 1;
+        if (sim.canSpawnMobAt("mossling", x, y, { surface: true, temporary: true, nightRaid: true })) surfaceSpot = { x, y };
+      }
+      if (!surfaceSpot) {
+        ecologyFailures.push({ seed: actualSeed, reason: "no valid mossling surface spot" });
+      } else {
+        for (const caveKind of ["crawler", "slime", "bat", "golem"]) {
+          if (sim.canSpawnMobAt(caveKind, surfaceSpot.x, surfaceSpot.y, { natural: true }) && ecologyFailures.length < 20) {
+            ecologyFailures.push({ seed: actualSeed, reason: "cave mob accepted on surface", caveKind, surfaceSpot });
+          }
+        }
+      }
     }
 
-    return { checked: seedCount, failures };
+    return { checked: seedCount, failures, ecologyFailures, ecologyCounts };
   }, SEED_COUNT);
 
   const progressionCheck = await page.evaluate(() => {
@@ -224,7 +264,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.crafted < 1
     || progressionCheck.completedContracts < 1
     || progressionCheck.platforms < 4;
-  const failed = errors.length > 0 || seedCheck.failures.length > 0 || progressionFailed || !start.support || !start.stable || start.campfires < 1 || !start.recallApi || !start.campApi || !start.nearCamp || fallDelta > 1;
+  const failed = errors.length > 0 || seedCheck.failures.length > 0 || seedCheck.ecologyFailures.length > 0 || progressionFailed || !start.support || !start.stable || start.campfires < 1 || !start.recallApi || !start.campApi || !start.nearCamp || fallDelta > 1;
   const report = { seedCheck, progressionCheck, start, afterDown, fallDelta, errors };
   console.log(JSON.stringify(report, null, 2));
 
