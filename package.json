@@ -4,6 +4,8 @@
   "description": "A browser-based 2D mining, crafting, and survival game inspired by Terraria-style exploration.",
   "main": "index.html",
   "scripts": {
+    "assets:audit": "node scripts/audit-external-assets.js",
+    "assets:fetch": "node scripts/fetch-external-assets.js",
     "docs:screenshots": "node scripts/capture-readme-images.js",
     "test": "npm run test:spawn && npm run test:perf",
     "test:spawn": "node scripts/verify-spawn-seeds.js",

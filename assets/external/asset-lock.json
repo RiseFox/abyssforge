@@ -1,0 +1,266 @@
+{
+  "generatedAt": "2026-06-13T16:40:03.135Z",
+  "manifestVersion": 1,
+  "downloads": [
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "license",
+      "role": "license evidence",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/LICENSE.txt",
+      "localPath": "assets/external/sparklinlabs/LICENSE.txt",
+      "bytes": 6555,
+      "sha256": "36ffd9dc085d529a7e60e1276d73ae5a030b020313e6c5408593a6ae2af39673"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "wood-chest-closed",
+      "role": "chest reference",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/items/wood-chest-close.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/items/wood-chest-close.png",
+      "bytes": 2927,
+      "sha256": "ed914bb0648c98677c6534443bcb45c2d2e8f72e2c732faaad6ad7218bdc734d"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "wood-chest-open",
+      "role": "chest reference",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/items/wood-chest-open.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/items/wood-chest-open.png",
+      "bytes": 2948,
+      "sha256": "7f58d908a3b9aab3b5b86eb1639fded3f971030a3d86a8191ae313fa0ce4d9dc"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "gold-chest-closed",
+      "role": "rare chest reference",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/items/gold-chest-close.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/items/gold-chest-close.png",
+      "bytes": 2917,
+      "sha256": "c0ced82a649ee192fa906ab6140c2397a8450db2e87a5bc0cd1b4c73c56ffeab"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "gold-chest-open",
+      "role": "rare chest reference",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/items/gold-chest-open.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/items/gold-chest-open.png",
+      "bytes": 2906,
+      "sha256": "0eef6fcbd72eab214bc52f29a38622aeafb6d1798e391ef56388d29f818f2f4e"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "crate",
+      "role": "surface cache prop",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/items/crate.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/items/crate.png",
+      "bytes": 2897,
+      "sha256": "7b52ec3f2180f71e72c17578e623f88b07607f4dd3225d53b213d61bddd1ad8e"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "barrel",
+      "role": "surface cache prop",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/items/barrel.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/items/barrel.png",
+      "bytes": 2950,
+      "sha256": "09806d7f28530ccf6b172496528de3b10c27225f2746eb9afc907adcdad599bf"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "coin",
+      "role": "inventory icon candidate",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/items/gold-%26-gem/coin.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/items/coin.png",
+      "bytes": 2921,
+      "sha256": "4e504b230a9de25df74cb6d541539fa594e7c92f70570d88cbbe776e46aa99b9"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "gem-1",
+      "role": "crystal icon candidate",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/items/gold-%26-gem/gem-1.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/items/gem-1.png",
+      "bytes": 2900,
+      "sha256": "a4af46951cd3a4bd5d825352ab29b2ecd12684122ab649eab44a4dad79e1adc6"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "gem-2",
+      "role": "ore icon candidate",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/items/gold-%26-gem/gem-2.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/items/gem-2.png",
+      "bytes": 2857,
+      "sha256": "6c3268561592678f0f7568b2a27fb6c1e1f5dcef408b565be2c548e9e7e382b1"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "gem-3",
+      "role": "rare ore icon candidate",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/items/gold-%26-gem/gem-3.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/items/gem-3.png",
+      "bytes": 2859,
+      "sha256": "b020556264cb36059ffde22d98372b00613fa4b562ac8111ddc0a186a411573e"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "gem-4",
+      "role": "abyss icon candidate",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/items/gold-%26-gem/gem-4.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/items/gem-4.png",
+      "bytes": 2846,
+      "sha256": "12dc0f585d4c93c1087e3905a8d97e8576c1af853f168d970f0e7c7f1f899652"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "bat",
+      "role": "mob silhouette reference",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/monsters/bat.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/monsters/bat.png",
+      "bytes": 2967,
+      "sha256": "884bb994477e9e3038d634c9c5bfa4fa311e9c1dfc4e83703249eabe2b683963"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "slime",
+      "role": "mob silhouette reference",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/monsters/slim.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/monsters/slim.png",
+      "bytes": 2953,
+      "sha256": "68776cd6a38b60f15c27e32fc891a701c6e0a6e6465c29e24414768ba20fc15e"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "skeleton",
+      "role": "deep mob reference",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/monsters/skeleton.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/monsters/skeleton.png",
+      "bytes": 3019,
+      "sha256": "76357139e83ddec54c629ee30c2ce70c5fbc5b8c4058b6fa70e4c65742cc6617"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "snake",
+      "role": "surface/cave mob reference",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/monsters/snake.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/monsters/snake.png",
+      "bytes": 3191,
+      "sha256": "0864e79e3fbb42cd590bf82b4f657c8cf88f099af6d29f032b5eb656383c7dd1"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "spark-fx",
+      "role": "impact fx reference",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/fx/1.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/fx/impact-1.png",
+      "bytes": 142,
+      "sha256": "7fdf8952f87d77ea325763f6f46601779e08842cf4ea3ddea1361df8242fd0b2"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "magic-fx",
+      "role": "relic fx reference",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/fx/5.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/fx/relic-5.png",
+      "bytes": 264,
+      "sha256": "20503540ddf955c9ae26f038fd237abbad75b4c7b74271581277333652e67b05"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "full-heart",
+      "role": "hud reference",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/hud/full-heart.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/hud/full-heart.png",
+      "bytes": 2995,
+      "sha256": "3f3e68616c84e13f97a0a4bf2b0dcc4f9a7bac9b61f9333014914e2ccb8cd77f"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "empty-heart",
+      "role": "hud reference",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/medieval-fantasy/hud/empty-heart.png",
+      "localPath": "assets/external/sparklinlabs/medieval-fantasy/hud/empty-heart.png",
+      "bytes": 2966,
+      "sha256": "2a35e2219816d1640a5071e322a60961242838e62650e98a4f231e0e96eea68f"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "gold-key",
+      "role": "key item reference",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/ninja-adventure/items/gold-key.png",
+      "localPath": "assets/external/sparklinlabs/ninja-adventure/items/gold-key.png",
+      "bytes": 2949,
+      "sha256": "598322c461a4854ad965733580a8359afae279068531300dc2745dc424695668"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "scroll-rock",
+      "role": "lore/cache item reference",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/ninja-adventure/items/scroll-rock.png",
+      "localPath": "assets/external/sparklinlabs/ninja-adventure/items/scroll-rock.png",
+      "bytes": 3081,
+      "sha256": "1fac97aaf9d8e253793bb16d85ed928e092dd074bc28bb260596526828beb85c"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "medipack",
+      "role": "consumable icon reference",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/ninja-adventure/items/medipack.png",
+      "localPath": "assets/external/sparklinlabs/ninja-adventure/items/medipack.png",
+      "bytes": 2888,
+      "sha256": "6d9030098632ac55c518f7d3a7374352334e39798f2076a79671c26058381d2a"
+    },
+    {
+      "sourceId": "sparklinlabs-superpowers",
+      "assetId": "hammer",
+      "role": "tool silhouette reference",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/ninja-adventure/weapons/hammer.png",
+      "localPath": "assets/external/sparklinlabs/ninja-adventure/weapons/hammer.png",
+      "bytes": 2909,
+      "sha256": "4571b4fc98ce15ce9d0321be479d8af680b4eaf2c7da43e678002e382f57e42c"
+    },
+    {
+      "sourceId": "opengameart-dungeon-items",
+      "assetId": "dungeon-items-sheet",
+      "role": "loot icon reference",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://opengameart.org/sites/default/files/DungeonItems.png",
+      "localPath": "assets/external/opengameart/dungeon-items/DungeonItems.png",
+      "bytes": 538,
+      "sha256": "2af7a5aa6b2f6225b15df90cea177b5fc1a147d46440816f7d90b2e799bfb8ba"
+    },
+    {
+      "sourceId": "opengameart-chest-animation",
+      "assetId": "chest-open-strip",
+      "role": "chest animation reference",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://opengameart.org/sites/default/files/chest_plain_open_anim-sheet_0.png",
+      "localPath": "assets/external/opengameart/chest/chest_plain_open_anim-sheet.png",
+      "bytes": 359,
+      "sha256": "60a1ee42896ce034ec457c77630c71276dfcfd5e9cf12344c47e67f0d338ccc3"
+    }
+  ]
+}

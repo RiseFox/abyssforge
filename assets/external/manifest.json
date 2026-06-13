@@ -1,0 +1,238 @@
+{
+  "version": 1,
+  "policy": {
+    "allowedLicenses": [
+      "CC0-1.0"
+    ],
+    "maxDownloadBytes": 20971520,
+    "runtimeRule": "Downloaded external assets are candidates. Normalize palette, scale, framing, and gameplay naming before wiring them into runtime textures."
+  },
+  "sources": [
+    {
+      "id": "sparklinlabs-superpowers",
+      "title": "Superpowers Asset Packs",
+      "author": "Sparklin Labs / Pixel-boy",
+      "license": "CC0-1.0",
+      "type": "github-raw",
+      "sourceUrl": "https://github.com/sparklinlabs/superpowers-asset-packs",
+      "licenseUrl": "https://github.com/sparklinlabs/superpowers-asset-packs/blob/master/LICENSE.txt",
+      "rawBaseUrl": "https://raw.githubusercontent.com/sparklinlabs/superpowers-asset-packs/master/",
+      "fit": "Best current automated intake source: CC0 repo, many pixel-art items, monsters, HUD pieces, and FX that can be recolored into AbyssForge.",
+      "selected": [
+        {
+          "id": "license",
+          "role": "license evidence",
+          "sourcePath": "LICENSE.txt",
+          "localPath": "sparklinlabs/LICENSE.txt"
+        },
+        {
+          "id": "wood-chest-closed",
+          "role": "chest reference",
+          "sourcePath": "medieval-fantasy/items/wood-chest-close.png",
+          "localPath": "sparklinlabs/medieval-fantasy/items/wood-chest-close.png"
+        },
+        {
+          "id": "wood-chest-open",
+          "role": "chest reference",
+          "sourcePath": "medieval-fantasy/items/wood-chest-open.png",
+          "localPath": "sparklinlabs/medieval-fantasy/items/wood-chest-open.png"
+        },
+        {
+          "id": "gold-chest-closed",
+          "role": "rare chest reference",
+          "sourcePath": "medieval-fantasy/items/gold-chest-close.png",
+          "localPath": "sparklinlabs/medieval-fantasy/items/gold-chest-close.png"
+        },
+        {
+          "id": "gold-chest-open",
+          "role": "rare chest reference",
+          "sourcePath": "medieval-fantasy/items/gold-chest-open.png",
+          "localPath": "sparklinlabs/medieval-fantasy/items/gold-chest-open.png"
+        },
+        {
+          "id": "crate",
+          "role": "surface cache prop",
+          "sourcePath": "medieval-fantasy/items/crate.png",
+          "localPath": "sparklinlabs/medieval-fantasy/items/crate.png"
+        },
+        {
+          "id": "barrel",
+          "role": "surface cache prop",
+          "sourcePath": "medieval-fantasy/items/barrel.png",
+          "localPath": "sparklinlabs/medieval-fantasy/items/barrel.png"
+        },
+        {
+          "id": "coin",
+          "role": "inventory icon candidate",
+          "sourcePath": "medieval-fantasy/items/gold-&-gem/coin.png",
+          "localPath": "sparklinlabs/medieval-fantasy/items/coin.png"
+        },
+        {
+          "id": "gem-1",
+          "role": "crystal icon candidate",
+          "sourcePath": "medieval-fantasy/items/gold-&-gem/gem-1.png",
+          "localPath": "sparklinlabs/medieval-fantasy/items/gem-1.png"
+        },
+        {
+          "id": "gem-2",
+          "role": "ore icon candidate",
+          "sourcePath": "medieval-fantasy/items/gold-&-gem/gem-2.png",
+          "localPath": "sparklinlabs/medieval-fantasy/items/gem-2.png"
+        },
+        {
+          "id": "gem-3",
+          "role": "rare ore icon candidate",
+          "sourcePath": "medieval-fantasy/items/gold-&-gem/gem-3.png",
+          "localPath": "sparklinlabs/medieval-fantasy/items/gem-3.png"
+        },
+        {
+          "id": "gem-4",
+          "role": "abyss icon candidate",
+          "sourcePath": "medieval-fantasy/items/gold-&-gem/gem-4.png",
+          "localPath": "sparklinlabs/medieval-fantasy/items/gem-4.png"
+        },
+        {
+          "id": "bat",
+          "role": "mob silhouette reference",
+          "sourcePath": "medieval-fantasy/monsters/bat.png",
+          "localPath": "sparklinlabs/medieval-fantasy/monsters/bat.png"
+        },
+        {
+          "id": "slime",
+          "role": "mob silhouette reference",
+          "sourcePath": "medieval-fantasy/monsters/slim.png",
+          "localPath": "sparklinlabs/medieval-fantasy/monsters/slim.png"
+        },
+        {
+          "id": "skeleton",
+          "role": "deep mob reference",
+          "sourcePath": "medieval-fantasy/monsters/skeleton.png",
+          "localPath": "sparklinlabs/medieval-fantasy/monsters/skeleton.png"
+        },
+        {
+          "id": "snake",
+          "role": "surface/cave mob reference",
+          "sourcePath": "medieval-fantasy/monsters/snake.png",
+          "localPath": "sparklinlabs/medieval-fantasy/monsters/snake.png"
+        },
+        {
+          "id": "spark-fx",
+          "role": "impact fx reference",
+          "sourcePath": "medieval-fantasy/fx/1.png",
+          "localPath": "sparklinlabs/medieval-fantasy/fx/impact-1.png"
+        },
+        {
+          "id": "magic-fx",
+          "role": "relic fx reference",
+          "sourcePath": "medieval-fantasy/fx/5.png",
+          "localPath": "sparklinlabs/medieval-fantasy/fx/relic-5.png"
+        },
+        {
+          "id": "full-heart",
+          "role": "hud reference",
+          "sourcePath": "medieval-fantasy/hud/full-heart.png",
+          "localPath": "sparklinlabs/medieval-fantasy/hud/full-heart.png"
+        },
+        {
+          "id": "empty-heart",
+          "role": "hud reference",
+          "sourcePath": "medieval-fantasy/hud/empty-heart.png",
+          "localPath": "sparklinlabs/medieval-fantasy/hud/empty-heart.png"
+        },
+        {
+          "id": "gold-key",
+          "role": "key item reference",
+          "sourcePath": "ninja-adventure/items/gold-key.png",
+          "localPath": "sparklinlabs/ninja-adventure/items/gold-key.png"
+        },
+        {
+          "id": "scroll-rock",
+          "role": "lore/cache item reference",
+          "sourcePath": "ninja-adventure/items/scroll-rock.png",
+          "localPath": "sparklinlabs/ninja-adventure/items/scroll-rock.png"
+        },
+        {
+          "id": "medipack",
+          "role": "consumable icon reference",
+          "sourcePath": "ninja-adventure/items/medipack.png",
+          "localPath": "sparklinlabs/ninja-adventure/items/medipack.png"
+        },
+        {
+          "id": "hammer",
+          "role": "tool silhouette reference",
+          "sourcePath": "ninja-adventure/weapons/hammer.png",
+          "localPath": "sparklinlabs/ninja-adventure/weapons/hammer.png"
+        }
+      ]
+    },
+    {
+      "id": "opengameart-dungeon-items",
+      "title": "Pixel Art Dungeon Items",
+      "author": "SpinachChicken",
+      "license": "CC0-1.0",
+      "type": "direct-file",
+      "sourceUrl": "https://opengameart.org/content/pixel-art-dungeon-items",
+      "licenseUrl": "https://opengameart.org/content/pixel-art-dungeon-items",
+      "fit": "Tiny CC0 item sheet for potion, skull, parchment, and strange-loot references.",
+      "selected": [
+        {
+          "id": "dungeon-items-sheet",
+          "role": "loot icon reference",
+          "sourceUrl": "https://opengameart.org/sites/default/files/DungeonItems.png",
+          "localPath": "opengameart/dungeon-items/DungeonItems.png"
+        }
+      ]
+    },
+    {
+      "id": "opengameart-chest-animation",
+      "title": "Chest - Opening Animation 16x16",
+      "author": "Natural_Privateer",
+      "license": "CC0-1.0",
+      "type": "direct-file",
+      "sourceUrl": "https://opengameart.org/content/chest-opening-animation-16x16",
+      "licenseUrl": "https://opengameart.org/content/chest-opening-animation-16x16",
+      "fit": "CC0 chest opening strip reference for better cache/chest interaction animation.",
+      "selected": [
+        {
+          "id": "chest-open-strip",
+          "role": "chest animation reference",
+          "sourceUrl": "https://opengameart.org/sites/default/files/chest_plain_open_anim-sheet_0.png",
+          "localPath": "opengameart/chest/chest_plain_open_anim-sheet.png"
+        }
+      ]
+    },
+    {
+      "id": "kenney",
+      "title": "Kenney asset library",
+      "author": "Kenney",
+      "license": "CC0-1.0",
+      "type": "official-site",
+      "sourceUrl": "https://kenney.nl/assets",
+      "licenseUrl": "https://kenney.nl/support",
+      "downloadMode": "manual-official-flow",
+      "fit": "Approved for future UI, buttons, input prompts, and general CC0 game assets. Download through official Kenney/itch pages."
+    },
+    {
+      "id": "0x72-dungeontileset-ii",
+      "title": "16x16 DungeonTileset II",
+      "author": "0x72 / Robert",
+      "license": "CC0-1.0",
+      "type": "itch",
+      "sourceUrl": "https://0x72.itch.io/dungeontileset-ii",
+      "licenseUrl": "https://0x72.itch.io/dungeontileset-ii",
+      "downloadMode": "manual-official-flow",
+      "fit": "Approved for future cave enemies, dungeon props, and item silhouettes after palette normalization."
+    },
+    {
+      "id": "pixel-frog-pixel-adventure",
+      "title": "Pixel Adventure",
+      "author": "Pixel Frog",
+      "license": "CC0-1.0",
+      "type": "itch",
+      "sourceUrl": "https://pixelfrog-assets.itch.io/pixel-adventure-1",
+      "licenseUrl": "https://pixelfrog-assets.itch.io/pixel-adventure-1",
+      "downloadMode": "manual-official-flow",
+      "fit": "Approved for future animation reference and item ideas. Too bright for direct AbyssForge runtime use without recolor."
+    }
+  ]
+}
