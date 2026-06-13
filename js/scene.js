@@ -171,6 +171,14 @@
         .setScrollFactor(0)
         .setDepth(79);
       this.tileFx = this.add.graphics().setDepth(9);
+      this.chestPropPool = Array.from({ length: 72 }, () =>
+        this.add.image(0, 0, "asset-cache-chest")
+          .setDepth(8)
+          .setVisible(false)
+          .setOrigin(0.5, 0.5)
+      );
+      this.visibleChestPropCount = 0;
+      this.nextChestPropScanAt = 0;
       this.watcher = this.add.image(this.player.x, this.player.y, "watcher")
         .setOrigin(0.5, 1)
         .setDepth(82)
@@ -518,6 +526,7 @@
       this.updateObserverAwareness(dt, { vx, left, right, up, down, jumpPressed, onFloor, onLadder, pointer });
       this.updateSky();
       this.drawAnimatedTileFx();
+      this.updateChestProps();
       this.updateDarkness();
       this.updatePickaxeVisual(Boolean(this.mineTarget));
 
@@ -803,6 +812,71 @@
           fx.fillCircle(x + TILE / 2, y + TILE / 2, 10 + pulse * 4);
         }
       }
+    }
+
+    chestTableIdAt(x, y, secret = null) {
+      const table = ML.WorldGenDirector?.chestTableFor?.(this.sim, x, y, secret);
+      if (!table) return null;
+      return Object.entries(ML.CHEST_TABLES || {}).find(([, value]) => value === table)?.[0] || null;
+    }
+
+    cacheVisualProfile(x, y, options = {}) {
+      const secret = options.secret !== undefined ? options.secret : this.sim.secretAt(x, y);
+      const tag = this.sim.chestTagAt?.(x, y) || null;
+      const tableId = this.chestTableIdAt(x, y, secret) || tag?.type || "cave";
+      const table = ML.WorldGenDirector?.chestTableFor?.(this.sim, x, y, secret) || null;
+      let kind = "chest";
+      if (secret || ["secret", "village", "watcher", "crystal", "abyss"].includes(tableId)) kind = "rare";
+      else if (tableId === "lowland" || tableId === "surface") kind = "crate";
+      else if (tableId === "grove" || tableId === "road") kind = "barrel";
+      const tint = secret ? 0xd8b6ff
+        : tableId === "watcher" ? 0xa985ff
+          : tableId === "abyss" ? 0xff9b66
+            : tableId === "crystal" ? 0x9efff0
+              : null;
+      return {
+        kind,
+        tableId,
+        label: table?.label || (secret ? "Secret cache" : "Supply chest"),
+        secret: Boolean(secret),
+        tint
+      };
+    }
+
+    updateChestProps(force = false) {
+      if (!this.chestPropPool?.length || !ML.ExternalAssets?.cacheTextureKey) return;
+      const now = this.time.now || 0;
+      if (!force && now < this.nextChestPropScanAt) return;
+      this.nextChestPropScanAt = now + 180;
+      const cam = this.cameras.main;
+      const minX = clamp(Math.floor((cam.scrollX - 64) / TILE), 0, this.worldWidthTiles() - 1);
+      const maxX = clamp(Math.ceil((cam.scrollX + cam.width + 64) / TILE), 0, this.worldWidthTiles() - 1);
+      const minY = clamp(Math.floor((cam.scrollY - 64) / TILE), 0, this.worldHeightTiles() - 1);
+      const maxY = clamp(Math.ceil((cam.scrollY + cam.height + 64) / TILE), 0, this.worldHeightTiles() - 1);
+      let used = 0;
+      for (let y = minY; y <= maxY && used < this.chestPropPool.length; y += 1) {
+        for (let x = minX; x <= maxX && used < this.chestPropPool.length; x += 1) {
+          if (this.sim.tileAt(x, y) !== Tile.CHEST) continue;
+          const profile = this.cacheVisualProfile(x, y);
+          const key = ML.ExternalAssets.cacheTextureKey(profile.kind, false, this);
+          if (!key) continue;
+          const sprite = this.chestPropPool[used];
+          used += 1;
+          const pulse = profile.secret ? Math.sin(now / 360 + x * 0.6 + y * 0.35) * 0.05 : 0;
+          sprite
+            .setTexture(key)
+            .setPosition(x * TILE + TILE / 2, y * TILE + TILE / 2)
+            .setScale(1 + pulse)
+            .setAlpha(profile.secret ? 0.98 : 0.94)
+            .setVisible(true);
+          if (profile.tint) sprite.setTint(profile.tint);
+          else sprite.clearTint();
+        }
+      }
+      for (let i = used; i < this.chestPropPool.length; i += 1) {
+        this.chestPropPool[i].setVisible(false);
+      }
+      this.visibleChestPropCount = used;
     }
 
     updateDarkness() {
@@ -1909,9 +1983,12 @@
 
     openChest(x, y) {
       if (this.sim.tileAt(x, y) !== Tile.CHEST) return false;
+      const profile = this.cacheVisualProfile(x, y);
       this.sim.setTile(x, y, AIR);
       this.layer.removeTileAt(x, y, true, false);
       this.layer.calculateFacesWithin(x - 1, y - 1, 3, 3);
+      this.playCacheOpenFx(x, y, profile);
+      this.updateChestProps(true);
       this.emitBlockBurst(x, y, BLOCK_TINTS[Tile.CHEST] || 0xcaa258, 7);
       ML.minimap.paintTile(this.sim, x, y);
       this.setAction("Open cache", 900);
@@ -1920,13 +1997,32 @@
         intensity: 0.42,
         ttl: 2800
       });
-      this.lootChest(x, y);
+      this.lootChest(x, y, profile);
       ML.renderAll(this.sim);
       this.saveGame();
       return true;
     }
 
-    lootChest(x, y) {
+    playCacheOpenFx(x, y, profile = null) {
+      const key = ML.ExternalAssets?.cacheTextureKey?.(profile?.kind || "chest", true, this);
+      if (!key) return;
+      const sprite = this.add.image(x * TILE + TILE / 2, y * TILE + TILE / 2, key)
+        .setDepth(42)
+        .setScale(0.92)
+        .setAlpha(0.98);
+      if (profile?.tint) sprite.setTint(profile.tint);
+      this.tweens.add({
+        targets: sprite,
+        y: sprite.y - 8,
+        scale: 1.24,
+        alpha: 0,
+        duration: profile?.secret ? 760 : 560,
+        ease: "Sine.easeOut",
+        onComplete: () => sprite.destroy()
+      });
+    }
+
+    lootChest(x, y, cacheProfile = null) {
       const depth = Math.max(0, y - (this.sim.surface[x] || 24));
       const secret = this.sim.secretAt(x, y);
       const rolled = ML.WorldGenDirector?.rollChestLoot?.(this.sim, x, y, { secret, rand: Math.random }) || null;
@@ -1950,7 +2046,7 @@
         this.spawnPickupFx(x, y, item);
       }
       ML.audio.play(secret ? "secret" : "chest");
-      const label = secret ? "Secret cache" : rolled?.label || "Chest";
+      const label = secret ? "Secret cache" : rolled?.label || cacheProfile?.label || "Chest";
       this.floatText(x * TILE, y * TILE - 6, `${label}!`, secret ? "#d8b6ff" : "#ffe49a");
       ML.showToast(`${label}: ${parts.join(", ")}.`, 3600);
       this.sim.stats.chests += 1;
@@ -1972,7 +2068,10 @@
           const result = this.sim.eat(item);
           ML.showToast(result.message, 1600);
           ML.audio.play(result.ok ? "eat" : "denied");
-          if (result.ok) this.setAction("Recover", 800);
+          if (result.ok) {
+            this.setAction("Recover", 800);
+            this.spawnRecoverFx(item);
+          }
           ML.renderAll(this.sim);
           return;
         }
@@ -3377,6 +3476,34 @@
           ML.bumpItem(item);
         }
       });
+    }
+
+    spawnRecoverFx(item) {
+      if (!this.player?.active) return;
+      const textureKey = this.textures.exists("asset-heart-full") ? "asset-heart-full" : "spark";
+      const count = item === "kit" ? 4 : 2;
+      for (let i = 0; i < count; i += 1) {
+        const icon = this.add.image(
+          this.player.x + Phaser.Math.Between(-10, 10),
+          this.player.y - 18 + Phaser.Math.Between(-5, 4),
+          textureKey
+        )
+          .setDepth(44)
+          .setAlpha(0.95)
+          .setScale(textureKey === "spark" ? 1.25 : 0.9);
+        if (textureKey === "spark") icon.setTint(0xff6f82);
+        this.tweens.add({
+          targets: icon,
+          y: icon.y - Phaser.Math.Between(18, 30),
+          x: icon.x + Phaser.Math.Between(-8, 8),
+          alpha: 0,
+          scale: textureKey === "spark" ? 0.7 : 1.14,
+          delay: i * 70,
+          duration: 620,
+          ease: "Sine.easeOut",
+          onComplete: () => icon.destroy()
+        });
+      }
     }
 
     floatText(x, y, text, color = "#f5d77a") {

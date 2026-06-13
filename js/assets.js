@@ -9,6 +9,7 @@
     chestClosed: "sparklinlabs/medieval-fantasy/items/wood-chest-close.png",
     chestOpen: "sparklinlabs/medieval-fantasy/items/wood-chest-open.png",
     rareChestClosed: "sparklinlabs/medieval-fantasy/items/gold-chest-close.png",
+    rareChestOpen: "sparklinlabs/medieval-fantasy/items/gold-chest-open.png",
     crate: "sparklinlabs/medieval-fantasy/items/crate.png",
     barrel: "sparklinlabs/medieval-fantasy/items/barrel.png",
     coin: "sparklinlabs/medieval-fantasy/items/coin.png",
@@ -18,9 +19,12 @@
     gem4: "sparklinlabs/medieval-fantasy/items/gem-4.png",
     bat: "sparklinlabs/medieval-fantasy/monsters/bat.png",
     slime: "sparklinlabs/medieval-fantasy/monsters/slim.png",
+    skeleton: "sparklinlabs/medieval-fantasy/monsters/skeleton.png",
     snake: "sparklinlabs/medieval-fantasy/monsters/snake.png",
     impact: "sparklinlabs/medieval-fantasy/fx/impact-1.png",
     relicFx: "sparklinlabs/medieval-fantasy/fx/relic-5.png",
+    fullHeart: "sparklinlabs/medieval-fantasy/hud/full-heart.png",
+    emptyHeart: "sparklinlabs/medieval-fantasy/hud/empty-heart.png",
     key: "sparklinlabs/ninja-adventure/items/gold-key.png",
     scroll: "sparklinlabs/ninja-adventure/items/scroll-rock.png",
     medipack: "sparklinlabs/ninja-adventure/items/medipack.png",
@@ -30,35 +34,41 @@
   };
 
   const ITEM_ICON_ASSETS = {
+    copper: "gem2",
+    iron: "gem2",
     coin: "coin",
+    amber: "gem3",
     gold: "gem3",
     crystal: "gem1",
     obsidian: "gem4",
     quartz: "gem2",
+    ember: "impact",
     voidglass: "gem4",
+    gel: "slime",
+    fang: "skeleton",
     relic: "scroll",
     mapScrap: "scroll",
+    sealedLetter: "scroll",
+    oldCompass: "dungeonItems",
+    watcherToken: "gem4",
+    mirrorShard: "gem2",
     strangeKey: "key",
     kit: "medipack",
     charge: "impact",
+    battery: "gem1",
     core: "relicFx",
     clockwork: "hammer"
   };
 
-  const RUNTIME_ITEM_TEXTURES = {
-    coin: "asset-item-coin",
-    gold: "asset-item-gold",
-    crystal: "asset-item-crystal",
-    obsidian: "asset-item-obsidian",
-    quartz: "asset-item-quartz",
-    voidglass: "asset-item-voidglass",
-    relic: "asset-item-relic",
-    mapScrap: "asset-item-mapScrap",
-    strangeKey: "asset-item-strangeKey",
-    kit: "asset-item-kit",
-    charge: "asset-item-charge",
-    core: "asset-item-core",
-    clockwork: "asset-item-clockwork"
+  const RUNTIME_ITEM_TEXTURES = Object.freeze(
+    Object.fromEntries(Object.keys(ITEM_ICON_ASSETS).map((item) => [item, `asset-item-${item}`]))
+  );
+
+  const CACHE_TEXTURES = {
+    chest: { closed: "asset-cache-chest", open: "asset-cache-chest-open", sourceClosed: "chestClosed", sourceOpen: "chestOpen" },
+    rare: { closed: "asset-cache-rare", open: "asset-cache-rare-open", sourceClosed: "rareChestClosed", sourceOpen: "rareChestOpen" },
+    crate: { closed: "asset-cache-crate", open: "asset-cache-crate-open", sourceClosed: "crate", sourceOpen: "crate" },
+    barrel: { closed: "asset-cache-barrel", open: "asset-cache-barrel-open", sourceClosed: "barrel", sourceOpen: "barrel" }
   };
 
   const state = {
@@ -159,12 +169,30 @@
     createNormalizedTexture(scene, "bat", "bat", 26, 20, { pad: 2, scale: 1.16, alignY: 0.5 });
     createNormalizedTexture(scene, "slime", "slime", 28, 20, { pad: 2, scale: 1.3, alignY: 0.68, shadow: true });
     createNormalizedTexture(scene, "crawler", "snake", 30, 18, { pad: 1, scale: 1.05, alignY: 0.68, shadow: true });
+    createNormalizedTexture(scene, "asset-bone-drop", "skeleton", 24, 22, { pad: 2, scale: 1.08, alignY: 0.62, shadow: true });
+    createNormalizedTexture(scene, "asset-heart-full", "fullHeart", 18, 18, { pad: 1, scale: 1.1, alignY: 0.5 });
+    createNormalizedTexture(scene, "asset-heart-empty", "emptyHeart", 18, 18, { pad: 1, scale: 1.1, alignY: 0.5 });
+
+    for (const cache of Object.values(CACHE_TEXTURES)) {
+      createNormalizedTexture(scene, cache.closed, cache.sourceClosed, 32, 32, {
+        pad: 3,
+        scale: 1.24,
+        alignY: 0.66,
+        shadow: true
+      });
+      createNormalizedTexture(scene, cache.open, cache.sourceOpen, 32, 32, {
+        pad: cache.sourceOpen === "crate" || cache.sourceOpen === "barrel" ? 4 : 3,
+        scale: cache.sourceOpen === "crate" || cache.sourceOpen === "barrel" ? 1.16 : 1.24,
+        alignY: 0.66,
+        shadow: true
+      });
+    }
 
     for (const [item, sourceName] of Object.entries(ITEM_ICON_ASSETS)) {
       const targetKey = RUNTIME_ITEM_TEXTURES[item];
       createNormalizedTexture(scene, targetKey, sourceName, 22, 22, {
         pad: 2,
-        scale: item === "charge" || item === "core" ? 0.9 : 1,
+        scale: item === "charge" || item === "core" || item === "ember" ? 0.9 : item === "fang" ? 1.18 : 1,
         alignY: 0.5,
         shadow: true
       });
@@ -181,16 +209,26 @@
     return sourceName ? rawUrl(sourceName) : "";
   }
 
+  function cacheTextureKey(kind = "chest", open = false, scene = ML.sceneRef) {
+    const cache = CACHE_TEXTURES[kind] || CACHE_TEXTURES.chest;
+    const key = open ? cache.open : cache.closed;
+    return scene?.textures?.exists?.(key) ? key : null;
+  }
+
   function report(scene = ML.sceneRef) {
     const requestedKeys = Object.keys(RAW_ASSETS).map(rawKey);
     const loaded = requestedKeys.filter((key) => scene?.textures?.exists?.(key));
     const itemTextureCount = Object.keys(RUNTIME_ITEM_TEXTURES)
       .filter((item) => itemTextureKey(item, scene)).length;
+    const cacheTextureCount = Object.values(CACHE_TEXTURES)
+      .flatMap((cache) => [cache.closed, cache.open])
+      .filter((key) => scene?.textures?.exists?.(key)).length;
     return {
       requested: requestedKeys.length,
       loaded: loaded.length,
       normalized: state.normalized.size,
       itemTextureCount,
+      cacheTextureCount,
       missing: [...state.missing].filter((key) => !scene?.textures?.exists?.(key))
     };
   }
@@ -199,12 +237,14 @@
     RAW_ASSETS,
     ITEM_ICON_ASSETS,
     RUNTIME_ITEM_TEXTURES,
+    CACHE_TEXTURES,
     preload,
     drawRawInto,
     createNormalizedTexture,
     makeRuntimeTextures,
     itemTextureKey,
     itemCssUrl,
+    cacheTextureKey,
     report
   };
 })();

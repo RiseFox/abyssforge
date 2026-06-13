@@ -9,7 +9,8 @@
     "assets:build-runtime": "node scripts/build-external-asset-data.js",
     "assets:fetch": "node scripts/fetch-external-assets.js",
     "docs:screenshots": "node scripts/capture-readme-images.js",
-    "test": "npm run test:spawn && npm run test:perf",
+    "test": "npm run test:spawn && npm run test:perf && npm run test:assets",
+    "test:assets": "node scripts/verify-asset-visuals.js",
     "test:spawn": "node scripts/verify-spawn-seeds.js",
     "test:perf": "node scripts/verify-hud-performance.js"
   },

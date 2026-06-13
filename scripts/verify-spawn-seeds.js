@@ -625,8 +625,30 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     scene?.togglePack?.(false);
     const packClosed = Boolean(window.ML.ui?.packDrawer?.classList.contains("hidden"));
     const externalReport = window.ML.ExternalAssets?.report?.(scene) || {};
-    const externalRuntimeKeys = ["bat", "slime", "crawler", "asset-item-coin", "asset-item-crystal", "asset-item-kit"]
+    const externalRuntimeKeys = ["bat", "slime", "crawler", "asset-item-coin", "asset-item-crystal", "asset-item-kit", "asset-item-fang", "asset-cache-rare-open"]
       .filter((key) => scene?.textures?.exists?.(key)).length;
+    const firstChest = (() => {
+      for (let y = 0; y < sim.worldHeight(); y += 1) {
+        for (let x = 0; x < sim.worldWidth(); x += 1) {
+          if (sim.tileAt(x, y) === window.ML.Tile.CHEST) return { x, y };
+        }
+      }
+      return null;
+    })();
+    if (firstChest) {
+      scene.player.setPosition(firstChest.x * window.ML.TILE + window.ML.TILE / 2, firstChest.y * window.ML.TILE - 18);
+      scene.sim.player = { x: scene.player.x, y: scene.player.y };
+      const cam = scene.cameras?.main;
+      cam?.stopFollow?.();
+      cam?.setScroll?.(
+        Math.max(0, scene.player.x - (cam?.width || 800) / 2),
+        Math.max(0, scene.player.y - (cam?.height || 600) / 2)
+      );
+      scene.updateChestProps?.(true);
+    }
+    const externalCacheProfile = firstChest ? scene.cacheVisualProfile?.(firstChest.x, firstChest.y) || null : null;
+    const chestPropPoolSize = scene?.chestPropPool?.length || 0;
+    const chestPropCount = scene?.visibleChestPropCount || 0;
     const externalKitHotbarIcon = Boolean(document.querySelector('.slot[data-item="kit"] .slot-icon.asset-icon'));
     return {
       recipes: window.ML.RECIPES.length,
@@ -694,6 +716,12 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       externalAssetReport: externalReport,
       externalRuntimeKeys,
       externalCoinTexture: Boolean(window.ML.ExternalAssets?.itemTextureKey?.("coin", scene)),
+      externalFangTexture: Boolean(window.ML.ExternalAssets?.itemTextureKey?.("fang", scene)),
+      externalCacheOpenTexture: Boolean(window.ML.ExternalAssets?.cacheTextureKey?.("rare", true, scene)),
+      externalCacheTextureCount: externalReport.cacheTextureCount || 0,
+      externalCacheProfile,
+      chestPropPoolSize,
+      chestPropCount,
       externalKitHotbarIcon,
       externalKitPackIcon,
       watcherRuntime: typeof scene?.spawnWatcherSighting === "function" && typeof scene?.updateShadowPressure === "function" && typeof scene?.dismissWatcher === "function" && typeof scene?.leaveWatcherTrace === "function",
@@ -995,12 +1023,17 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || !progressionCheck.watcherTexture
     || !progressionCheck.watcherTraceTexture
     || !progressionCheck.mobWakeTexture
-    || progressionCheck.externalAssetDataCount < 20
-    || (progressionCheck.externalAssetReport?.loaded || 0) < 18
-    || (progressionCheck.externalAssetReport?.normalized || 0) < 8
-    || (progressionCheck.externalAssetReport?.itemTextureCount || 0) < 8
-    || progressionCheck.externalRuntimeKeys < 5
+    || progressionCheck.externalAssetDataCount < 25
+    || (progressionCheck.externalAssetReport?.loaded || 0) < 25
+    || (progressionCheck.externalAssetReport?.normalized || 0) < 28
+    || (progressionCheck.externalAssetReport?.itemTextureCount || 0) < 20
+    || progressionCheck.externalRuntimeKeys < 8
     || !progressionCheck.externalCoinTexture
+    || !progressionCheck.externalFangTexture
+    || !progressionCheck.externalCacheOpenTexture
+    || progressionCheck.externalCacheTextureCount < 8
+    || !progressionCheck.externalCacheProfile?.kind
+    || progressionCheck.chestPropPoolSize < 48
     || !progressionCheck.externalKitHotbarIcon
     || !progressionCheck.externalKitPackIcon
     || !progressionCheck.watcherRuntime
