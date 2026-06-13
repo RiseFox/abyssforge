@@ -5,6 +5,7 @@
   const { WORLD_W, WORLD_H, AIR, TILE, ITEM_META, HOTBAR, PICKS, BLADES, LAMPS, RECIPES, CRAFT_CATS, CAMP_SERVICES, ACHIEVEMENTS, MAP_COLORS, clamp } = ML;
 
   const ui = {
+    hud: document.getElementById("hud"),
     healthText: document.getElementById("healthText"),
     healthBar: document.getElementById("healthBar"),
     energyText: document.getElementById("energyText"),
@@ -104,14 +105,18 @@
     achievementProgress: document.getElementById("achievementProgress"),
     achievementList: document.getElementById("achievementList"),
     storyProgress: document.getElementById("storyProgress"),
-    storyList: document.getElementById("storyList")
+    storyList: document.getElementById("storyList"),
+    perfChip: document.getElementById("perfChip"),
+    fpsText: document.getElementById("fpsText"),
+    frameText: document.getElementById("frameText"),
+    perfMetaText: document.getElementById("perfMetaText")
   };
 
   const mobile = { left: false, right: false, jumpTap: false, mineTap: false, placeTap: false, attackTap: false };
 
   let toastTimer = 0;
   let craftTab = "tools";
-  let minimapOpen = window.matchMedia("(min-width: 761px)").matches;
+  let minimapOpen = false;
   let lastFlashAt = 0;
   let hotbarEls = null;
   let lastCraftableIds = null;
@@ -119,6 +124,13 @@
   let achievementTimer = 0;
   let achievementQueue = [];
   let achievementShowing = false;
+  const perfState = {
+    lastAt: 0,
+    frames: 0,
+    frameSum: 0,
+    worstFrame: 0,
+    samples: 0
+  };
 
   const ITEM_KIND = {
     dirt: "Terrain",
@@ -187,16 +199,19 @@
     const scene = ML.sceneRef;
     const maxHealth = sim.maxHealth || 100;
     const maxEnergy = sim.maxEnergy || 100;
+    const healthPct = clamp(sim.health / maxHealth, 0, 1);
+    const energyPct = clamp(sim.energy / maxEnergy, 0, 1);
     ui.healthText.textContent = maxHealth > 100 ? `${Math.round(sim.health)}/${maxHealth}` : String(Math.round(sim.health));
-    ui.healthBar.style.width = `${clamp(sim.health / maxHealth * 100, 0, 100)}%`;
+    ui.healthBar.style.width = `${healthPct * 100}%`;
     ui.energyText.textContent = maxEnergy > 100 ? `${Math.round(sim.energy)}/${maxEnergy}` : String(Math.round(sim.energy));
-    ui.energyBar.style.width = `${clamp(sim.energy / maxEnergy * 100, 0, 100)}%`;
+    ui.energyBar.style.width = `${energyPct * 100}%`;
     const px = player ? player.x : sim.player.x;
     const py = player ? player.y : sim.player.y;
     const tileX = clamp(Math.floor(px / TILE), 0, WORLD_W - 1);
     const depth = Math.max(0, Math.floor(py / TILE - (sim.surface[tileX] || 24)));
     ui.depthText.textContent = `${depth} m`;
-    ui.depthBar.style.width = `${clamp(depth / 230 * 100, 0, 100)}%`;
+    const depthCap = Math.max(230, (sim.worldHeight?.() || WORLD_H) - 32);
+    ui.depthBar.style.width = `${clamp(depth / depthCap * 100, 0, 100)}%`;
     const lampPct = Math.round((sim.lampChargeRatio?.() ?? 0) * 100);
     const lightState = light > 0.7 ? "Clear" : light > 0.35 ? "Dim" : "Dark";
     ui.lightText.textContent = `${lightState} · ${lampPct}%`;
@@ -210,7 +225,9 @@
     const phase = scene ? scene.phaseName() : "Day";
     const biome = scene?.currentBiome ? scene.currentBiome() : ML.BiomeSystem?.current?.(sim, { x: px, y: py });
     const stratum = scene?.currentStratum ? scene.currentStratum() : sim.stratumAt?.(tileX, Math.floor(py / TILE));
-    ui.worldLabel.textContent = `Seed ${sim.seed} · Day ${day} · ${phase}${biome?.name ? ` · ${biome.name}` : ""}${stratum?.name ? ` · ${stratum.name}` : ""}`;
+    const zoneLabel = stratum?.name || biome?.name || "Surface";
+    ui.worldLabel.textContent = `Day ${day} · ${phase} · ${zoneLabel}`;
+    ui.worldLabel.title = `Seed ${sim.seed}${biome?.name ? ` · ${biome.name}` : ""}${stratum?.name ? ` · ${stratum.name}` : ""}`;
     renderBiome(biome, stratum);
     const pickName = PICKS[sim.pickLevel]?.name || "Pickaxe";
     ui.pickText.textContent = pickName;
@@ -229,6 +246,66 @@
     ui.actionText.textContent = scene?.currentAction || "Explore";
     ui.targetText.textContent = scene?.targetLabel || "None";
     ui.campToggle?.classList.toggle("camp-ready", Boolean(scene?.nearCamp?.()));
+    if (ui.hud) {
+      ui.hud.style.setProperty("--health-pct", healthPct.toFixed(3));
+      ui.hud.style.setProperty("--energy-pct", energyPct.toFixed(3));
+      ui.hud.style.setProperty("--light-pct", clamp(light, 0, 1).toFixed(3));
+      ui.hud.style.setProperty("--shadow-pct", (shadow / 100).toFixed(3));
+      ui.hud.classList.toggle("low-health", healthPct < 0.34);
+      ui.hud.classList.toggle("low-energy", energyPct < 0.28);
+      ui.hud.classList.toggle("low-light", light < 0.34);
+      ui.hud.classList.toggle("shadow-warning", shadow > 48);
+      ui.hud.classList.toggle("near-camp", Boolean(scene?.nearCamp?.()));
+      ui.hud.classList.toggle("event-active", Boolean(scene?.caveEvent));
+      ui.hud.classList.toggle("boss-active", Boolean(scene?.activeBoss?.()));
+    }
+    ui.healthBar.closest(".stat")?.classList.toggle("warning", healthPct < 0.34);
+    ui.energyBar.closest(".stat")?.classList.toggle("warning", energyPct < 0.28);
+    ui.lightBar.closest(".stat")?.classList.toggle("warning", light < 0.34);
+    ui.shadowBar?.closest(".stat")?.classList.toggle("warning", shadow > 48);
+  }
+
+  function updatePerformance(scene = ML.sceneRef, delta = 0) {
+    if (!ui.perfChip || !ui.fpsText || !ui.frameText) return;
+    const now = performance.now();
+    if (!perfState.lastAt) perfState.lastAt = now;
+    perfState.frames += 1;
+    perfState.frameSum += delta;
+    perfState.worstFrame = Math.max(perfState.worstFrame, delta);
+    const elapsed = now - perfState.lastAt;
+    if (elapsed < 700) return;
+
+    const fps = perfState.frames * 1000 / Math.max(1, elapsed);
+    const avgFrame = perfState.frameSum / Math.max(1, perfState.frames);
+    const worstFrame = perfState.worstFrame;
+    const hudNodes = ui.hud ? ui.hud.getElementsByTagName("*").length : 0;
+    const enemies = scene?.enemies?.countActive ? scene.enemies.countActive(true) : 0;
+    const rows = scene?.sim?.worldHeight?.() || scene?.sim?.world?.length || WORLD_H;
+    const status = fps < 30 || avgFrame > 34 ? "bad" : fps < 45 || avgFrame > 24 ? "warn" : "good";
+
+    ui.fpsText.textContent = String(Math.round(fps));
+    ui.frameText.textContent = `${avgFrame.toFixed(1)} ms`;
+    if (ui.perfMetaText) ui.perfMetaText.textContent = `${rows} rows · ${enemies} mobs`;
+    ui.perfChip.classList.toggle("perf-good", status === "good");
+    ui.perfChip.classList.toggle("perf-warn", status === "warn");
+    ui.perfChip.classList.toggle("perf-bad", status === "bad");
+
+    perfState.samples += 1;
+    ML.performanceSnapshot = {
+      fps,
+      avgFrame,
+      worstFrame,
+      hudNodes,
+      enemies,
+      rows,
+      status,
+      samples: perfState.samples
+    };
+
+    perfState.lastAt = now;
+    perfState.frames = 0;
+    perfState.frameSum = 0;
+    perfState.worstFrame = 0;
   }
 
   function renderBiome(biome, stratum = null) {
@@ -771,6 +848,7 @@
       }
       this.offCtx.putImageData(img, 0, 0);
       ui.minimapPanel.classList.toggle("hidden", !minimapOpen);
+      ui.mapToggle?.classList.toggle("active", minimapOpen);
       this.render(ML.sceneRef);
     },
 
@@ -825,6 +903,7 @@
   function toggleMinimap(force) {
     minimapOpen = typeof force === "boolean" ? force : !minimapOpen;
     ui.minimapPanel.classList.toggle("hidden", !minimapOpen);
+    ui.mapToggle?.classList.toggle("active", minimapOpen);
     if (minimapOpen) {
       ML.sceneRef?.toggleCraft(false);
       ML.sceneRef?.toggleHelp(false);
@@ -997,6 +1076,7 @@
     renderMystery,
     renderStory,
     renderAll,
+    updatePerformance,
     minimap,
     toggleMinimap,
     showDeath,

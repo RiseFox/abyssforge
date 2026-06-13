@@ -2058,6 +2058,461 @@ canvas:focus { outline: none; }
     linear-gradient(#f5ebdb 0 0) center / 32% 100% no-repeat;
 }
 
+/* HUD v3: compact survival rig, lower playfield obstruction, live state cues. */
+:root {
+  --hud-glass: rgba(7, 10, 12, 0.72);
+  --hud-glass-strong: rgba(14, 12, 10, 0.88);
+  --hud-iron: rgba(119, 124, 121, 0.36);
+  --hud-copper: #d58b54;
+  --hud-teal: #7ee6d2;
+  --hud-violet: #b791ff;
+  --hud-danger: #f06f58;
+  --hud-ok: #80d676;
+  --hud-edge: rgba(244, 212, 147, 0.24);
+}
+
+#hud {
+  --health-pct: 1;
+  --energy-pct: 1;
+  --light-pct: 1;
+  --shadow-pct: 0;
+}
+
+#hud::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.32), transparent 23%, transparent 74%, rgba(0, 0, 0, 0.24)),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.2), transparent 25%, transparent 80%, rgba(0, 0, 0, 0.12));
+  opacity: 0.62;
+}
+
+.perf-chip {
+  pointer-events: auto;
+}
+
+.top-left {
+  width: min(372px, calc(100vw - 24px));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.brand,
+.status-panel,
+.tool-panel,
+.objective-panel,
+.biome-panel,
+.mystery-panel,
+.top-right,
+.perf-chip {
+  backdrop-filter: none;
+}
+
+.brand {
+  position: relative;
+  grid-column: 1 / -1;
+  width: min(372px, calc(100vw - 24px));
+  overflow: hidden;
+  padding: 8px 11px;
+  border-color: rgba(244, 212, 147, 0.32);
+  background:
+    linear-gradient(90deg, rgba(126, 230, 210, 0.1), transparent 34%),
+    linear-gradient(180deg, rgba(255, 238, 186, 0.09), transparent 38%),
+    rgba(8, 9, 10, 0.8);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.44), inset 0 1px 0 rgba(255, 235, 186, 0.1);
+}
+
+.brand::after {
+  content: "";
+  position: absolute;
+  left: 52px;
+  right: 10px;
+  bottom: 6px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--hud-teal), transparent);
+  opacity: 0.58;
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  border-color: rgba(126, 230, 210, 0.36);
+  background:
+    linear-gradient(135deg, rgba(126, 230, 210, 0.3), transparent 28%),
+    linear-gradient(135deg, #65492c 0 42%, #537743 43% 62%, #a0733d 63% 100%);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.28), 0 0 18px rgba(126, 230, 210, 0.14);
+}
+
+.brand span {
+  max-width: 285px;
+  overflow: hidden;
+  color: rgba(220, 236, 231, 0.76);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-panel {
+  grid-column: 1 / -1;
+  width: min(372px, calc(100vw - 24px));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 5px;
+  padding: 6px;
+  border: 1px solid rgba(244, 212, 147, 0.22);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(19, 23, 24, 0.76), rgba(9, 9, 10, 0.84)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 38px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(255, 240, 199, 0.05);
+}
+
+.stat-health,
+.stat-energy {
+  grid-column: span 3;
+}
+
+.stat-depth,
+.stat-light,
+.stat-shadow {
+  grid-column: span 2;
+}
+
+.stat {
+  position: relative;
+  min-height: 47px;
+  overflow: hidden;
+  padding: 7px 8px;
+  border-color: rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.015)),
+    rgba(8, 10, 11, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.36);
+}
+
+.stat::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--stat-accent, var(--hud-edge));
+}
+
+.stat::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--stat-accent, var(--hud-edge));
+  opacity: 0.34;
+  transform: scaleX(var(--stat-pct, 1));
+  transform-origin: left center;
+}
+
+.stat-health { --stat-accent: var(--hud-danger); --stat-pct: var(--health-pct); }
+.stat-energy { --stat-accent: #d8c56f; --stat-pct: var(--energy-pct); }
+.stat-depth { --stat-accent: #78b9ce; }
+.stat-light { --stat-accent: #f0c75e; --stat-pct: var(--light-pct); }
+.stat-shadow { --stat-accent: var(--hud-violet); --stat-pct: var(--shadow-pct); }
+
+.stat.warning {
+  border-color: color-mix(in srgb, var(--stat-accent) 70%, transparent);
+  animation: hudWarningPulse 1100ms ease-in-out infinite;
+}
+
+.stat label {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 4px;
+}
+
+.stat label span:first-child {
+  color: rgba(244, 234, 210, 0.66);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.stat label span:last-child {
+  overflow: hidden;
+  color: #fff1cf;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar {
+  position: relative;
+  z-index: 1;
+  height: 5px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.09);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.28);
+}
+
+.bar > i {
+  border-radius: 2px;
+  transition: width 90ms linear, filter 160ms ease;
+}
+
+#hud.low-health .bar.health > i,
+#hud.low-light .bar.light > i,
+#hud.shadow-warning .bar.shadow > i {
+  filter: drop-shadow(0 0 7px currentColor);
+}
+
+.tool-panel {
+  grid-column: 1 / -1;
+  width: min(372px, calc(100vw - 24px));
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: stretch;
+  padding: 8px;
+  border-color: rgba(126, 230, 210, 0.22);
+  background:
+    linear-gradient(100deg, rgba(126, 230, 210, 0.11), transparent 35%),
+    linear-gradient(180deg, rgba(21, 23, 24, 0.78), rgba(9, 8, 7, 0.84));
+}
+
+.pick-icon {
+  width: 46px;
+  height: 46px;
+  border-color: rgba(126, 230, 210, 0.24);
+  background:
+    radial-gradient(circle at 50% 44%, rgba(126, 230, 210, 0.18), transparent 58%),
+    rgba(0, 0, 0, 0.28);
+}
+
+.tool-copy {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 10px;
+}
+
+.tool-copy strong {
+  grid-column: 1 / -1;
+  color: #fff2d0;
+  font-size: 15px;
+}
+
+.tool-copy label {
+  min-width: 0;
+  padding: 4px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tool-copy label > span:last-child {
+  color: rgba(247, 235, 208, 0.9);
+}
+
+.action-strip {
+  display: none;
+}
+
+.action-chip {
+  padding: 6px 6px;
+  border-color: rgba(126, 230, 210, 0.16);
+  background:
+    linear-gradient(180deg, rgba(126, 230, 210, 0.06), transparent),
+    rgba(8, 9, 10, 0.76);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.36);
+}
+
+.action-chip b {
+  font-size: 10px;
+}
+
+.action-chip span {
+  color: #94efe0;
+}
+
+.objective-panel,
+.biome-panel,
+.mystery-panel {
+  position: relative;
+  overflow: hidden;
+  padding: 8px 10px 9px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.055), transparent 52%),
+    rgba(8, 9, 10, 0.78);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 239, 199, 0.07);
+}
+
+.objective-panel,
+.biome-panel {
+  width: auto;
+  min-width: 0;
+}
+
+.mystery-panel {
+  grid-column: 1 / -1;
+  width: min(372px, calc(100vw - 24px));
+}
+
+.objective-head,
+.biome-head {
+  display: grid;
+  gap: 4px;
+}
+
+.objective-head strong,
+.biome-head strong {
+  text-align: left;
+}
+
+.objective-panel::before,
+.biome-panel::before,
+.mystery-panel::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--intel-accent, var(--gold));
+}
+
+.objective-panel { --intel-accent: var(--gold); }
+.biome-panel { --intel-accent: var(--hud-teal); }
+.mystery-panel { --intel-accent: var(--hud-violet); }
+
+.objective-head span,
+.biome-head span,
+.mystery-head span {
+  color: var(--intel-accent, var(--gold));
+}
+
+.objective-progress,
+.mystery-progress {
+  height: 4px;
+  border-radius: 2px;
+}
+
+.objective-panel em,
+.biome-panel em,
+.mystery-panel em {
+  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.top-right {
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid rgba(244, 212, 147, 0.18);
+  border-radius: var(--radius);
+  background: rgba(7, 8, 9, 0.62);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.38);
+}
+
+.icon-button {
+  width: 40px;
+  height: 36px;
+  border-color: rgba(244, 212, 147, 0.2);
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 244, 205, 0.11), transparent 46%),
+    rgba(18, 15, 12, 0.9);
+}
+
+.perf-chip {
+  position: absolute;
+  right: max(12px, env(safe-area-inset-right));
+  top: calc(max(12px, env(safe-area-inset-top)) + 54px);
+  z-index: 28;
+  width: 132px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  align-items: baseline;
+  padding: 7px 9px;
+  border: 1px solid rgba(126, 230, 210, 0.22);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(90deg, rgba(126, 230, 210, 0.1), transparent),
+    rgba(6, 8, 9, 0.76);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.34);
+}
+
+.perf-chip span {
+  color: rgba(244, 234, 210, 0.62);
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.perf-chip strong {
+  color: var(--hud-ok);
+  font-size: 18px;
+  line-height: 1;
+  text-align: right;
+}
+
+.perf-chip small,
+.perf-chip em {
+  color: rgba(244, 234, 210, 0.64);
+  font-size: 9px;
+  font-style: normal;
+  line-height: 1.05;
+}
+
+.perf-chip em {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.perf-chip.perf-warn {
+  border-color: rgba(240, 199, 94, 0.55);
+}
+
+.perf-chip.perf-warn strong {
+  color: #f0c75e;
+}
+
+.perf-chip.perf-bad {
+  border-color: rgba(240, 111, 88, 0.72);
+  animation: hudWarningPulse 950ms ease-in-out infinite;
+}
+
+.perf-chip.perf-bad strong {
+  color: var(--hud-danger);
+}
+
+.hotbar {
+  grid-auto-columns: 62px;
+  gap: 5px;
+  padding: 7px;
+  border-color: rgba(244, 212, 147, 0.3);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(126, 230, 210, 0.08), transparent 36%),
+    linear-gradient(180deg, rgba(72, 53, 31, 0.42), rgba(7, 7, 8, 0.92)),
+    var(--panel-strong);
+}
+
+.slot {
+  width: 62px;
+  height: 58px;
+  border-radius: 8px;
+}
+
+.slot.selected {
+  transform: translateY(-4px);
+}
+
+@keyframes hudWarningPulse {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.36), 0 0 0 rgba(240, 111, 88, 0); }
+  50% { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.36), 0 0 18px rgba(240, 111, 88, 0.28); }
+}
+
 @media (max-width: 760px) {
   .status-panel { grid-template-columns: 1fr; width: min(190px, calc(100vw - 24px)); }
   .brand { padding: 7px 8px; }
@@ -2209,15 +2664,120 @@ canvas:focus { outline: none; }
   }
 }
 
+@media (max-width: 760px) {
+  .top-left {
+    width: min(236px, calc(100vw - 24px));
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .brand,
+  .status-panel,
+  .tool-panel,
+  .objective-panel,
+  .biome-panel,
+  .mystery-panel {
+    width: min(236px, calc(100vw - 24px));
+  }
+
+  .brand {
+    padding: 7px 8px;
+  }
+
+  .brand-mark {
+    width: 28px;
+    height: 28px;
+  }
+
+  .status-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    padding: 5px;
+  }
+
+  .stat-health,
+  .stat-energy,
+  .stat-depth,
+  .stat-light {
+    grid-column: span 1;
+  }
+
+  .stat-shadow {
+    grid-column: span 2;
+  }
+
+  .stat {
+    min-height: 42px;
+    padding: 6px 7px;
+  }
+
+  .stat label span:last-child {
+    font-size: 10px;
+  }
+
+  .tool-panel {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .tool-copy {
+    grid-template-columns: 1fr;
+  }
+
+  .tool-copy label:nth-of-type(n + 3) {
+    display: none;
+  }
+
+  .objective-panel,
+  .biome-panel,
+  .mystery-panel {
+    padding: 7px 8px 8px;
+  }
+
+  .top-right {
+    grid-template-columns: repeat(2, 38px);
+    padding: 4px;
+  }
+
+  .icon-button {
+    width: 38px;
+    height: 34px;
+  }
+
+  .perf-chip {
+    right: max(12px, env(safe-area-inset-right));
+    top: calc(max(12px, env(safe-area-inset-top)) + 218px);
+    width: 104px;
+    padding: 6px 7px;
+  }
+
+  .perf-chip em {
+    display: none;
+  }
+
+  .hotbar {
+    grid-auto-columns: 52px;
+    padding: 6px;
+  }
+
+  .slot {
+    width: 52px;
+    height: 50px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .toast,
   button,
   .craft-ready,
   .achievement-toast,
+  .perf-chip,
   .objective-progress > i,
   .boss-bar > i > b,
   .bar > i { transition: none; }
   .slot-count.bump,
+  .slot.selected,
+  .stat.warning,
+  .perf-chip.perf-bad,
   .damage-flash.active,
   .camp-drawer:not(.hidden),
   .craft-drawer:not(.hidden),

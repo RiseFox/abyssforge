@@ -342,6 +342,7 @@
     }
 
     update(_time, delta) {
+      ML.updatePerformance?.(this, delta);
       if (this.pausedByUI || this.dead) {
         // Taps queued while input is ignored must not fire after resume.
         ML.mobile.jumpTap = ML.mobile.mineTap = ML.mobile.placeTap = ML.mobile.attackTap = false;

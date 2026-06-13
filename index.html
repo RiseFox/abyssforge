@@ -19,24 +19,24 @@
             <span id="worldLabel">New descent</span>
           </div>
         </div>
-        <div class="status-panel">
-          <div class="stat">
+        <div class="status-panel" aria-label="Survival telemetry">
+          <div class="stat stat-health">
             <label><span>Health</span><span id="healthText">100</span></label>
             <div class="bar health"><i id="healthBar"></i></div>
           </div>
-          <div class="stat">
+          <div class="stat stat-energy">
             <label><span>Energy</span><span id="energyText">100</span></label>
             <div class="bar energy"><i id="energyBar"></i></div>
           </div>
-          <div class="stat">
+          <div class="stat stat-depth">
             <label><span>Depth</span><span id="depthText">0 m</span></label>
             <div class="bar depth"><i id="depthBar"></i></div>
           </div>
-          <div class="stat">
+          <div class="stat stat-light">
             <label><span>Light</span><span id="lightText">Surface</span></label>
             <div class="bar light"><i id="lightBar"></i></div>
           </div>
-          <div class="stat">
+          <div class="stat stat-shadow">
             <label><span>Shadow</span><span id="shadowText">Still</span></label>
             <div class="bar shadow"><i id="shadowBar"></i></div>
           </div>
@@ -116,6 +116,12 @@
         <button id="pauseBtn" class="icon-button" type="button" title="Pause (Esc)">
           <svg id="pauseIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14"/><path d="M16 5v14"/></svg>
         </button>
+      </div>
+      <div id="perfChip" class="perf-chip perf-good" aria-label="Runtime performance">
+        <span>FPS</span>
+        <strong id="fpsText">--</strong>
+        <small id="frameText">-- ms</small>
+        <em id="perfMetaText">warming</em>
       </div>
 
       <div id="toast" class="toast" role="status"></div>

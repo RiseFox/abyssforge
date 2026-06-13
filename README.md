@@ -113,7 +113,7 @@ npm install
 npm test
 ```
 
-`npm test` launches Playwright, opens the game, verifies 300 generated starts, checks that the spawn has real support, confirms the starter camp is reachable, validates campfire anchors and progression systems, and samples biome variety in the runtime.
+`npm test` launches Playwright, opens the game, verifies 300 generated starts, checks that the spawn has real support, confirms the starter camp is reachable, validates campfire anchors and progression systems, samples biome variety, and runs a HUD performance smoke gate for FPS, frame time, DOM weight, and default overlay state.
 
 ## Project Shape
 
