@@ -90,7 +90,7 @@
       this.layer = this.map.createLayer(0, tileset, 0, 0);
       this.initCollision();
 
-      this.physics.world.setBounds(0, 0, WORLD_W * TILE, WORLD_H * TILE);
+      this.physics.world.setBounds(0, 0, WORLD_W * TILE, this.worldHeightTiles() * TILE);
       this.player = this.physics.add.sprite(this.sim.player.x, this.sim.player.y, "playerSheet", "idle0");
       this.player.setCollideWorldBounds(true);
       this.player.body.setSize(20, 30).setOffset(4, 5);
@@ -101,7 +101,7 @@
       this.createAnims();
 
       // Hold S to drop through platforms.
-      this.physics.add.collider(this.player, this.layer, null, (_player, tile) => {
+      this.playerLayerCollider = this.physics.add.collider(this.player, this.layer, null, (_player, tile) => {
         if (tile.index === Tile.PLATFORM && this.platformDrop && this.canDropThroughPlatform(tile)) return false;
         return true;
       }, this);
@@ -128,10 +128,10 @@
       this.updatePickaxeVisual(false);
 
       this.enemies = this.physics.add.group();
-      this.physics.add.collider(this.enemies, this.layer);
+      this.enemyLayerCollider = this.physics.add.collider(this.enemies, this.layer);
       this.physics.add.overlap(this.player, this.enemies, this.hitPlayer, null, this);
 
-      this.cameras.main.setBounds(0, 0, WORLD_W * TILE, WORLD_H * TILE);
+      this.cameras.main.setBounds(0, 0, WORLD_W * TILE, this.worldHeightTiles() * TILE);
       this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
       this.cameras.main.setDeadzone(120, 80);
 
@@ -259,7 +259,33 @@
       this.layer.forEachTile((tile) => {
         if (tile.index === Tile.PLATFORM) tile.setCollision(false, false, true, false);
       });
-      this.layer.calculateFacesWithin(0, 0, WORLD_W, WORLD_H);
+      this.layer.calculateFacesWithin(0, 0, WORLD_W, this.worldHeightTiles());
+    }
+
+    worldHeightTiles() {
+      return this.sim?.worldHeight?.() || this.sim?.world?.length || WORLD_H;
+    }
+
+    refreshWorldBounds() {
+      const heightPx = this.worldHeightTiles() * TILE;
+      this.physics.world.setBounds(0, 0, WORLD_W * TILE, heightPx);
+      this.cameras.main.setBounds(0, 0, WORLD_W * TILE, heightPx);
+    }
+
+    rebuildWorldLayer() {
+      this.playerLayerCollider?.destroy();
+      this.enemyLayerCollider?.destroy();
+      this.layer?.destroy();
+      this.map = this.make.tilemap({ data: this.sim.world, tileWidth: TILE, tileHeight: TILE });
+      const tileset = this.map.addTilesetImage("tiles", "tiles", TILE, TILE, 0, 0);
+      this.layer = this.map.createLayer(0, tileset, 0, 0);
+      this.initCollision();
+      this.playerLayerCollider = this.physics.add.collider(this.player, this.layer, null, (_player, tile) => {
+        if (tile.index === Tile.PLATFORM && this.platformDrop && this.canDropThroughPlatform(tile)) return false;
+        return true;
+      }, this);
+      this.enemyLayerCollider = this.physics.add.collider(this.enemies, this.layer);
+      this.refreshWorldBounds();
     }
 
     prepareGameInputFocus() {
@@ -867,7 +893,7 @@
       const dx = x * TILE + TILE / 2 - this.player.x;
       const dy = y * TILE + TILE / 2 - this.player.y;
       if (Math.sqrt(dx * dx + dy * dy) > TILE * INTERACT_RANGE_TILES) return null;
-      if (x < 0 || y < 0 || x >= WORLD_W || y >= WORLD_H) return null;
+      if (x < 0 || y < 0 || x >= WORLD_W || y >= this.worldHeightTiles()) return null;
       return { x, y, tile: this.sim.tileAt(x, y) };
     }
 
@@ -899,7 +925,7 @@
       const minX = Math.max(0, Math.floor(player.x - radius - 1));
       const maxX = Math.min(WORLD_W - 1, Math.ceil(player.x + radius + 1));
       const minY = Math.max(0, Math.floor(player.y - radius - 1));
-      const maxY = Math.min(WORLD_H - 1, Math.ceil(player.y + radius + 1));
+      const maxY = Math.min(this.worldHeightTiles() - 1, Math.ceil(player.y + radius + 1));
       let best = null;
       let bestDistance = Infinity;
       for (let y = minY; y <= maxY; y += 1) {
@@ -1205,7 +1231,12 @@
       const block = BLOCKS[target.tile];
       if (!block || target.tile === Tile.BEDROCK || target.tile === Tile.LAVA) {
         this.targetLabel = block ? block.name : "Unknown";
-        ML.showToast(target.tile === Tile.LAVA ? "You cannot mine lava. Cover it with a block." : "Bedrock does not move.");
+        if (target.tile === Tile.BEDROCK && this.openAbyssSeam(target)) {
+          this.mineTarget = null;
+          this.mineProgress = 0;
+          return;
+        }
+        ML.showToast(target.tile === Tile.LAVA ? "You cannot mine lava. Cover it with a block." : "Ancient bedrock holds. The lower seam is where the world continues.");
         this.mineTarget = null;
         return;
       }
@@ -1280,6 +1311,25 @@
           this.mineGraphics.lineBetween((x1 + x2) / 2 + 2, (y1 + y2) / 2 - 1, x2, y2);
         }
       }
+    }
+
+    openAbyssSeam(target = null, reason = "mine") {
+      const x = clamp(Math.floor(target?.x ?? this.player.x / TILE), 2, WORLD_W - 3);
+      const y = Math.floor(target?.y ?? this.player.y / TILE);
+      if (!this.sim.canOpenDepthSeam?.(x, y)) return false;
+      const result = this.sim.extendDepth(x, 96);
+      if (!result) return false;
+      this.rebuildWorldLayer();
+      ML.minimap.init(this.sim);
+      this.cameras.main.shake(reason === "fall" ? 190 : 260, reason === "fall" ? 0.006 : 0.009);
+      this.emitBlockBurst(x, Math.max(1, result.from - 3), 0xd8b6ff, 18);
+      this.emitDust(x * TILE + TILE / 2, (result.from - 2) * TILE, 10);
+      this.floatText(this.player.x - 36, this.player.y - 52, "ABYSS SEAM", "#d8b6ff");
+      this.setAction("World opens", 1600);
+      this.checkAchievements();
+      ML.audio.play("rumble");
+      ML.showToast(`The bedrock seam splits. New strata opened: ${result.from}m-${result.to}m.`, 3600);
+      return true;
     }
 
     breakTile(x, y, awardDrop, opts = {}) {
@@ -1742,7 +1792,7 @@
       if (this.enemies.countActive(true) >= 12) return;
       const dir = this.player.x < enemy.x ? -1 : 1;
       const tx = clamp(Math.floor(enemy.x / TILE) + dir * 2, 2, WORLD_W - 3);
-      const ty = clamp(Math.floor(enemy.y / TILE), 2, WORLD_H - 3);
+      const ty = clamp(Math.floor(enemy.y / TILE), 2, this.worldHeightTiles() - 3);
       if (!this.sim.canSpawnMobAt(kind, tx, ty, { summoned: true })) return;
       const mob = this.sim.addMob(tx, ty, kind, { summoned: true });
       const spot = this.findMobSpot(mob);
@@ -2006,7 +2056,7 @@
       const mob = this.sim.mobs.find((m) => m.id === enemy.mobId);
       if (!mob) return;
       const tx = clamp(Math.floor(enemy.x / TILE), 1, WORLD_W - 2);
-      const ty = clamp(Math.floor(enemy.y / TILE), 1, WORLD_H - 2);
+      const ty = clamp(Math.floor(enemy.y / TILE), 1, this.worldHeightTiles() - 2);
       if (this.sim.tileAt(tx, ty) === AIR) {
         mob.x = tx;
         mob.y = ty;
@@ -2059,7 +2109,8 @@
       for (let tries = 0; tries < 80 && added < Math.min(missing, 5); tries += 1) {
         const x = 4 + Math.floor(Math.random() * (WORLD_W - 8));
         const surfaceY = this.sim.surface[x] || 24;
-        const y = surfaceY + 16 + Math.floor(Math.random() * Math.max(1, WORLD_H - surfaceY - 24));
+        const height = this.worldHeightTiles();
+        const y = surfaceY + 16 + Math.floor(Math.random() * Math.max(1, height - surfaceY - 24));
         if (Math.abs(x - px) < 40 && Math.abs(y - py) < 26) continue;
         if (Math.abs(x - this.sim.shaft.x) <= 10 && y <= this.sim.shaft.y + 24) continue;
         const picked = this.sim.pickMobForSpot(x, y, Math.random, { natural: true });
@@ -2171,7 +2222,7 @@
       for (let tries = 0; tries < 32; tries += 1) {
         const dir = Math.random() < 0.5 ? -1 : 1;
         const x = clamp(px + dir * Phaser.Math.Between(5, 11), 3, WORLD_W - 4);
-        const y = clamp(py + Phaser.Math.Between(-4, 5), 5, WORLD_H - 6);
+        const y = clamp(py + Phaser.Math.Between(-4, 5), 5, this.worldHeightTiles() - 6);
         if (Math.abs(x - px) < 4 && Math.abs(y - py) < 3) continue;
         let spawnKind = kind;
         let spawnY = y;
@@ -2213,7 +2264,7 @@
           const rx = rock.x;
           const ry = rock.y;
           const tx = clamp(Math.floor(rx / TILE), 0, WORLD_W - 1);
-          const ty = clamp(Math.floor(ry / TILE), 0, WORLD_H - 1);
+          const ty = clamp(Math.floor(ry / TILE), 0, this.worldHeightTiles() - 1);
           this.emitBlockBurst(tx, ty, 0x8f8a7d, 8);
           this.emitDust(rx, ry, 7);
           if (Phaser.Math.Distance.Between(rx, ry, this.player.x, this.player.y) < 48) {
@@ -2311,8 +2362,8 @@
         for (const side of sides) {
           const x = clamp(px + side * distance, 2, WORLD_W - 3);
           for (const offset of yOffsets) {
-            const startY = clamp(py + offset, 4, WORLD_H - 7);
-            const endY = Math.min(WORLD_H - 4, startY + 9);
+            const startY = clamp(py + offset, 4, this.worldHeightTiles() - 7);
+            const endY = Math.min(this.worldHeightTiles() - 4, startY + 9);
             for (let y = startY; y < endY; y += 1) {
               const tile = this.sim.tileAt(x, y);
               if (tile === AIR || !BLOCKS[tile]?.solid || !this.sim.hasHeadClearance(x, y)) continue;
@@ -2339,8 +2390,8 @@
       if (!candidates.length) {
         const minTileX = clamp(Math.floor((left + 24) / TILE), 2, WORLD_W - 3);
         const maxTileX = clamp(Math.ceil((right - 24) / TILE), 2, WORLD_W - 3);
-        const minTileY = clamp(Math.floor((top + 28) / TILE), 4, WORLD_H - 7);
-        const maxTileY = clamp(Math.ceil((bottom - 28) / TILE), 4, WORLD_H - 4);
+        const minTileY = clamp(Math.floor((top + 28) / TILE), 4, this.worldHeightTiles() - 7);
+        const maxTileY = clamp(Math.ceil((bottom - 28) / TILE), 4, this.worldHeightTiles() - 4);
         for (let y = minTileY; y <= maxTileY; y += 1) {
           for (let x = minTileX; x <= maxTileX; x += 1) {
             if (Math.abs(x - px) < 8 && Math.abs(y - py) < 5) continue;
@@ -2549,7 +2600,11 @@
         }
       }
 
-      if (this.player.y > WORLD_H * TILE - 80) this.failDescent("void");
+      const bottomY = this.worldHeightTiles() * TILE;
+      if (this.player.y > bottomY - 150) {
+        const opened = this.openAbyssSeam({ x: Math.floor(this.player.x / TILE), y: this.worldHeightTiles() - 3 }, "fall");
+        if (!opened && this.player.y > bottomY - 72) this.failDescent("void");
+      }
     }
 
     // ---- FX ------------------------------------------------------------------------

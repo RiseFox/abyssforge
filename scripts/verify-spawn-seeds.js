@@ -165,6 +165,14 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const pendingAfterQueue = scene?.pendingMobSpawns?.size || 0;
     if (mobWakeQueued) scene.cancelPendingMobSpawn?.(stagedMob.id, false);
     const pendingAfterCancel = scene?.pendingMobSpawns?.size || 0;
+    const heightBefore = sim.worldHeight?.() || sim.world.length;
+    const seamX = sim.shaft.x;
+    const extension = sim.extendDepth?.(seamX, 64);
+    const heightAfter = sim.worldHeight?.() || sim.world.length;
+    const seamOpened = sim.tileAt(seamX, heightBefore - 3) !== window.ML.Tile.BEDROCK;
+    const secondExtension = sim.extendDepth?.(seamX, 48);
+    const heightAfterSecond = sim.worldHeight?.() || sim.world.length;
+    const secondSeamOpened = sim.tileAt(seamX, heightAfter - 3) !== window.ML.Tile.BEDROCK;
     scene?.togglePack?.(true);
     const packVisible = Boolean(window.ML.ui?.packDrawer && !window.ML.ui.packDrawer.classList.contains("hidden"));
     const packChips = window.ML.ui?.packGrid?.children?.length || 0;
@@ -189,6 +197,18 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       mobWakeTexture: Boolean(scene?.textures?.exists?.("mobWake")),
       watcherRuntime: typeof scene?.spawnWatcherSighting === "function" && typeof scene?.updateShadowPressure === "function" && typeof scene?.dismissWatcher === "function" && typeof scene?.leaveWatcherTrace === "function",
       mobWakeRuntime: typeof scene?.mobWakeInfo === "function" && typeof scene?.queueMobMaterialize === "function" && typeof scene?.updatePendingMobSpawns === "function" && typeof scene?.cancelPendingMobSpawn === "function",
+      endlessRuntime: typeof sim.extendDepth === "function" && typeof sim.worldHeight === "function" && typeof scene?.openAbyssSeam === "function" && typeof scene?.rebuildWorldLayer === "function",
+      heightBefore,
+      heightAfter,
+      extensionRows: extension?.rows || 0,
+      extensionChests: extension?.chests || 0,
+      extensionMobs: extension?.mobs || 0,
+      seamOpened,
+      heightAfterSecond,
+      secondExtensionRows: secondExtension?.rows || 0,
+      secondExtensionMobs: secondExtension?.mobs || 0,
+      secondSeamOpened,
+      worldExpansions: sim.stats.worldExpansions || 0,
       watcherTraceDelta: traceAfter - traceBefore,
       watcherTraceActive: Boolean(trace),
       watcherSpotDistance: watcherSpot ? Math.round(Math.hypot(watcherSpot.x - scene.player.x, watcherSpot.y - scene.player.y)) : 0,
@@ -310,6 +330,16 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || !progressionCheck.mobWakeTexture
     || !progressionCheck.watcherRuntime
     || !progressionCheck.mobWakeRuntime
+    || !progressionCheck.endlessRuntime
+    || progressionCheck.heightAfter <= progressionCheck.heightBefore
+    || progressionCheck.extensionRows < 48
+    || progressionCheck.extensionMobs < 1
+    || !progressionCheck.seamOpened
+    || progressionCheck.heightAfterSecond <= progressionCheck.heightAfter
+    || progressionCheck.secondExtensionRows < 48
+    || progressionCheck.secondExtensionMobs < 1
+    || !progressionCheck.secondSeamOpened
+    || progressionCheck.worldExpansions < 2
     || !progressionCheck.watcherTraceActive
     || progressionCheck.watcherTraceDelta < 1
     || progressionCheck.watcherSpotDistance < 245

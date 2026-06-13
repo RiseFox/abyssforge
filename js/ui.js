@@ -742,13 +742,18 @@
     offCtx: null,
 
     init(sim) {
+      const height = sim.worldHeight?.() || sim.world?.length || WORLD_H;
       this.off = document.createElement("canvas");
       this.off.width = WORLD_W;
-      this.off.height = WORLD_H;
+      this.off.height = height;
       this.offCtx = this.off.getContext("2d");
-      const img = this.offCtx.createImageData(WORLD_W, WORLD_H);
+      if (ui.minimapCanvas) {
+        ui.minimapCanvas.width = WORLD_W;
+        ui.minimapCanvas.height = height;
+      }
+      const img = this.offCtx.createImageData(WORLD_W, height);
       const px = new Uint32Array(img.data.buffer);
-      for (let y = 0; y < WORLD_H; y += 1) {
+      for (let y = 0; y < height; y += 1) {
         const row = sim.world[y];
         for (let x = 0; x < WORLD_W; x += 1) {
           const t = row[x];
@@ -774,14 +779,16 @@
 
     paintTile(sim, x, y) {
       if (!this.offCtx) return;
-      if (x < 0 || y < 0 || x >= WORLD_W || y >= WORLD_H) return;
+      const height = sim.worldHeight?.() || sim.world?.length || WORLD_H;
+      if (x < 0 || y < 0 || x >= WORLD_W || y >= height) return;
       this.paintPixel(sim, x, y);
     },
 
     render(scene) {
       if (!minimapOpen || !this.off || !ui.minimapCanvas) return;
       const ctx = ui.minimapCanvas.getContext("2d");
-      ctx.clearRect(0, 0, WORLD_W, WORLD_H);
+      const height = scene?.sim?.worldHeight?.() || scene?.sim?.world?.length || WORLD_H;
+      ctx.clearRect(0, 0, WORLD_W, height);
       ctx.drawImage(this.off, 0, 0);
       if (!scene || !scene.player) return;
       // Enemies as red dots, player as a gold dot.

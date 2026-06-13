@@ -137,7 +137,8 @@
 
   function scan(sim, x, y, radius = 5) {
     const cx = clamp(Math.floor(x), 0, WORLD_W - 1);
-    const cy = clamp(Math.floor(y), 0, WORLD_H - 1);
+    const height = sim.worldHeight?.() || sim.world?.length || WORLD_H;
+    const cy = clamp(Math.floor(y), 0, height - 1);
     const counts = {
       ore: 0,
       roots: 0,
@@ -151,7 +152,7 @@
 
     for (let yy = cy - radius; yy <= cy + radius; yy += 1) {
       for (let xx = cx - radius; xx <= cx + radius; xx += 1) {
-        if (xx < 0 || yy < 0 || xx >= WORLD_W || yy >= WORLD_H) continue;
+        if (xx < 0 || yy < 0 || xx >= WORLD_W || yy >= height) continue;
         const tile = sim.tileAt(xx, yy);
         if (tile === AIR) {
           counts.air += 1;

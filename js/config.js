@@ -264,6 +264,7 @@ window.ML = window.ML || {};
     { id: "campTen", name: "Quartermaster", note: "Use ten campfire services.", stat: "campUses", at: 10 },
     { id: "campAnchor", name: "Warm Anchor", note: "Set your first campfire anchor.", stat: "camps", at: 1 },
     { id: "campNetwork", name: "Wayfire Network", note: "Activate three campfire anchors.", stat: "camps", at: 3 },
+    { id: "worldBelow", name: "No Bottom", note: "Split the lower bedrock seam and open another stratum.", stat: "worldExpansions", at: 1 },
     { id: "firstFieldNote", name: "It Does Not Fit", note: "Decode your first hidden field note.", loreNotes: 1 },
     { id: "loreHunter", name: "Between the Contracts", note: "Decode five hidden field notes.", loreNotes: 5 },
     { id: "firstWatcher", name: "Watched From the Dark", note: "Notice the hidden observer beyond your light.", stat: "watcherSightings", at: 1 },
@@ -427,12 +428,11 @@ window.ML = window.ML || {};
       natural: true,
       event: true,
       minDepth: 36,
-      maxDepth: 210,
-      biomes: ["stonewarrens", "fungalhollow", "ironfault", "deepstone", "crystalvein"],
+      biomes: ["stonewarrens", "fungalhollow", "ironfault", "deepstone", "crystalvein", "obsidianabyss"],
       ceiling: true,
       ceilingRange: 6,
       minAir: 3,
-      note: "Spawns only in enclosed air pockets with ceiling cover."
+      note: "Spawns only in enclosed air pockets with ceiling cover, including opened abyss seams."
     },
     golem: {
       label: "Deep pressure golem",
@@ -440,12 +440,11 @@ window.ML = window.ML || {};
       natural: true,
       event: true,
       minDepth: 118,
-      maxDepth: 270,
       biomes: ["deepstone", "crystalvein", "obsidianabyss"],
       ceiling: true,
       ceilingRange: 9,
       floorWidth: 3,
-      note: "Heavy deep mob, restricted to stable deep floors."
+      note: "Heavy deep mob, restricted to stable deep floors below the first abyss seam."
     },
     broodmother: {
       label: "Hidden vault boss",

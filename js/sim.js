@@ -35,7 +35,7 @@
       this.shadowPressure = clamp(this.shadowPressure || 0, 0, 100);
       this.health = clamp(this.health ?? this.maxHealth, 0, this.maxHealth);
       this.energy = clamp(this.energy ?? this.maxEnergy, 0, this.maxEnergy);
-      this.stats = Object.assign({ mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0, recalls: 0, campUses: 0, camps: 0, watcherSightings: 0, watcherTraces: 0, shadowPeaks: 0 }, this.stats || {});
+      this.stats = Object.assign({ mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0, recalls: 0, campUses: 0, camps: 0, watcherSightings: 0, watcherTraces: 0, shadowPeaks: 0, worldExpansions: 0 }, this.stats || {});
       this.achievements = Object.assign({}, this.achievements || {});
       ML.LoreSystem?.ensure?.(this);
       this.craftedRecipes = Object.assign({}, this.craftedRecipes || {});
@@ -93,7 +93,7 @@
       this.spawn = generated.spawn;
       this.shaft = generated.shaft;
       this.secrets = generated.secrets || [];
-      this.stats = { mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0, recalls: 0, campUses: 0, camps: 0, watcherSightings: 0, watcherTraces: 0, shadowPeaks: 0 };
+      this.stats = { mined: 0, deepest: 0, enemies: 0, bosses: 0, secrets: 0, chests: 0, crafted: 0, contracts: 0, events: 0, recalls: 0, campUses: 0, camps: 0, watcherSightings: 0, watcherTraces: 0, shadowPeaks: 0, worldExpansions: 0 };
       this.achievements = {};
       this.lore = ML.LoreSystem?.initialState?.() || { awakened: false, notes: {}, lastNoteId: null, completedGoals: {} };
       this.craftedRecipes = {};
@@ -322,6 +322,135 @@
       return { world, surface, spawn: { x: sx - 3, y: sy }, shaft: { x: sx, y: sy }, secrets };
     }
 
+    worldHeight() {
+      return Array.isArray(this.world) ? this.world.length : WORLD_H;
+    }
+
+    canOpenDepthSeam(x, y) {
+      return y >= this.worldHeight() - 7 && x > 1 && x < WORLD_W - 2;
+    }
+
+    deepTileFor(x, y, rand) {
+      const surfaceY = this.surface[x] || 24;
+      const depth = y - surfaceY;
+      const roll = rand();
+      let tile = depth > 210 ? Tile.DEEP : Tile.STONE;
+      if (depth > 42 && roll < 0.035) tile = Tile.COAL;
+      else if (depth > 70 && roll > 0.948 && roll <= 0.972) tile = Tile.COPPER;
+      else if (depth > 105 && roll > 0.972 && roll <= 0.986) tile = Tile.IRON;
+      else if (depth > 150 && roll > 0.986 && roll <= 0.994) tile = Tile.GOLD;
+      else if (depth > 190 && roll > 0.994 && roll <= 0.998) tile = Tile.CRYSTAL;
+      else if (depth > 225 && roll > 0.998) tile = Tile.OBSIDIAN;
+      if (depth > 245 && rand() < 0.11) tile = Tile.OBSIDIAN;
+      return tile;
+    }
+
+    carveAirCircle(cx, cy, radius, minY = 1, maxY = this.worldHeight() - 2) {
+      for (let ox = -radius; ox <= radius; ox += 1) {
+        for (let oy = -radius; oy <= radius; oy += 1) {
+          if (ox * ox + oy * oy > radius * radius + 0.7) continue;
+          const x = cx + ox;
+          const y = cy + oy;
+          if (x <= 2 || x >= WORLD_W - 3 || y < minY || y > maxY) continue;
+          this.world[y][x] = AIR;
+        }
+      }
+    }
+
+    extendDepth(entryX = Math.floor(WORLD_W / 2), rows = 96) {
+      if (!Array.isArray(this.world)) return null;
+      const oldHeight = this.worldHeight();
+      const addRows = clamp(Math.floor(rows), 48, 160);
+      const newHeight = oldHeight + addRows;
+      const seedMix = (this.seed ^ (oldHeight * 1103515245) ^ (entryX * 2654435761)) >>> 0;
+      const rand = mulberry32(seedMix);
+      entryX = clamp(Math.floor(entryX), 5, WORLD_W - 6);
+
+      for (let y = Math.max(0, oldHeight - 8); y < oldHeight; y += 1) {
+        for (let x = 0; x < WORLD_W; x += 1) {
+          if (this.world[y][x] === Tile.BEDROCK) this.world[y][x] = this.deepTileFor(x, y, rand);
+        }
+      }
+
+      for (let y = oldHeight; y < newHeight; y += 1) {
+        const row = Array(WORLD_W).fill(AIR);
+        for (let x = 0; x < WORLD_W; x += 1) {
+          row[x] = y >= newHeight - 4 ? Tile.BEDROCK : this.deepTileFor(x, y, rand);
+        }
+        this.world.push(row);
+      }
+
+      // Ensure the old bottom becomes an explorable seam instead of a hard stop.
+      let riftX = entryX;
+      for (let y = oldHeight - 10; y < Math.min(newHeight - 8, oldHeight + Math.floor(addRows * 0.62)); y += 1) {
+        riftX = clamp(riftX + Math.floor(rand() * 3) - 1, 6, WORLD_W - 7);
+        const radius = rand() < 0.28 ? 2 : 1;
+        this.carveAirCircle(riftX, y, radius, oldHeight - 12, newHeight - 6);
+        if (rand() < 0.24) this.world[y][clamp(riftX + (rand() < 0.5 ? -2 : 2), 2, WORLD_W - 3)] = Tile.LADDER;
+      }
+
+      for (let c = 0; c < 42; c += 1) {
+        let x = 6 + Math.floor(rand() * (WORLD_W - 12));
+        let y = oldHeight + 4 + Math.floor(rand() * Math.max(1, addRows - 18));
+        let radius = rand() < 0.68 ? 1 : 2;
+        const steps = 18 + Math.floor(rand() * 58);
+        for (let i = 0; i < steps; i += 1) {
+          this.carveAirCircle(x, y, radius, oldHeight - 6, newHeight - 6);
+          x = clamp(x + Math.floor(rand() * 3) - 1, 4, WORLD_W - 5);
+          y = clamp(y + Math.floor(rand() * 3) - 1, oldHeight - 4, newHeight - 8);
+          if (rand() < 0.13) radius = radius === 1 ? 2 : 1;
+        }
+      }
+
+      const solidAt = (x, y) => {
+        const t = this.tileAt(x, y);
+        return t !== AIR && BLOCKS[t]?.solid;
+      };
+      let chests = 0;
+      let camps = 0;
+      for (let tries = 0; tries < 420; tries += 1) {
+        const x = 5 + Math.floor(rand() * (WORLD_W - 10));
+        const y = oldHeight + 4 + Math.floor(rand() * Math.max(1, addRows - 16));
+        if (this.tileAt(x, y) !== AIR || !solidAt(x, y + 1)) continue;
+        if (chests < 7 && rand() < 0.32) {
+          this.world[y][x] = Tile.CHEST;
+          chests += 1;
+          continue;
+        }
+        if (camps < 2 && rand() < 0.13) {
+          this.world[y][x] = Tile.CAMPFIRE;
+          camps += 1;
+          continue;
+        }
+        if (rand() < 0.2) this.world[y][x] = Tile.MUSHROOM;
+      }
+
+      for (let y = oldHeight + 8; y < newHeight - 8; y += 1) {
+        for (let x = 4; x < WORLD_W - 4; x += 1) {
+          if (this.world[y][x] === AIR && solidAt(x, y + 1) && rand() < 0.045) {
+            this.world[y][x] = Tile.LAVA;
+            if (this.world[y][x + 1] === AIR && solidAt(x + 1, y + 1) && rand() < 0.55) this.world[y][x + 1] = Tile.LAVA;
+          }
+        }
+      }
+
+      let mobAdds = 0;
+      for (let tries = 0; tries < 260 && mobAdds < 24; tries += 1) {
+        const x = 4 + Math.floor(rand() * (WORLD_W - 8));
+        const y = oldHeight + 6 + Math.floor(rand() * Math.max(1, addRows - 18));
+        const picked = this.pickMobForSpot(x, y, rand, { natural: true });
+        if (!picked) continue;
+        const depth = picked.y - (this.surface[x] || 24);
+        this.addMob(x, picked.y, picked.kind, { elite: depth > 190 && rand() < 0.08 });
+        mobAdds += 1;
+      }
+
+      this.rebuildLights();
+      this.mobBaseline = Math.max(this.mobBaseline || 0, (this.mobs || []).length);
+      this.stats.worldExpansions = (this.stats.worldExpansions || 0) + 1;
+      return { from: oldHeight, to: newHeight, rows: addRows, entryX, chests, camps, mobs: mobAdds };
+    }
+
     // Mobs are part of the world, decided at generation time like ores: they
     // live at fixed homes in the caves and only get a sprite when the player
     // comes near. Killed mobs are gone for good (minus a small dawn repop).
@@ -402,8 +531,9 @@
       const cfg = ENEMIES?.[kind];
       const rule = this.mobSpawnRule(kind);
       if (!cfg || !rule) return false;
+      const height = this.worldHeight();
       x = clamp(Math.floor(x), 1, WORLD_W - 2);
-      y = clamp(Math.floor(y), 1, WORLD_H - 2);
+      y = clamp(Math.floor(y), 1, height - 2);
       const depth = this.mobDepthAt(x, y);
       const biomeId = this.mobBiomeIdAt(x, y);
 
@@ -484,7 +614,7 @@
           for (let oy = -r; oy <= r; oy += 1) {
             if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue;
             const x = clamp((mob.x || 1) + ox, 1, WORLD_W - 2);
-            const y = clamp((mob.y || 1) + oy, 1, WORLD_H - 2);
+            const y = clamp((mob.y || 1) + oy, 1, this.worldHeight() - 2);
             if (this.canSpawnMobAt(mob.kind, x, y, context)) return { x, y };
           }
         }
@@ -568,7 +698,8 @@
     rebuildLights() {
       this.lights = [];
       if (!this.world) return;
-      for (let y = 0; y < WORLD_H; y += 1) {
+      const height = this.worldHeight();
+      for (let y = 0; y < height; y += 1) {
         for (let x = 0; x < WORLD_W; x += 1) {
           const t = this.world[y][x];
           if (t !== AIR && BLOCKS[t] && BLOCKS[t].light) this.lights.push({ x, y, t });
@@ -651,7 +782,7 @@
     hasStableSpawnFloor() {
       const x = this.spawn?.x;
       const y = this.spawnFloorY();
-      if (x === undefined || y < 2 || y >= WORLD_H) return false;
+      if (x === undefined || y < 2 || y >= this.worldHeight()) return false;
       const floor = this.tileAt(x, y);
       return floor !== AIR && floor !== Tile.PLATFORM && BLOCKS[floor]?.solid && this.hasHeadClearance(x, y);
     }
@@ -668,8 +799,9 @@
     hasPlayerSupport(player = this.player) {
       if (!player) return false;
       const centerX = clamp(Math.floor(player.x / TILE), 0, WORLD_W - 1);
-      const bodyY = clamp(Math.floor(player.y / TILE), 0, WORLD_H - 1);
-      const footY = clamp(Math.floor((player.y + 18) / TILE), 0, WORLD_H - 1);
+      const height = this.worldHeight();
+      const bodyY = clamp(Math.floor(player.y / TILE), 0, height - 1);
+      const footY = clamp(Math.floor((player.y + 18) / TILE), 0, height - 1);
       const bodyTile = this.tileAt(centerX, bodyY);
       if (bodyTile === Tile.LADDER || this.tileAt(centerX, footY) === Tile.LADDER) return true;
       const footTile = this.tileAt(centerX, footY);
@@ -679,8 +811,9 @@
     snapPlayerToTileCenter(player = this.player) {
       if (!player) return this.safeSpawnPixels();
       const centerX = clamp(Math.floor(player.x / TILE), 1, WORLD_W - 2);
-      const footY = clamp(Math.floor((player.y + 18) / TILE), 0, WORLD_H - 1);
-      const bodyY = clamp(Math.floor(player.y / TILE), 0, WORLD_H - 1);
+      const height = this.worldHeight();
+      const footY = clamp(Math.floor((player.y + 18) / TILE), 0, height - 1);
+      const bodyY = clamp(Math.floor(player.y / TILE), 0, height - 1);
       if (this.tileAt(centerX, bodyY) === Tile.LADDER || this.tileAt(centerX, footY) === Tile.LADDER) {
         return { x: centerX * TILE + TILE / 2, y: player.y };
       }
@@ -700,9 +833,10 @@
     nearestSafePlayerPixels(player = this.player) {
       if (!player) return this.safeSpawnPixels();
       const startX = clamp(Math.floor(player.x / TILE), 1, WORLD_W - 2);
-      const startY = clamp(Math.floor((player.y + 18) / TILE), 0, WORLD_H - 2);
+      const height = this.worldHeight();
+      const startY = clamp(Math.floor((player.y + 18) / TILE), 0, height - 2);
 
-      for (let y = startY; y < Math.min(WORLD_H - 2, startY + 5); y += 1) {
+      for (let y = startY; y < Math.min(height - 2, startY + 5); y += 1) {
         for (let radius = 0; radius <= 3; radius += 1) {
           for (const x of [startX - radius, startX + radius]) {
             if (x < 1 || x >= WORLD_W - 1) continue;
@@ -730,7 +864,7 @@
       // Only the cleared shaft area counts — a save made deep below the shaft
       // column must not get teleported back to the surface.
       const inStartDrop = Math.abs(px - sx) <= 10 && py >= sy - 4 && py <= sy + 24;
-      const belowWorld = py >= WORLD_H - 5;
+      const belowWorld = py >= this.worldHeight() - 5;
       const unsupported = !this.hasPlayerSupport(this.player);
       if (inStartDrop || belowWorld || unsupported || !this.hasStableSpawnFloor()) {
         if (unsupported && !inStartDrop && !belowWorld) {
@@ -918,12 +1052,12 @@
     }
 
     tileAt(x, y) {
-      if (x < 0 || y < 0 || x >= WORLD_W || y >= WORLD_H) return Tile.BEDROCK;
+      if (x < 0 || y < 0 || x >= WORLD_W || y >= this.worldHeight()) return Tile.BEDROCK;
       return this.world[y][x];
     }
 
     setTile(x, y, tile) {
-      if (x < 0 || y < 0 || x >= WORLD_W || y >= WORLD_H) return;
+      if (x < 0 || y < 0 || x >= WORLD_W || y >= this.worldHeight()) return;
       this.world[y][x] = tile;
     }
 
