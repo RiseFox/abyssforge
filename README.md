@@ -11,9 +11,9 @@ AbyssForge is a browser-based 2D mining, crafting, and survival prototype inspir
 - Dynamic cave events: ore surges, lantern drafts, depth swarms, and tremors.
 - Rare elite mobs with stronger stats and better loot.
 - Recall-to-camp survival action with energy cost, cooldown, boss lockout, and a craftable Recall charm upgrade.
-- Surface camp services for resting, buying supplies, and rerolling expedition contracts.
+- Physical campfire points with warm light, passive recovery, camp services, and deeper secret-room rest stops.
 - Boss health bar, depth-zone labeling, and clearer active objective tracking.
-- Torch and headlamp lighting, day/night mood, situational background music, and compact pixel-art UI.
+- Torch, campfire, and headlamp lighting, day/night mood, situational background music, and compact pixel-art UI.
 - Craft-ready HUD badge and notifications when new recipes become buildable.
 - Expanded crafting with block kits, survival kits, relic charms, movement upgrades, loot upgrades, and boss-material progression.
 - Achievements with unlock toasts and a pause-menu progress list.
@@ -28,7 +28,7 @@ AbyssForge is a browser-based 2D mining, crafting, and survival prototype inspir
 - Right mouse - place or use the selected hotbar item
 - `F` - attack with the pickaxe
 - `R` - recall to the surface camp when deep routes get dangerous
-- `C` - open surface camp services while standing near camp
+- `C` - open camp services while standing near a campfire
 - `E` - craft selected recipe
 - `1`-`9` - select hotbar slot
 - `M` - toggle map
@@ -47,4 +47,4 @@ npm install
 npm test
 ```
 
-The test launches the game with Playwright and checks that generated starts have stable floor support instead of spawning the player in air or between blocks. It also verifies that progression data for crafting, contracts, cave events, achievements, secrets, and bosses is available in the runtime.
+The test launches the game with Playwright and checks that generated starts have stable floor support instead of spawning the player in air or between blocks. It also verifies that the start has a reachable campfire, and that progression data for crafting, contracts, cave events, achievements, secrets, bosses, and camp services is available in the runtime.

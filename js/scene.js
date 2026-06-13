@@ -64,6 +64,7 @@
       this.autoPausedByVisibility = false;
       this.lastSizzleAt = 0;
       this.lastDarkWarnAt = 0;
+      this.lastCampHintAt = 0;
       this.caveEvent = null;
       this.nextCaveEventAt = 0;
       this.eventPulseAt = 0;
@@ -127,6 +128,7 @@
       this.lightGlow = this.add.graphics()
         .setScrollFactor(0)
         .setDepth(79);
+      this.tileFx = this.add.graphics().setDepth(9);
 
       // Screen-space darkness with holes punched out around light sources.
       this.darknessRT = this.add.renderTexture(0, 0, this.scale.width, this.scale.height)
@@ -388,6 +390,9 @@
       } else {
         this.sim.energy = clamp(this.sim.energy + dt * 5.5, 0, this.sim.maxEnergy);
       }
+      if (this.nearCamp() && onFloor && !inLava) {
+        this.sim.energy = clamp(this.sim.energy + dt * 6.5, 0, this.sim.maxEnergy);
+      }
       this.updateSurvivalRegen(dt, onFloor, inLava);
       if (this.caveEvent?.id === "lanternDraft") {
         this.sim.energy = clamp(this.sim.energy + dt * 4.5, 0, this.sim.maxEnergy);
@@ -419,6 +424,7 @@
       this.updateCaveEvents(dt);
       this.updateHazards(dt, inLava);
       this.updateSky();
+      this.drawAnimatedTileFx();
       this.drawDarkness();
       this.updatePickaxeVisual(Boolean(this.mineTarget));
 
@@ -475,6 +481,7 @@
       if (this.caveEvent?.id === "swarm" || this.caveEvent?.id === "tremor") return "danger";
       if (this.caveEvent?.id === "oreSurge") return "treasure";
       if (this.hasNearbyDanger()) return "danger";
+      if (this.nearCamp()) return "camp";
       if (this.nearUnopenedSecretChest()) return "treasure";
       if (depth > 130) return "deep";
       if (depth > 10) return "cave";
@@ -561,6 +568,49 @@
       return clamp(best, 0, 1);
     }
 
+    drawAnimatedTileFx() {
+      if (!this.tileFx) return;
+      const fx = this.tileFx;
+      const cam = this.cameras.main;
+      const now = this.time.now;
+      const minX = cam.scrollX - 80;
+      const maxX = cam.scrollX + cam.width + 80;
+      const minY = cam.scrollY - 80;
+      const maxY = cam.scrollY + cam.height + 80;
+      fx.clear();
+      for (const light of this.sim.lights) {
+        if (light.t !== Tile.CAMPFIRE && light.t !== Tile.TORCH && light.t !== Tile.MUSHROOM) continue;
+        const x = light.x * TILE;
+        const y = light.y * TILE;
+        if (x < minX || x > maxX || y < minY || y > maxY) continue;
+        const flicker = Math.sin(now / 92 + light.x * 11 + light.y * 5);
+        if (light.t === Tile.CAMPFIRE) {
+          const lift = flicker > 0 ? 1 : 0;
+          fx.fillStyle(0x4a2a16, 0.9);
+          fx.fillRect(x + 7, y + 24, 18, 4);
+          fx.fillStyle(0xf08a3e, 0.9);
+          fx.fillRect(x + 11, y + 14 - lift, 4, 8 + lift);
+          fx.fillRect(x + 18, y + 15 + lift, 4, 7);
+          fx.fillStyle(0xffdf78, 0.96);
+          fx.fillRect(x + 14, y + 10 - lift, 5, 11 + lift);
+          if (Math.sin(now / 210 + light.x) > 0.35) {
+            fx.fillStyle(0xffc45a, 0.75);
+            fx.fillRect(x + 12 + ((light.x + light.y) % 8), y + 6 - (now / 80) % 5, 2, 2);
+          }
+        } else if (light.t === Tile.TORCH) {
+          fx.fillStyle(0xf3ce62, 0.9);
+          fx.fillRect(x + 11, y + 3 - (flicker > 0 ? 1 : 0), 11, 10);
+          fx.fillStyle(0xf37a42, 0.92);
+          fx.fillRect(x + 14, y + 6 + (flicker < 0 ? 1 : 0), 5, 6);
+        } else if (light.t === Tile.MUSHROOM) {
+          const alpha = 0.36 + Math.sin(now / 300 + light.x) * 0.12;
+          fx.fillStyle(0xa9ffef, alpha);
+          fx.fillRect(x + 7, y + 8, 18, 4);
+          fx.fillRect(x + 10, y + 5, 12, 3);
+        }
+      }
+    }
+
     drawDarkness() {
       const cam = this.cameras.main;
       const ambient = this.ambientLight();
@@ -626,13 +676,14 @@
         const wy = light.y * TILE + TILE / 2;
         if (wx < minX || wx > maxX || wy < minY || wy > maxY) continue;
         radius = r * TILE;
-        if (light.t === Tile.TORCH || light.t === Tile.LAVA) {
+        if (light.t === Tile.TORCH || light.t === Tile.LAVA || light.t === Tile.CAMPFIRE) {
           radius += Math.sin(now / 95 + light.x * 13 + light.y * 7) * 7;
         }
         const sx = wx - cam.scrollX;
         const sy = wy - cam.scrollY;
-        const color = light.t === Tile.LAVA ? 0xff6a2f : light.t === Tile.MUSHROOM ? 0x61e0d0 : 0xf0b85c;
-        drawGlow(sx, sy, radius, color, light.t === Tile.TORCH ? 1 : 0.75);
+        const color = light.t === Tile.LAVA ? 0xff6a2f : light.t === Tile.MUSHROOM ? 0x61e0d0 : light.t === Tile.CAMPFIRE ? 0xf5b45c : 0xf0b85c;
+        const strength = light.t === Tile.CAMPFIRE ? 1.15 : light.t === Tile.TORCH ? 1 : 0.75;
+        drawGlow(sx, sy, radius, color, strength);
         punchLight(sx, sy, radius);
       }
     }
@@ -707,14 +758,15 @@
       const light = this.playerLight();
       const surfaceRest = this.depthMeters() <= 3;
       const litRest = light > 0.5;
-      if (!surfaceRest && !litRest) return;
-      let rate = surfaceRest ? 1.15 : 0.55;
+      const campRest = this.nearCamp();
+      if (!surfaceRest && !litRest && !campRest) return;
+      let rate = campRest ? 1.7 : surfaceRest ? 1.15 : 0.55;
       if (this.sim.regenBoost) rate *= 1.55;
       if (this.caveEvent?.id === "lanternDraft") rate *= 1.8;
       const before = this.sim.health;
       this.sim.health = clamp(this.sim.health + dt * rate, 0, this.sim.maxHealth);
       if (Math.floor(before) !== Math.floor(this.sim.health) && (!this.actionHoldUntil || this.time.now > this.actionHoldUntil)) {
-        this.currentAction = "Recover";
+        this.currentAction = campRest ? "Resting" : "Recover";
       }
     }
 
@@ -820,7 +872,7 @@
       if (this.pausedByUI || this.dead) return false;
       if (this.depthMeters() <= 7) {
         this.setAction("At camp", 900);
-        ML.showToast("You are already near the surface camp.", 1200);
+        ML.showToast("You are already near the surface campfire.", 1200);
         return false;
       }
       if (this.hasActiveBoss()) {
@@ -954,6 +1006,16 @@
       if (!block || target.tile === Tile.BEDROCK || target.tile === Tile.LAVA) {
         this.targetLabel = block ? block.name : "Unknown";
         ML.showToast(target.tile === Tile.LAVA ? "You cannot mine lava. Cover it with a block." : "Bedrock does not move.");
+        this.mineTarget = null;
+        return;
+      }
+      if (block.camp) {
+        this.targetLabel = block.name;
+        this.setAction("Camp point", 420);
+        if (this.time.now - this.lastCampHintAt > 1500) {
+          this.lastCampHintAt = this.time.now;
+          ML.showToast("Campfire is a rest point. Press C nearby.", 1200);
+        }
         this.mineTarget = null;
         return;
       }
@@ -1939,9 +2001,7 @@
     // ---- UI plumbing ------------------------------------------------------------------
 
     nearCamp() {
-      if (!this.player) return false;
-      const safe = this.sim.safeSpawnPixels();
-      return this.depthMeters() <= 8 && Phaser.Math.Distance.Between(this.player.x, this.player.y, safe.x, safe.y) <= TILE * 8;
+      return ML.CampSystem.isNearCamp(this.sim, this.player);
     }
 
     toggleCamp(force) {
@@ -1949,7 +2009,7 @@
       if (opening && !this.nearCamp()) {
         this.setAction("Find camp", 900);
         ML.audio.play("denied");
-        ML.showToast("Camp services are available only at the surface camp.", 1800);
+        ML.showToast("Camp services are available near a lit campfire.", 1800);
         return;
       }
       this.campOpen = opening;
@@ -1966,7 +2026,7 @@
       if (!this.nearCamp()) {
         this.toggleCamp(false);
         ML.audio.play("denied");
-        ML.showToast("Move back to the surface camp.", 1300);
+        ML.showToast("Move back to a campfire.", 1300);
         return false;
       }
       const service = (ML.CAMP_SERVICES || []).find((entry) => entry.id === id);

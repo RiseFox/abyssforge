@@ -28,7 +28,8 @@ window.ML = window.ML || {};
     OBSIDIAN: 15,
     LAVA: 16,
     MUSHROOM: 17,
-    CHEST: 18
+    CHEST: 18,
+    CAMPFIRE: 19
   };
 
   // light: glow radius in tiles for the lightmap; hazard: damage per second on contact.
@@ -51,7 +52,8 @@ window.ML = window.ML || {};
     [Tile.OBSIDIAN]: { name: "Obsidian", drop: "obsidian", hardness: 3.1, tier: 5, solid: true },
     [Tile.LAVA]: { name: "Lava", drop: null, hardness: 999, tier: 99, solid: false, hazard: 16, light: 3.6 },
     [Tile.MUSHROOM]: { name: "Glow cap", drop: "mushroom", hardness: 0.15, tier: 1, solid: false, light: 2.8 },
-    [Tile.CHEST]: { name: "Supply chest", drop: null, loot: true, hardness: 0.6, tier: 1, solid: true }
+    [Tile.CHEST]: { name: "Supply chest", drop: null, loot: true, hardness: 0.6, tier: 1, solid: true },
+    [Tile.CAMPFIRE]: { name: "Campfire", drop: "wood", hardness: 0.5, tier: 1, solid: false, light: 7.2, camp: true }
   };
 
   const SOLID_TILES = Object.keys(BLOCKS).map(Number).filter((id) => BLOCKS[id].solid);
@@ -76,7 +78,8 @@ window.ML = window.ML || {};
     [Tile.OBSIDIAN]: 0x4a2f73,
     [Tile.LAVA]: 0xff7a2e,
     [Tile.MUSHROOM]: 0x6fe3d2,
-    [Tile.CHEST]: 0xcaa258
+    [Tile.CHEST]: 0xcaa258,
+    [Tile.CAMPFIRE]: 0xf0a84d
   };
 
   // Minimap pixel colors.
@@ -99,7 +102,8 @@ window.ML = window.ML || {};
     [Tile.OBSIDIAN]: "#3a2752",
     [Tile.LAVA]: "#e25822",
     [Tile.MUSHROOM]: "#6fe3d2",
-    [Tile.CHEST]: "#caa258"
+    [Tile.CHEST]: "#caa258",
+    [Tile.CAMPFIRE]: "#f0a84d"
   };
 
   const ITEM_META = {
@@ -256,8 +260,8 @@ window.ML = window.ML || {};
     { id: "eventFive", name: "Faultline Veteran", note: "Encounter five cave events.", stat: "events", at: 5 },
     { id: "recallOne", name: "Back to Camp", note: "Recall safely to the surface camp.", stat: "recalls", at: 1 },
     { id: "recallCharm", name: "Anchor Spark", note: "Craft the Recall charm.", flag: "recallCharm" },
-    { id: "campFirst", name: "Camp Ledger", note: "Use a surface camp service.", stat: "campUses", at: 1 },
-    { id: "campTen", name: "Quartermaster", note: "Use ten surface camp services.", stat: "campUses", at: 10 }
+    { id: "campFirst", name: "Camp Ledger", note: "Use a campfire service.", stat: "campUses", at: 1 },
+    { id: "campTen", name: "Quartermaster", note: "Use ten campfire services.", stat: "campUses", at: 10 }
   ];
 
   const CONTRACTS = [

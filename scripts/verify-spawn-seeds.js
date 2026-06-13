@@ -34,11 +34,13 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       const footY = Math.floor((safe.y + 18) / TILE);
       const stable = sim.hasStableSpawnFloor();
       const support = sim.hasPlayerSupport(safe);
+      const campReady = window.ML.CampSystem.isNearCamp(sim, safe);
+      const campfireCount = sim.lights.filter((light) => light.t === Tile.CAMPFIRE).length;
       const secretCount = sim.secrets?.length || 0;
       const bossCount = sim.mobs.filter((mob) => window.ML.ENEMIES[mob.kind]?.boss).length;
 
-      if (!stable || !support || floor === AIR || floor === Tile.PLATFORM || !BLOCKS[floor]?.solid || footY !== floorY || secretCount < 5 || bossCount < 2) {
-        failures.push({ seed: actualSeed, spawn: sim.spawn, shaft: sim.shaft, floorY, floor, safe, footY, stable, support, secretCount, bossCount });
+      if (!stable || !support || !campReady || campfireCount < 1 || floor === AIR || floor === Tile.PLATFORM || !BLOCKS[floor]?.solid || footY !== floorY || secretCount < 5 || bossCount < 2) {
+        failures.push({ seed: actualSeed, spawn: sim.spawn, shaft: sim.shaft, floorY, floor, safe, footY, stable, support, campReady, campfireCount, secretCount, bossCount });
       }
     }
 
@@ -73,6 +75,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       contracts: window.ML.CONTRACTS.length,
       caveEvents: Object.keys(window.ML.CAVE_EVENTS || {}).length,
       campServices: window.ML.CAMP_SERVICES.length,
+      campSystem: Boolean(window.ML.CampSystem?.isNearCamp),
       craftable: craftable.length,
       craftResult,
       recallCraft,
@@ -103,6 +106,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       support: scene.sim.hasPlayerSupport({ x: scene.player.x, y: scene.player.y }),
       stable: scene.sim.hasStableSpawnFloor(),
       floorTile: scene.sim.tileAt(scene.sim.spawn.x, scene.sim.spawnFloorY()),
+      campfires: scene.sim.lights.filter((light) => light.t === window.ML.Tile.CAMPFIRE).length,
       recallApi: typeof scene.recallToCamp === "function" && typeof scene.recallCost === "function",
       campApi: typeof scene.nearCamp === "function" && typeof scene.toggleCamp === "function" && typeof scene.useCampService === "function",
       nearCamp: scene.nearCamp()
@@ -124,6 +128,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.contracts < 5
     || progressionCheck.caveEvents < 4
     || progressionCheck.campServices < 5
+    || !progressionCheck.campSystem
     || progressionCheck.craftable < 3
     || !progressionCheck.craftResult.ok
     || !progressionCheck.recallCraft.ok
@@ -136,7 +141,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.crafted < 1
     || progressionCheck.completedContracts < 1
     || progressionCheck.platforms < 4;
-  const failed = errors.length > 0 || seedCheck.failures.length > 0 || progressionFailed || !start.support || !start.stable || !start.recallApi || !start.campApi || !start.nearCamp || fallDelta > 1;
+  const failed = errors.length > 0 || seedCheck.failures.length > 0 || progressionFailed || !start.support || !start.stable || start.campfires < 1 || !start.recallApi || !start.campApi || !start.nearCamp || fallDelta > 1;
   const report = { seedCheck, progressionCheck, start, afterDown, fallDelta, errors };
   console.log(JSON.stringify(report, null, 2));
 

@@ -150,6 +150,7 @@
     ui.gearText.textContent = gear.join(" · ");
     ui.actionText.textContent = scene?.currentAction || "Explore";
     ui.targetText.textContent = scene?.targetLabel || "None";
+    ui.campToggle?.classList.toggle("camp-ready", Boolean(scene?.nearCamp?.()));
   }
 
   // The hotbar DOM is built once; later calls only patch counts and selection.
@@ -400,16 +401,14 @@
   }
 
   function campServiceSummary(service) {
-    if (service.kind === "rest") return "Full health, energy, and recall ready.";
-    if (service.kind === "rerollContract") return "Replace the active contract.";
-    return rewardText(service.out);
+    return ML.CampSystem.serviceSummary(service) || rewardText(service.out);
   }
 
   function renderCamp(sim) {
     const scene = ML.sceneRef;
     if (!scene || !ui.campServices || !scene.campOpen) return;
     const near = scene.nearCamp ? scene.nearCamp() : false;
-    ui.campStatus.textContent = near ? "Camp ready" : "Move closer to camp";
+    ui.campStatus.textContent = near ? "Campfire ready" : "Find a campfire";
     ui.campServices.textContent = "";
     CAMP_SERVICES.forEach((service) => {
       const ok = near && ML.canAfford(sim.inventory, service.cost || {});

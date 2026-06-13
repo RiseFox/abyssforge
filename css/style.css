@@ -40,9 +40,11 @@ button {
   border-radius: 7px;
   font: inherit;
   cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 180ms ease, transform 120ms ease;
 }
 
 button:hover { border-color: rgba(225, 168, 77, 0.7); }
+button:active { transform: translateY(1px) scale(0.985); }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 #shell {
@@ -413,6 +415,12 @@ canvas:focus { outline: none; }
   box-shadow: 0 0 0 2px rgba(225, 168, 77, 0.22), 0 12px 32px var(--shadow);
 }
 
+.icon-button.camp-ready {
+  border-color: rgba(240, 168, 77, 0.78);
+  background: rgba(52, 36, 18, 0.92);
+  box-shadow: 0 0 0 2px rgba(240, 168, 77, 0.18), 0 12px 32px var(--shadow);
+}
+
 .craft-badge {
   position: absolute;
   right: -5px;
@@ -759,6 +767,17 @@ canvas:focus { outline: none; }
 .camp-drawer.hidden,
 .craft-drawer.hidden { display: none; }
 
+.camp-drawer:not(.hidden),
+.craft-drawer:not(.hidden),
+.help-drawer:not(.hidden) {
+  animation: drawerEnter 180ms ease-out;
+}
+
+@keyframes drawerEnter {
+  from { opacity: 0; transform: translateY(-6px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .camp-services {
   display: grid;
   gap: 8px;
@@ -776,6 +795,11 @@ canvas:focus { outline: none; }
   padding: 10px;
   text-align: left;
   background: rgba(255, 255, 255, 0.055);
+}
+
+.camp-service:not(:disabled):hover {
+  background: rgba(240, 168, 77, 0.105);
+  transform: translateY(-1px);
 }
 
 .camp-service strong {
@@ -1331,11 +1355,15 @@ canvas:focus { outline: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .toast,
+  button,
   .craft-ready,
   .achievement-toast,
   .objective-progress > i,
   .boss-bar > i > b,
   .bar > i { transition: none; }
   .slot-count.bump,
-  .damage-flash.active { animation: none; }
+  .damage-flash.active,
+  .camp-drawer:not(.hidden),
+  .craft-drawer:not(.hidden),
+  .help-drawer:not(.hidden) { animation: none; }
 }

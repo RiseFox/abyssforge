@@ -130,6 +130,24 @@
     ctx.strokeStyle = "rgba(0,0,0,0.4)";
     ctx.lineWidth = 2;
     ctx.strokeRect(chestX + 1, 3, TILE - 2, TILE - 4);
+
+    const campX = Tile.CAMPFIRE * TILE;
+    ctx.clearRect(campX, 0, TILE, TILE);
+    ctx.fillStyle = "rgba(0,0,0,0.24)";
+    ctx.fillRect(campX + 5, 25, 22, 4);
+    ctx.fillStyle = "#6b3d1e";
+    ctx.fillRect(campX + 7, 23, 18, 5);
+    ctx.fillStyle = "#a16432";
+    ctx.fillRect(campX + 6, 21, 20, 4);
+    ctx.fillStyle = "#412615";
+    ctx.fillRect(campX + 9, 24, 14, 3);
+    ctx.fillStyle = "#f7d276";
+    ctx.fillRect(campX + 14, 11, 5, 11);
+    ctx.fillStyle = "#f08a3e";
+    ctx.fillRect(campX + 11, 14, 4, 8);
+    ctx.fillRect(campX + 18, 15, 4, 7);
+    ctx.fillStyle = "#9d3a24";
+    ctx.fillRect(campX + 15, 18, 3, 5);
     tiles.refresh();
 
     // ---- Player sprite sheet: 8 frames of 28x36 ---------------------------

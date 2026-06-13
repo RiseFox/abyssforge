@@ -162,7 +162,7 @@
           <div class="help-row"><span><kbd>1</kbd>-<kbd>9</kbd></span><span>Select hotbar slot (mouse wheel works too)</span></div>
           <div class="help-row"><span><kbd>F</kbd></span><span>Swing at enemies in front of you</span></div>
           <div class="help-row"><span><kbd>R</kbd></span><span>Recall to the surface camp when the route turns bad</span></div>
-          <div class="help-row"><span><kbd>C</kbd></span><span>Open camp services when standing near the surface camp</span></div>
+          <div class="help-row"><span><kbd>C</kbd></span><span>Open camp services while standing near a campfire</span></div>
           <div class="help-row"><span><kbd>E</kbd></span><span>Open crafting. A gold badge means something new is buildable</span></div>
           <div class="help-row"><span><kbd>M</kbd></span><span>Toggle the minimap</span></div>
           <div class="help-row"><span><kbd>Gel</kbd></span><span>Slimes and crawlers drop gel for torches and charges</span></div>
@@ -176,8 +176,8 @@
       <aside id="campDrawer" class="camp-drawer hidden">
         <div class="drawer-head">
           <div>
-            <strong>Surface camp</strong>
-            <span id="campStatus">Stand near camp</span>
+            <strong>Campfire</strong>
+            <span id="campStatus">Find a campfire</span>
           </div>
           <button id="closeCamp" class="icon-button" type="button" title="Close">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg>
@@ -246,6 +246,7 @@
 
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
+  <script src="js/camp.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/textures.js"></script>
   <script src="js/sim.js"></script>

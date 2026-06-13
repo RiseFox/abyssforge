@@ -200,8 +200,12 @@
           const chestX = roomX + Math.floor(w / 2);
           let lampX = roomX + 1 + Math.floor(rand() * Math.max(1, w - 2));
           if (lampX === chestX) lampX = chestX > roomX + 2 ? chestX - 2 : chestX + 2;
+          let campX = roomX + w - 3;
+          if (campX === chestX || campX === lampX) campX = roomX + 2;
+          if (campX === chestX || campX === lampX) campX = roomX + 1;
           world[floorY][chestX] = Tile.CHEST;
           world[floorY][lampX] = tier >= 2 ? Tile.MUSHROOM : Tile.TORCH;
+          if (!bossKind) world[floorY][campX] = Tile.CAMPFIRE;
 
           const ore = tier >= 3 ? Tile.CRYSTAL : tier >= 2 ? Tile.GOLD : Tile.IRON;
           world[roomY + 1][roomX + 1] = ore;
@@ -216,7 +220,8 @@
             w,
             h,
             opened: false,
-            chest: { x: chestX, y: floorY }
+            chest: { x: chestX, y: floorY },
+            camp: !bossKind ? { x: campX, y: floorY } : null
           };
           if (bossKind) {
             secret.boss = {
@@ -426,6 +431,11 @@
       this.world[floorY - 2][this.spawn.x - 1] = AIR;
       this.world[floorY - 1][this.spawn.x + 1] = AIR;
       this.world[floorY - 2][this.spawn.x + 1] = AIR;
+      const campX = clamp(sx - 4, 1, WORLD_W - 2);
+      if (floorY - 1 > 0) {
+        this.world[floorY - 1][campX] = Tile.CAMPFIRE;
+        this.world[floorY - 2][campX] = AIR;
+      }
       if (Array.isArray(this.lights)) this.rebuildLights();
       if (Array.isArray(this.mobs)) {
         this.mobs = this.mobs.filter((m) => Math.abs(m.x - sx) > 10 || m.y > sy + 24);
@@ -614,23 +624,7 @@
     }
 
     campService(service) {
-      if (!service) return { ok: false, message: "Unknown camp service." };
-      if (!ML.canAfford(this.inventory, service.cost || {})) {
-        return { ok: false, message: "Need " + ML.formatCost(service.cost) + "." };
-      }
-      ML.spend(this.inventory, service.cost || {});
-      if (service.kind === "rest") {
-        this.health = this.maxHealth;
-        this.energy = this.maxEnergy;
-      }
-      if (service.kind === "rerollContract") {
-        this.rollContract();
-      }
-      if (service.out) {
-        for (const [item, count] of Object.entries(service.out)) this.addItem(item, count);
-      }
-      this.stats.campUses += 1;
-      return { ok: true, message: `${service.name} complete.`, service };
+      return ML.CampSystem.applyService(this, service);
     }
 
     load() {
