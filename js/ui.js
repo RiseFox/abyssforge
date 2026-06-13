@@ -86,6 +86,11 @@
     respawnBtn: document.getElementById("respawnBtn"),
     newWorldBtn: document.getElementById("newWorldBtn"),
     damageFlash: document.getElementById("damageFlash"),
+    interactPrompt: document.getElementById("interactPrompt"),
+    interactKey: document.getElementById("interactKey"),
+    interactAction: document.getElementById("interactAction"),
+    interactName: document.getElementById("interactName"),
+    interactHint: document.getElementById("interactHint"),
     achievementToast: document.getElementById("achievementToast"),
     achievementToastName: document.getElementById("achievementToastName"),
     achievementToastNote: document.getElementById("achievementToastNote"),
@@ -409,6 +414,20 @@
     ui.recallText.closest(".action-chip")?.classList.toggle("disabled", remaining > 0);
   }
 
+  function renderInteraction(scene = ML.sceneRef) {
+    if (!ui.interactPrompt) return;
+    const target = (!scene?.pausedByUI && !scene?.dead && !scene?.craftOpen && !scene?.campOpen && !scene?.helpOpen)
+      ? scene.interactionTarget?.()
+      : null;
+    ui.interactPrompt.classList.toggle("hidden", !target);
+    if (!target) return;
+    ui.interactKey.textContent = target.key || "E";
+    ui.interactAction.textContent = target.action || "Use";
+    ui.interactName.textContent = target.name || "Object";
+    ui.interactHint.textContent = target.hint || "Nearby";
+    ui.interactPrompt.title = `${target.key || "E"}: ${target.action || "Use"} ${target.name || "object"}`;
+  }
+
   function renderCraft(sim) {
     if (!ML.sceneRef || !ML.sceneRef.craftOpen) return;
 
@@ -596,6 +615,7 @@
     renderEvent(scene);
     renderBossBar(scene);
     renderRecall(scene);
+    renderInteraction(scene);
     updateCraftReady(sim);
     renderAchievements(sim);
     renderMystery(sim);
@@ -820,6 +840,7 @@
     ui.helpToggle.addEventListener("click", () => activeScene().toggleHelp());
     ui.closeHelp.addEventListener("click", () => activeScene().toggleHelp(false));
     ui.campToggle?.addEventListener("click", () => activeScene().toggleCamp());
+    ui.interactPrompt?.addEventListener("click", () => activeScene().interactOrCraft());
     ui.closeCamp?.addEventListener("click", () => activeScene().toggleCamp(false));
     ui.craftToggle.addEventListener("click", () => activeScene().toggleCraft());
     ui.craftReady?.addEventListener("click", () => activeScene().toggleCraft(true));
@@ -914,6 +935,7 @@
     renderEvent,
     renderBossBar,
     renderRecall,
+    renderInteraction,
     renderCamp,
     renderMystery,
     renderStory,

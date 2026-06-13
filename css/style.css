@@ -573,6 +573,95 @@ canvas:focus { outline: none; }
   fill: none;
 }
 
+.interact-prompt {
+  position: absolute;
+  left: 50%;
+  bottom: max(92px, calc(env(safe-area-inset-bottom) + 92px));
+  z-index: 35;
+  min-width: min(360px, calc(100vw - 28px));
+  max-width: calc(100vw - 28px);
+  min-height: 50px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 3px;
+  padding: 8px 12px 8px 9px;
+  border: 1px solid rgba(236, 205, 135, 0.36);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(225, 168, 77, 0.16), transparent 48%),
+    rgba(16, 14, 12, 0.94);
+  color: var(--text);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 239, 199, 0.08);
+  transform: translate(-50%, 0);
+  opacity: 1;
+  cursor: pointer;
+  transition: opacity 150ms ease, transform 150ms ease, border-color 150ms ease;
+}
+
+.interact-prompt.hidden {
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 7px);
+}
+
+.interact-prompt:hover,
+.interact-prompt:focus-visible {
+  border-color: rgba(240, 207, 109, 0.72);
+  outline: none;
+}
+
+.interact-key {
+  grid-row: span 2;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(240, 207, 109, 0.55);
+  border-radius: 7px;
+  background: rgba(240, 207, 109, 0.12);
+  color: #ffe49a;
+  font: 900 15px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.24);
+}
+
+.interact-copy {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.interact-copy strong {
+  color: #ffe49a;
+  font-size: 13px;
+  line-height: 1.05;
+}
+
+.interact-copy em {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.interact-prompt small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .hotbar {
   position: absolute;
   left: 50%;

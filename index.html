@@ -56,7 +56,7 @@
           <div class="action-chip"><b>Mine/Hit</b><span>LMB</span></div>
           <div class="action-chip"><b>Place/Use</b><span>RMB</span></div>
           <div class="action-chip"><b>Attack</b><span>F</span></div>
-          <div class="action-chip"><b>Craft</b><span>E</span></div>
+          <div class="action-chip"><b>Interact</b><span>E</span></div>
           <div class="action-chip recall-chip"><b>Recall</b><span id="recallText">R</span></div>
         </div>
         <div class="objective-panel" aria-label="Expedition contract">
@@ -186,12 +186,12 @@
           <div class="help-row"><span><kbd>Shift</kbd></span><span>Sprint (drains energy)</span></div>
           <div class="help-row"><span><kbd>Space</kbd></span><span>Jump. Double jump with Cave boots</span></div>
           <div class="help-row"><span><kbd>LMB</kbd></span><span>Mine blocks or hit an enemy under the cursor</span></div>
+          <div class="help-row"><span><kbd>E</kbd></span><span>Open nearby chests, secret caches, or campfires. If nothing is close, open crafting</span></div>
           <div class="help-row"><span><kbd>RMB</kbd></span><span>Place the selected item. Field kits are used; glow caps plant onto open air, otherwise eaten</span></div>
           <div class="help-row"><span><kbd>1</kbd>-<kbd>9</kbd></span><span>Select hotbar slot (mouse wheel works too)</span></div>
           <div class="help-row"><span><kbd>F</kbd></span><span>Swing at enemies in front of you</span></div>
           <div class="help-row"><span><kbd>R</kbd></span><span>Recall to the active campfire anchor when the route turns bad</span></div>
           <div class="help-row"><span><kbd>C</kbd></span><span>Open camp services. Resting sets that campfire as your anchor</span></div>
-          <div class="help-row"><span><kbd>E</kbd></span><span>Open crafting. A gold badge means something new is buildable</span></div>
           <div class="help-row"><span><kbd>M</kbd></span><span>Toggle the minimap</span></div>
           <div class="help-row"><span><kbd>Gel</kbd></span><span>Slimes and crawlers drop gel for torches and charges</span></div>
           <div class="help-row"><span><kbd>Coins</kbd></span><span>Mobs and chests drop coins for merchant recovery kits</span></div>
@@ -242,6 +242,15 @@
         </div>
         <canvas id="minimapCanvas" width="180" height="300"></canvas>
       </aside>
+
+      <button id="interactPrompt" class="interact-prompt hidden" type="button" aria-live="polite">
+        <span id="interactKey" class="interact-key">E</span>
+        <span class="interact-copy">
+          <strong id="interactAction">Open</strong>
+          <em id="interactName">Supply chest</em>
+        </span>
+        <small id="interactHint">Nearby</small>
+      </button>
 
       <div id="hotbar" class="hotbar" aria-label="Hotbar"></div>
 

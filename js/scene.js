@@ -170,7 +170,7 @@
         altDown: "DOWN"
       });
 
-      this.input.keyboard.on("keydown-E", () => this.toggleCraft());
+      this.input.keyboard.on("keydown-E", () => this.interactOrCraft());
       this.input.keyboard.on("keydown-C", () => this.toggleCamp());
       this.input.keyboard.on("keydown-M", () => ML.toggleMinimap());
       this.input.keyboard.on("keydown-ESC", () => this.setPaused(!this.pausedByUI));
@@ -225,7 +225,7 @@
       ML.renderAll(this.sim);
       this.checkLore("load", { silent: true });
       this.checkAchievements();
-      ML.showToast("Pickaxe ready. LMB mines, RMB places or uses, F attacks, E crafts, M map.", 4600);
+      ML.showToast("Pickaxe ready. LMB mines, RMB places or uses, E opens nearby objects or crafts, F attacks.", 4600);
     }
 
     createAnims() {
@@ -451,6 +451,7 @@
         ML.renderEvent(this);
         ML.renderBossBar(this);
         ML.renderRecall(this);
+        ML.renderInteraction(this);
         this.checkBiomeTransition();
       }
       this.lastMapUpdate += delta;
@@ -838,6 +839,111 @@
       return { x, y, tile: this.sim.tileAt(x, y) };
     }
 
+    playerTilePoint() {
+      return {
+        x: this.player.x / TILE,
+        y: this.player.y / TILE
+      };
+    }
+
+    hasSightToTile(x, y) {
+      const from = this.playerTilePoint();
+      const to = { x: x + 0.5, y: y + 0.5 };
+      const distance = Math.hypot(to.x - from.x, to.y - from.y);
+      const steps = Math.max(2, Math.ceil(distance * 5));
+      for (let i = 1; i < steps; i += 1) {
+        const t = i / steps;
+        const tx = Math.floor(from.x + (to.x - from.x) * t);
+        const ty = Math.floor(from.y + (to.y - from.y) * t);
+        if (tx === x && ty === y) continue;
+        const tile = this.sim.tileAt(tx, ty);
+        if (tile !== AIR && BLOCKS[tile]?.solid && tile !== Tile.PLATFORM) return false;
+      }
+      return true;
+    }
+
+    nearestTileObject(predicate, radius = INTERACT_RANGE_TILES) {
+      const player = this.playerTilePoint();
+      const minX = Math.max(0, Math.floor(player.x - radius - 1));
+      const maxX = Math.min(WORLD_W - 1, Math.ceil(player.x + radius + 1));
+      const minY = Math.max(0, Math.floor(player.y - radius - 1));
+      const maxY = Math.min(WORLD_H - 1, Math.ceil(player.y + radius + 1));
+      let best = null;
+      let bestDistance = Infinity;
+      for (let y = minY; y <= maxY; y += 1) {
+        for (let x = minX; x <= maxX; x += 1) {
+          const tile = this.sim.tileAt(x, y);
+          if (!predicate(tile, x, y)) continue;
+          const distance = Math.hypot(x + 0.5 - player.x, y + 0.5 - player.y);
+          if (distance > radius || distance >= bestDistance) continue;
+          if (!this.hasSightToTile(x, y)) continue;
+          best = { x, y, tile, distance };
+          bestDistance = distance;
+        }
+      }
+      return best;
+    }
+
+    interactionTarget() {
+      if (!this.player || this.dead || this.pausedByUI) return null;
+      const chest = this.nearestTileObject((tile) => tile === Tile.CHEST, INTERACT_RANGE_TILES);
+      if (chest) {
+        const secret = this.sim.secretAt(chest.x, chest.y);
+        return {
+          kind: secret ? "secretChest" : "chest",
+          key: "E",
+          action: "Open",
+          name: secret ? "Secret cache" : "Supply chest",
+          hint: secret ? "Hidden loot" : "Loot cache",
+          x: chest.x,
+          y: chest.y
+        };
+      }
+
+      const camp = ML.CampSystem.nearestCampfire(this.sim, this.player);
+      if (camp) {
+        return {
+          kind: "camp",
+          key: "E",
+          action: "Use",
+          name: "Campfire",
+          hint: `Anchor ${ML.CampSystem.campLabel(this.sim, ML.CampSystem.activeCamp(this.sim))}`,
+          x: camp.x,
+          y: camp.y
+        };
+      }
+
+      return null;
+    }
+
+    interact() {
+      const target = this.interactionTarget();
+      if (!target) return false;
+      if (target.kind === "chest" || target.kind === "secretChest") {
+        return this.openChest(target.x, target.y);
+      }
+      if (target.kind === "camp") {
+        this.toggleCamp(true);
+        return true;
+      }
+      return false;
+    }
+
+    interactOrCraft() {
+      if (this.pausedByUI || this.dead) return false;
+      if (this.craftOpen) {
+        this.toggleCraft(false);
+        return true;
+      }
+      if (this.campOpen) {
+        this.toggleCamp(false);
+        return true;
+      }
+      if (this.interact()) return true;
+      this.toggleCraft();
+      return true;
+    }
+
     describePointerTarget() {
       const enemy = this.findEnemyAtPointer(this.input.activePointer);
       if (enemy) return this.enemyName(enemy.kind);
@@ -1172,6 +1278,20 @@
         ML.audio.play("break");
         ML.renderAll(this.sim);
       }
+      return true;
+    }
+
+    openChest(x, y) {
+      if (this.sim.tileAt(x, y) !== Tile.CHEST) return false;
+      this.sim.setTile(x, y, AIR);
+      this.layer.removeTileAt(x, y, true, false);
+      this.layer.calculateFacesWithin(x - 1, y - 1, 3, 3);
+      this.emitBlockBurst(x, y, BLOCK_TINTS[Tile.CHEST] || 0xcaa258, 7);
+      ML.minimap.paintTile(this.sim, x, y);
+      this.setAction("Open cache", 900);
+      this.lootChest(x, y);
+      ML.renderAll(this.sim);
+      this.saveGame();
       return true;
     }
 
@@ -2238,6 +2358,7 @@
         ML.toggleMinimap(false);
         ML.renderCamp(this.sim);
       }
+      ML.renderInteraction?.(this);
     }
 
     useCampService(id) {
@@ -2280,6 +2401,7 @@
         ML.toggleMinimap(false);
         ML.renderCraft(this.sim);
       }
+      ML.renderInteraction?.(this);
     }
 
     toggleHelp(force) {

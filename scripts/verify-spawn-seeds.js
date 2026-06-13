@@ -226,6 +226,38 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
   }));
   const fallDelta = Number((afterDown.y - start.y).toFixed(3));
 
+  const interactionCheck = await page.evaluate(() => {
+    const scene = window.ML.sceneRef;
+    const sim = scene.sim;
+    const { TILE, Tile, AIR } = window.ML;
+    const floorY = sim.spawnFloorY();
+    const chestX = sim.spawn.x + 1;
+    const chestY = floorY - 1;
+    scene.player.setPosition(sim.spawn.x * TILE + TILE / 2, floorY * TILE - 17);
+    sim.player = { x: scene.player.x, y: scene.player.y };
+    if (sim.tileAt(chestX, chestY) !== AIR) {
+      sim.setTile(chestX, chestY, AIR);
+      scene.layer.removeTileAt(chestX, chestY, true, false);
+    }
+    scene.placeTileAt(Tile.CHEST, chestX, chestY);
+    const beforeChests = sim.stats.chests || 0;
+    const beforeCoin = sim.inventory.coin || 0;
+    const target = scene.interactionTarget();
+    const opened = scene.interact();
+    const afterTile = sim.tileAt(chestX, chestY);
+    const afterTarget = scene.interactionTarget();
+    return {
+      target,
+      afterTarget,
+      opened,
+      afterTile,
+      chestRemoved: afterTile === AIR,
+      chestDelta: (sim.stats.chests || 0) - beforeChests,
+      coinDelta: (sim.inventory.coin || 0) - beforeCoin,
+      chestTargetCleared: !afterTarget || afterTarget.kind !== "chest"
+    };
+  });
+
   await browser.close();
 
   const progressionFailed = progressionCheck.recipes < 34
@@ -264,8 +296,14 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.crafted < 1
     || progressionCheck.completedContracts < 1
     || progressionCheck.platforms < 4;
-  const failed = errors.length > 0 || seedCheck.failures.length > 0 || seedCheck.ecologyFailures.length > 0 || progressionFailed || !start.support || !start.stable || start.campfires < 1 || !start.recallApi || !start.campApi || !start.nearCamp || fallDelta > 1;
-  const report = { seedCheck, progressionCheck, start, afterDown, fallDelta, errors };
+  const interactionFailed = interactionCheck.target?.kind !== "chest"
+    || !interactionCheck.opened
+    || !interactionCheck.chestRemoved
+    || interactionCheck.chestDelta !== 1
+    || interactionCheck.coinDelta < 4
+    || !interactionCheck.chestTargetCleared;
+  const failed = errors.length > 0 || seedCheck.failures.length > 0 || seedCheck.ecologyFailures.length > 0 || progressionFailed || interactionFailed || !start.support || !start.stable || start.campfires < 1 || !start.recallApi || !start.campApi || !start.nearCamp || fallDelta > 1;
+  const report = { seedCheck, progressionCheck, start, afterDown, fallDelta, interactionCheck, errors };
   console.log(JSON.stringify(report, null, 2));
 
   if (failed) process.exit(1);
