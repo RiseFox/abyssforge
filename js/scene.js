@@ -171,6 +171,14 @@
         .setScrollFactor(0)
         .setDepth(79);
       this.tileFx = this.add.graphics().setDepth(9);
+      this.lightPropPool = Array.from({ length: 128 }, () =>
+        this.add.image(0, 0, "light-torch-0")
+          .setDepth(9.5)
+          .setVisible(false)
+          .setOrigin(0.5, 1)
+      );
+      this.visibleLightPropCount = 0;
+      this.nextLightPropScanAt = 0;
       this.chestPropPool = Array.from({ length: 72 }, () =>
         this.add.image(0, 0, "asset-cache-chest")
           .setDepth(8)
@@ -526,6 +534,7 @@
       this.updateObserverAwareness(dt, { vx, left, right, up, down, jumpPressed, onFloor, onLadder, pointer });
       this.updateSky();
       this.drawAnimatedTileFx();
+      this.updateLightProps();
       this.updateChestProps();
       this.updateDarkness();
       this.updatePickaxeVisual(Boolean(this.mineTarget));
@@ -812,6 +821,72 @@
           fx.fillCircle(x + TILE / 2, y + TILE / 2, 10 + pulse * 4);
         }
       }
+    }
+
+    lightPropFrameKeys() {
+      return [
+        "light-campfire-0",
+        "light-campfire-1",
+        "light-campfire-2",
+        "light-torch-0",
+        "light-torch-1",
+        "light-torch-2",
+        "light-glowcap-0",
+        "light-glowcap-1",
+        "light-glowcap-2"
+      ].filter((key) => this.textures.exists(key));
+    }
+
+    isLightPropTile(tile) {
+      return tile === Tile.CAMPFIRE || tile === Tile.TORCH || tile === Tile.MUSHROOM;
+    }
+
+    lightPropTextureKey(tile, now, x, y) {
+      const frame = Math.abs(Math.floor(now / 130 + x * 0.37 + y * 0.19)) % 3;
+      if (tile === Tile.CAMPFIRE) return `light-campfire-${frame}`;
+      if (tile === Tile.TORCH) return `light-torch-${frame}`;
+      if (tile === Tile.MUSHROOM) return `light-glowcap-${frame}`;
+      return null;
+    }
+
+    updateLightProps(force = false) {
+      if (!this.lightPropPool?.length) return;
+      const now = this.time.now || 0;
+      if (!force && now < this.nextLightPropScanAt) return;
+      this.nextLightPropScanAt = now + 120;
+      const cam = this.cameras.main;
+      const minX = Math.floor((cam.scrollX - 64) / TILE);
+      const maxX = Math.ceil((cam.scrollX + cam.width + 64) / TILE);
+      const minY = Math.floor((cam.scrollY - 64) / TILE);
+      const maxY = Math.ceil((cam.scrollY + cam.height + 64) / TILE);
+      let used = 0;
+      const lights = this.sim?.lights || [];
+      for (const light of lights) {
+        if (used >= this.lightPropPool.length) break;
+        if (light.x < minX || light.x > maxX || light.y < minY || light.y > maxY) continue;
+        const tile = this.sim.tileAt(light.x, light.y);
+        if (!this.isLightPropTile(tile)) continue;
+        const key = this.lightPropTextureKey(tile, now, light.x, light.y);
+        if (!key || !this.textures.exists(key)) continue;
+        const sprite = this.lightPropPool[used];
+        used += 1;
+        const pulse = tile === Tile.MUSHROOM
+          ? 1 + Math.sin(now / 420 + light.x * 0.23 + light.y * 0.31) * 0.035
+          : tile === Tile.CAMPFIRE
+            ? 1 + Math.sin(now / 180 + light.x) * 0.025
+            : 1;
+        sprite
+          .setTexture(key)
+          .setPosition(light.x * TILE + TILE / 2, light.y * TILE + TILE + (tile === Tile.MUSHROOM ? 1 : 0))
+          .setScale(pulse)
+          .setAlpha(tile === Tile.MUSHROOM ? 0.94 : 0.98)
+          .clearTint()
+          .setVisible(true);
+      }
+      for (let i = used; i < this.lightPropPool.length; i += 1) {
+        this.lightPropPool[i].setVisible(false);
+      }
+      this.visibleLightPropCount = used;
     }
 
     chestTableIdAt(x, y, secret = null) {

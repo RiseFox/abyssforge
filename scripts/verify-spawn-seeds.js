@@ -654,6 +654,8 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const externalCacheProfile = firstChest ? scene.cacheVisualProfile?.(firstChest.x, firstChest.y) || null : null;
     const chestPropPoolSize = scene?.chestPropPool?.length || 0;
     const chestPropCount = scene?.visibleChestPropCount || 0;
+    const lightPropPoolSize = scene?.lightPropPool?.length || 0;
+    const lightPropFrameCount = scene?.lightPropFrameKeys?.().length || 0;
     const externalSlicedIconUrls = ["sealedLetter", "strangeKey", "watcherToken", "battery"]
       .map((item) => window.ML.ExternalAssets?.itemCssUrl?.(item) || "");
     const externalSlicedIconCount = externalSlicedIconUrls.filter((url) => url.startsWith("data:image/png;base64,")).length;
@@ -737,9 +739,12 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       externalCacheProfile,
       chestPropPoolSize,
       chestPropCount,
+      lightPropPoolSize,
+      lightPropFrameCount,
       externalKitHotbarIcon,
       externalKitPackIcon,
       watcherRuntime: typeof scene?.spawnWatcherSighting === "function" && typeof scene?.updateShadowPressure === "function" && typeof scene?.dismissWatcher === "function" && typeof scene?.leaveWatcherTrace === "function",
+      lightPropRuntime: typeof scene?.updateLightProps === "function" && typeof scene?.lightPropTextureKey === "function",
       mobWakeRuntime: typeof scene?.mobWakeInfo === "function" && typeof scene?.queueMobMaterialize === "function" && typeof scene?.updatePendingMobSpawns === "function" && typeof scene?.cancelPendingMobSpawn === "function",
       smartMobRuntime: typeof scene?.enemyInstinct === "function",
       eventCopyRuntime: typeof scene?.eventCopyFor === "function",
@@ -1056,9 +1061,12 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.externalSlicedIconUnique < 4
     || !progressionCheck.externalCacheProfile?.kind
     || progressionCheck.chestPropPoolSize < 48
+    || progressionCheck.lightPropPoolSize < 96
+    || progressionCheck.lightPropFrameCount < 9
     || !progressionCheck.externalKitHotbarIcon
     || !progressionCheck.externalKitPackIcon
     || !progressionCheck.watcherRuntime
+    || !progressionCheck.lightPropRuntime
     || !progressionCheck.mobWakeRuntime
     || !progressionCheck.smartMobRuntime
     || !progressionCheck.eventCopyRuntime

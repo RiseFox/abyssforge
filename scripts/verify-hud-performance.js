@@ -59,6 +59,8 @@ const MAX_HUD_NODES = Number(process.env.MAX_HUD_NODES || 1200);
   });
 
   const snapshot = await page.evaluate(() => {
+    const scene = window.ML.sceneRef;
+    scene?.updateLightProps?.(true);
     const hud = document.getElementById("hud");
     const hotbar = document.getElementById("hotbar");
     const topLeft = document.querySelector(".top-left");
@@ -81,8 +83,11 @@ const MAX_HUD_NODES = Number(process.env.MAX_HUD_NODES || 1200);
       perfChip: rectOf(perfChip),
       externalAssets: window.ML.ExternalAssets?.report?.() || null,
       assetIconCount: document.querySelectorAll(".asset-icon").length,
-      chestPropPool: window.ML.sceneRef?.chestPropPool?.length || 0,
-      visibleChestProps: window.ML.sceneRef?.visibleChestPropCount || 0
+      chestPropPool: scene?.chestPropPool?.length || 0,
+      visibleChestProps: scene?.visibleChestPropCount || 0,
+      lightPropPool: scene?.lightPropPool?.length || 0,
+      visibleLightProps: scene?.visibleLightPropCount || 0,
+      lightPropFrameCount: scene?.lightPropFrameKeys?.().length || 0
     };
   });
 
@@ -108,6 +113,8 @@ const MAX_HUD_NODES = Number(process.env.MAX_HUD_NODES || 1200);
   if ((snapshot.externalAssets?.sheetIconCount || 0) < 4) failures.push("expected sliced sheet item icons");
   if ((snapshot.assetIconCount || 0) < 1) failures.push("expected at least one external asset icon in the HUD");
   if ((snapshot.chestPropPool || 0) < 48) failures.push("expected pooled chest prop sprites");
+  if ((snapshot.lightPropPool || 0) < 96) failures.push("expected pooled light prop sprites");
+  if ((snapshot.lightPropFrameCount || 0) < 9) failures.push("expected animated light prop frames");
 
   if (failures.length) {
     console.error(`HUD performance check failed: ${failures.join("; ")}`);

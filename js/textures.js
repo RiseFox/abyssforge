@@ -206,6 +206,84 @@
     ctx.fillRect(signX + 9, 14, 14, 2);
     tiles.refresh();
 
+    const drawLightPropTextures = () => {
+      const propSize = 32;
+      const makeProp = (key) => {
+        const texture = freshCanvasTexture(key, propSize, propSize);
+        const propCtx = texture.getContext();
+        propCtx.clearRect(0, 0, propSize, propSize);
+        return [texture, propCtx];
+      };
+
+      for (let frame = 0; frame < 3; frame += 1) {
+        const lift = frame === 1 ? 1 : frame === 2 ? -1 : 0;
+        let texture;
+        let propCtx;
+
+        [texture, propCtx] = makeProp(`light-campfire-${frame}`);
+        propCtx.fillStyle = "rgba(0,0,0,0.28)";
+        propCtx.fillRect(4, 27, 24, 4);
+        propCtx.fillStyle = "#4a2a16";
+        propCtx.fillRect(7, 24, 19, 4);
+        propCtx.fillStyle = "#8d5829";
+        propCtx.fillRect(5, 22, 21, 4);
+        propCtx.fillRect(9, 26, 17, 2);
+        propCtx.fillStyle = "#2c1a10";
+        propCtx.fillRect(8, 25, 16, 3);
+        propCtx.fillStyle = "#9d3a24";
+        propCtx.fillRect(14, 17 + lift, 4, 7);
+        propCtx.fillStyle = "#f08a3e";
+        propCtx.fillRect(10, 15 - lift, 5, 9);
+        propCtx.fillRect(18, 16 + lift, 5, 8);
+        propCtx.fillStyle = "#ffdf78";
+        propCtx.fillRect(14, 9 - lift, 5, 13);
+        propCtx.fillStyle = "#fff1a8";
+        propCtx.fillRect(15, 12 - lift, 3, 6);
+        propCtx.fillStyle = "rgba(255,202,94,0.65)";
+        propCtx.fillRect(8 + frame * 6, 7 + frame, 2, 2);
+        texture.refresh();
+
+        [texture, propCtx] = makeProp(`light-torch-${frame}`);
+        propCtx.fillStyle = "rgba(0,0,0,0.22)";
+        propCtx.fillRect(10, 30, 12, 2);
+        propCtx.fillStyle = "#4d2d17";
+        propCtx.fillRect(14, 14, 5, 17);
+        propCtx.fillStyle = "#8c5a2d";
+        propCtx.fillRect(13, 15, 7, 3);
+        propCtx.fillRect(13, 22, 7, 3);
+        propCtx.fillStyle = "#9d3a24";
+        propCtx.fillRect(15, 9 + lift, 3, 7);
+        propCtx.fillStyle = "#f37a42";
+        propCtx.fillRect(12, 7 - lift, 8, 8);
+        propCtx.fillStyle = "#f3ce62";
+        propCtx.fillRect(13, 4 - lift, 6, 9);
+        propCtx.fillStyle = "#fff1a8";
+        propCtx.fillRect(15, 6 - lift, 3, 5);
+        texture.refresh();
+
+        [texture, propCtx] = makeProp(`light-glowcap-${frame}`);
+        const pulse = frame === 1 ? 1 : 0;
+        propCtx.fillStyle = "rgba(70,230,210,0.16)";
+        propCtx.fillRect(6 - pulse, 14 - pulse, 20 + pulse * 2, 9 + pulse * 2);
+        propCtx.fillStyle = "rgba(0,0,0,0.22)";
+        propCtx.fillRect(10, 29, 13, 2);
+        propCtx.fillStyle = "#c9c1aa";
+        propCtx.fillRect(14, 17, 5, 13);
+        propCtx.fillStyle = "#eee0c4";
+        propCtx.fillRect(15, 17, 3, 11);
+        propCtx.fillStyle = "#2ab9ad";
+        propCtx.fillRect(6, 11 - pulse, 20, 8);
+        propCtx.fillRect(9, 8 - pulse, 14, 4);
+        propCtx.fillStyle = "#6ff7e9";
+        propCtx.fillRect(9, 12 - pulse, 5, 3);
+        propCtx.fillRect(19, 13 - pulse, 4, 3);
+        propCtx.fillStyle = "#d7fff8";
+        propCtx.fillRect(16, 10 - pulse, 2, 2);
+        texture.refresh();
+      }
+    };
+    drawLightPropTextures();
+
     // ---- Player sprite sheet: 8 frames of 28x36 ---------------------------
     const FRAME_W = 28;
     const FRAME_H = 36;

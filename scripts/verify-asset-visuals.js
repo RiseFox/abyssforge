@@ -19,6 +19,7 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
   await page.waitForFunction(() =>
     window.ML?.sceneRef?.sim
     && window.ML.sceneRef.chestPropPool
+    && window.ML.sceneRef.lightPropPool
     && window.ML.ExternalAssets?.report
   );
 
@@ -59,6 +60,21 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
     if (firstChest) {
       scene.playCacheOpenFx(firstChest.x, firstChest.y, { kind: "chest", label: "Test cache" });
     }
+    const firstLight = (scene.sim.lights || []).find((light) => {
+      const tile = sim.tileAt(light.x, light.y);
+      return tile === window.ML.Tile.CAMPFIRE || tile === window.ML.Tile.TORCH || tile === window.ML.Tile.MUSHROOM;
+    }) || null;
+    if (firstLight) {
+      const cam = scene.cameras.main;
+      cam.stopFollow();
+      cam.setScroll(
+        Math.max(0, firstLight.x * window.ML.TILE - cam.width / 2),
+        Math.max(0, firstLight.y * window.ML.TILE - cam.height / 2)
+      );
+      scene.updateLightProps(true);
+    }
+    const lightPropFrames = scene.lightPropFrameKeys?.() || [];
+    const visibleLightProps = scene.lightPropPool.filter((sprite) => sprite.visible);
     const mobWakeFrames = window.ML.ExternalAssets.mobWakeFrameKeys?.(scene) || [];
     const mobWakePreview = mobWakeFrames[0]
       ? scene.add.image(scene.player.x + 92, scene.player.y - 4, mobWakeFrames[0])
@@ -75,6 +91,11 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
       firstTexture,
       recoverFxCount: recoverFx.length,
       cacheOpenAnimation: scene.lastCacheOpenAnimation || null,
+      firstLight,
+      lightPropPoolSize: scene.lightPropPool.length,
+      visibleLightProps: scene.visibleLightPropCount,
+      firstLightTexture: visibleLightProps[0]?.texture?.key || null,
+      lightPropFrameCount: lightPropFrames.length,
       mobWakeFrameCount: mobWakeFrames.length,
       mobWakePreviewTexture: mobWakePreview?.texture?.key || null,
       slicedIconUrls,
@@ -102,6 +123,11 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
   if ((snapshot.visibleCacheProps || 0) < 1) failures.push("expected visible cache prop overlay");
   if (!snapshot.firstTexture?.startsWith("asset-cache-")) failures.push("expected normalized cache texture in scene");
   if ((snapshot.cacheOpenAnimation?.frameCount || 0) < 4) failures.push("expected cache opening animation to run");
+  if (!snapshot.firstLight) failures.push("expected at least one light prop source in the generated world");
+  if ((snapshot.lightPropPoolSize || 0) < 96) failures.push("expected pooled light prop sprites");
+  if ((snapshot.visibleLightProps || 0) < 1) failures.push("expected visible light prop overlay");
+  if ((snapshot.lightPropFrameCount || 0) < 9) failures.push("expected generated light prop animation frames");
+  if (!snapshot.firstLightTexture?.startsWith?.("light-")) failures.push("expected animated light prop texture in scene");
   if ((snapshot.mobWakeFrameCount || 0) < 5) failures.push("expected mob wake frame list");
   if (!snapshot.mobWakePreviewTexture?.startsWith?.("asset-mob-wake-frame")) failures.push("expected mob wake preview texture");
   if ((snapshot.recoverFxCount || 0) < 1) failures.push("expected recover heart FX");
