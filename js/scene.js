@@ -2750,7 +2750,9 @@
       const wx = spot.x * TILE + TILE / 2;
       const wy = spot.y * TILE + 12;
       const cfg = ENEMIES[mob.kind];
-      const marker = this.add.image(wx, wy + 6, "mobWake")
+      const frameKeys = ML.ExternalAssets?.mobWakeFrameKeys?.(this) || [];
+      const markerKey = frameKeys[0] || "mobWake";
+      const marker = this.add.image(wx, wy + 6, markerKey)
         .setOrigin(0.5, 1)
         .setDepth(83)
         .setAlpha(0)
@@ -2771,6 +2773,9 @@
         mob,
         spot,
         marker,
+        frameKeys,
+        frameIndex: 0,
+        nextFrameAt: this.time.now,
         queuedAt: this.time.now,
         readyAt: this.time.now + (options.delay ?? 900),
         event: Boolean(mob.event || mob.summoned || options.event),
@@ -2822,6 +2827,15 @@
         if (wake.tooClose) {
           pending.readyAt = this.time.now + 420;
           continue;
+        }
+        if (pending.frameKeys?.length && pending.marker?.active && this.time.now >= pending.nextFrameAt) {
+          const progress = clamp((this.time.now - pending.queuedAt) / Math.max(1, pending.readyAt - pending.queuedAt), 0, 1);
+          const key = pending.frameKeys[pending.frameIndex % pending.frameKeys.length];
+          pending.frameIndex += 1;
+          pending.nextFrameAt = this.time.now + (pending.event ? 62 : 78);
+          pending.marker.setTexture(key);
+          pending.marker.setScale((pending.mob?.boss ? 1.74 : pending.mob?.elite ? 1.52 : 1.26) + progress * 0.22);
+          pending.marker.setAlpha(0.36 + progress * 0.52);
         }
         if (this.time.now < pending.readyAt) continue;
         if (this.enemies.countActive(true) >= 12) continue;

@@ -354,6 +354,11 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const stagedSpot = stagedMob ? scene.findMobSpot?.(stagedMob) : null;
     const mobWakeQueued = stagedMob && stagedSpot ? scene.queueMobMaterialize?.(stagedMob, stagedSpot, { delay: 1200, reason: "test" }) : false;
     const pendingAfterQueue = scene?.pendingMobSpawns?.size || 0;
+    const pendingWake = mobWakeQueued ? scene.pendingMobSpawns?.get?.(stagedMob.id) : null;
+    const mobWakeAnimatedMarker = Boolean(
+      pendingWake?.frameKeys?.length >= 5
+      && pendingWake?.marker?.texture?.key?.startsWith?.("asset-mob-wake-frame")
+    );
     if (mobWakeQueued) scene.cancelPendingMobSpawn?.(stagedMob.id, false);
     const pendingAfterCancel = scene?.pendingMobSpawns?.size || 0;
     const heightBefore = sim.worldHeight?.() || sim.world.length;
@@ -724,6 +729,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       externalCacheOpenTexture: Boolean(window.ML.ExternalAssets?.cacheTextureKey?.("rare", true, scene)),
       externalCacheTextureCount: externalReport.cacheTextureCount || 0,
       externalCacheAnimationFrameCount: externalReport.cacheAnimationFrameCount || 0,
+      externalMobWakeAnimationFrameCount: externalReport.mobWakeAnimationFrameCount || 0,
       externalDerivedCssIconCount: externalReport.derivedCssIconCount || 0,
       externalSheetIconCount: externalReport.sheetIconCount || 0,
       externalSlicedIconCount,
@@ -866,6 +872,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       watcherTraceActive: Boolean(trace),
       watcherSpotDistance: watcherSpot ? Math.round(Math.hypot(watcherSpot.x - scene.player.x, watcherSpot.y - scene.player.y)) : 0,
       mobWakeQueued: Boolean(mobWakeQueued),
+      mobWakeAnimatedMarker,
       pendingAfterQueue,
       pendingAfterCancel,
       shadowPressure: sim.shadowPressure,
@@ -1042,6 +1049,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || !progressionCheck.externalCacheOpenTexture
     || progressionCheck.externalCacheTextureCount < 8
     || progressionCheck.externalCacheAnimationFrameCount < 4
+    || progressionCheck.externalMobWakeAnimationFrameCount < 5
     || progressionCheck.externalDerivedCssIconCount < 20
     || progressionCheck.externalSheetIconCount < 4
     || progressionCheck.externalSlicedIconCount < 4
@@ -1171,6 +1179,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.watcherTraceDelta < 1
     || progressionCheck.watcherSpotDistance < 245
     || !progressionCheck.mobWakeQueued
+    || !progressionCheck.mobWakeAnimatedMarker
     || progressionCheck.pendingAfterQueue < 1
     || progressionCheck.pendingAfterCancel !== 0
     || progressionCheck.watcherSightings < 3

@@ -78,6 +78,14 @@
     { key: "asset-cache-open-frame-3", rect: [16, 16, 16, 16] }
   ]);
 
+  const MOB_WAKE_FRAMES = Object.freeze([
+    { key: "asset-mob-wake-frame-0", rect: [0, 0, 13, 13] },
+    { key: "asset-mob-wake-frame-1", rect: [13, 0, 13, 13] },
+    { key: "asset-mob-wake-frame-2", rect: [26, 0, 13, 13] },
+    { key: "asset-mob-wake-frame-3", rect: [39, 0, 13, 13] },
+    { key: "asset-mob-wake-frame-4", rect: [52, 0, 13, 13] }
+  ]);
+
   const state = {
     requested: 0,
     loaded: new Set(),
@@ -242,6 +250,16 @@
       });
     }
 
+    for (const frame of MOB_WAKE_FRAMES) {
+      createNormalizedTexture(scene, frame.key, "relicFx", 34, 30, {
+        pad: 2,
+        scale: 1.42,
+        alignY: 0.56,
+        sourceRect: frame.rect,
+        shadow: true
+      });
+    }
+
     for (const item of Object.keys(ITEM_ICON_ASSETS)) {
       const spec = itemSpec(item);
       const targetKey = RUNTIME_ITEM_TEXTURES[item];
@@ -278,6 +296,12 @@
       .filter((key) => scene?.textures?.exists?.(key));
   }
 
+  function mobWakeFrameKeys(scene = ML.sceneRef) {
+    return MOB_WAKE_FRAMES
+      .map((frame) => frame.key)
+      .filter((key) => scene?.textures?.exists?.(key));
+  }
+
   function report(scene = ML.sceneRef) {
     const requestedKeys = Object.keys(RAW_ASSETS).map(rawKey);
     const loaded = requestedKeys.filter((key) => scene?.textures?.exists?.(key));
@@ -291,6 +315,7 @@
       .flatMap((cache) => [cache.closed, cache.open])
       .filter((key) => scene?.textures?.exists?.(key)).length;
     const cacheAnimationFrameCount = cacheOpenFrameKeys(scene).length;
+    const mobWakeAnimationFrameCount = mobWakeFrameKeys(scene).length;
     return {
       requested: requestedKeys.length,
       loaded: loaded.length,
@@ -300,6 +325,7 @@
       sheetIconCount,
       cacheTextureCount,
       cacheAnimationFrameCount,
+      mobWakeAnimationFrameCount,
       missing: [...state.missing].filter((key) => !scene?.textures?.exists?.(key))
     };
   }
@@ -310,6 +336,7 @@
     RUNTIME_ITEM_TEXTURES,
     CACHE_TEXTURES,
     CACHE_OPEN_FRAMES,
+    MOB_WAKE_FRAMES,
     preload,
     drawRawInto,
     createNormalizedTexture,
@@ -318,6 +345,7 @@
     itemCssUrl,
     cacheTextureKey,
     cacheOpenFrameKeys,
+    mobWakeFrameKeys,
     report
   };
 })();

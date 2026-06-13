@@ -21,7 +21,7 @@ AbyssForge primarily uses code-generated pixel textures. External assets are tre
 - License evidence: `assets/external/sparklinlabs/LICENSE.txt`
 - Local files: `assets/external/sparklinlabs/`
 - Use case: chests, cache props, currency/gem icons, mob silhouette references, HUD heart references, small FX, and tool/key/lore item references.
-- Runtime status: selected chest, item, mob, and FX candidates are approved for the normalized runtime bridge in `js/assets.js`; the rest remain references until explicitly mapped.
+- Runtime status: selected chest, item, mob, HUD, item-FX, and mob-wake FX candidates are approved for the normalized runtime bridge in `js/assets.js`; the rest remain references until explicitly mapped.
 
 ### OpenGameArt - Pixel Art Dungeon Items
 

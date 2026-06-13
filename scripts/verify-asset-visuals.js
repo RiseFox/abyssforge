@@ -59,6 +59,14 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
     if (firstChest) {
       scene.playCacheOpenFx(firstChest.x, firstChest.y, { kind: "chest", label: "Test cache" });
     }
+    const mobWakeFrames = window.ML.ExternalAssets.mobWakeFrameKeys?.(scene) || [];
+    const mobWakePreview = mobWakeFrames[0]
+      ? scene.add.image(scene.player.x + 92, scene.player.y - 4, mobWakeFrames[0])
+        .setDepth(85)
+        .setScale(1.45)
+        .setAlpha(0.9)
+        .setBlendMode(Phaser.BlendModes.ADD)
+      : null;
 
     return {
       firstChest,
@@ -67,6 +75,8 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
       firstTexture,
       recoverFxCount: recoverFx.length,
       cacheOpenAnimation: scene.lastCacheOpenAnimation || null,
+      mobWakeFrameCount: mobWakeFrames.length,
+      mobWakePreviewTexture: mobWakePreview?.texture?.key || null,
       slicedIconUrls,
       slicedIconUnique,
       externalAssets: window.ML.ExternalAssets.report(scene)
@@ -81,9 +91,10 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
 
   const failures = [];
   if ((snapshot.externalAssets?.loaded || 0) < 25) failures.push("expected 25 external assets loaded");
-  if ((snapshot.externalAssets?.normalized || 0) < 43) failures.push("expected 43 normalized runtime textures");
+  if ((snapshot.externalAssets?.normalized || 0) < 48) failures.push("expected 48 normalized runtime textures");
   if ((snapshot.externalAssets?.cacheTextureCount || 0) < 8) failures.push("expected 8 cache textures");
   if ((snapshot.externalAssets?.cacheAnimationFrameCount || 0) < 4) failures.push("expected 4 cache animation frames");
+  if ((snapshot.externalAssets?.mobWakeAnimationFrameCount || 0) < 5) failures.push("expected 5 mob wake animation frames");
   if ((snapshot.externalAssets?.itemTextureCount || 0) < 20) failures.push("expected expanded item textures");
   if ((snapshot.externalAssets?.derivedCssIconCount || 0) < 20) failures.push("expected derived CSS item icons");
   if ((snapshot.externalAssets?.sheetIconCount || 0) < 4) failures.push("expected sliced sheet item icons");
@@ -91,6 +102,8 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
   if ((snapshot.visibleCacheProps || 0) < 1) failures.push("expected visible cache prop overlay");
   if (!snapshot.firstTexture?.startsWith("asset-cache-")) failures.push("expected normalized cache texture in scene");
   if ((snapshot.cacheOpenAnimation?.frameCount || 0) < 4) failures.push("expected cache opening animation to run");
+  if ((snapshot.mobWakeFrameCount || 0) < 5) failures.push("expected mob wake frame list");
+  if (!snapshot.mobWakePreviewTexture?.startsWith?.("asset-mob-wake-frame")) failures.push("expected mob wake preview texture");
   if ((snapshot.recoverFxCount || 0) < 1) failures.push("expected recover heart FX");
   if ((snapshot.slicedIconUnique || 0) < 4) failures.push("expected unique sliced lore/supply icons");
 
