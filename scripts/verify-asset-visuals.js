@@ -19,6 +19,7 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
   await page.waitForFunction(() =>
     window.ML?.sceneRef?.sim
     && window.ML.sceneRef.chestPropPool
+    && window.ML.sceneRef.orePropPool
     && window.ML.sceneRef.lightPropPool
     && window.ML.ExternalAssets?.report
   );
@@ -75,6 +76,42 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
     }
     const lightPropFrames = scene.lightPropFrameKeys?.() || [];
     const visibleLightProps = scene.lightPropPool.filter((sprite) => sprite.visible);
+    const oreTiles = [
+      window.ML.Tile.COAL,
+      window.ML.Tile.COPPER,
+      window.ML.Tile.IRON,
+      window.ML.Tile.CRYSTAL,
+      window.ML.Tile.GOLD,
+      window.ML.Tile.OBSIDIAN,
+      window.ML.Tile.AMBER,
+      window.ML.Tile.QUARTZ,
+      window.ML.Tile.EMBER,
+      window.ML.Tile.VOIDGLASS
+    ];
+    let firstOre = null;
+    for (let y = 0; y < sim.worldHeight(); y += 1) {
+      for (let x = 0; x < sim.worldWidth(); x += 1) {
+        const tile = sim.tileAt(x, y);
+        if (oreTiles.includes(tile)) {
+          firstOre = { x, y, tile };
+          break;
+        }
+      }
+      if (firstOre) break;
+    }
+    if (firstOre) {
+      const cam = scene.cameras.main;
+      cam.stopFollow();
+      scene.player.setPosition(firstOre.x * window.ML.TILE + window.ML.TILE / 2, firstOre.y * window.ML.TILE - 28);
+      scene.sim.player = { x: scene.player.x, y: scene.player.y };
+      cam.setScroll(
+        Math.max(0, firstOre.x * window.ML.TILE - cam.width / 2),
+        Math.max(0, firstOre.y * window.ML.TILE - cam.height / 2)
+      );
+      scene.updateOreProps(true);
+    }
+    const orePropFrames = scene.orePropFrameKeys?.() || [];
+    const visibleOreProps = scene.orePropPool.filter((sprite) => sprite.visible);
     const mobWakeFrames = window.ML.ExternalAssets.mobWakeFrameKeys?.(scene) || [];
     const mobWakePreview = mobWakeFrames[0]
       ? scene.add.image(scene.player.x + 92, scene.player.y - 4, mobWakeFrames[0])
@@ -96,6 +133,11 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
       visibleLightProps: scene.visibleLightPropCount,
       firstLightTexture: visibleLightProps[0]?.texture?.key || null,
       lightPropFrameCount: lightPropFrames.length,
+      firstOre,
+      orePropPoolSize: scene.orePropPool.length,
+      visibleOreProps: scene.visibleOrePropCount,
+      firstOreTexture: visibleOreProps[0]?.texture?.key || null,
+      orePropFrameCount: orePropFrames.length,
       mobWakeFrameCount: mobWakeFrames.length,
       mobWakePreviewTexture: mobWakePreview?.texture?.key || null,
       slicedIconUrls,
@@ -128,6 +170,11 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
   if ((snapshot.visibleLightProps || 0) < 1) failures.push("expected visible light prop overlay");
   if ((snapshot.lightPropFrameCount || 0) < 9) failures.push("expected generated light prop animation frames");
   if (!snapshot.firstLightTexture?.startsWith?.("light-")) failures.push("expected animated light prop texture in scene");
+  if (!snapshot.firstOre) failures.push("expected at least one ore prop source in the generated world");
+  if ((snapshot.orePropPoolSize || 0) < 128) failures.push("expected pooled ore prop sprites");
+  if ((snapshot.visibleOreProps || 0) < 1) failures.push("expected visible ore prop overlay");
+  if ((snapshot.orePropFrameCount || 0) < 9) failures.push("expected generated ore prop animation frames");
+  if (!snapshot.firstOreTexture?.startsWith?.("ore-glint-")) failures.push("expected animated ore glint texture in scene");
   if ((snapshot.mobWakeFrameCount || 0) < 5) failures.push("expected mob wake frame list");
   if (!snapshot.mobWakePreviewTexture?.startsWith?.("asset-mob-wake-frame")) failures.push("expected mob wake preview texture");
   if ((snapshot.recoverFxCount || 0) < 1) failures.push("expected recover heart FX");

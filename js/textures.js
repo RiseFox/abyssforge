@@ -284,6 +284,56 @@
     };
     drawLightPropTextures();
 
+    const drawOrePropTextures = () => {
+      const propSize = 32;
+      const makeOre = (key) => {
+        const texture = freshCanvasTexture(key, propSize, propSize);
+        const propCtx = texture.getContext();
+        propCtx.clearRect(0, 0, propSize, propSize);
+        return [texture, propCtx];
+      };
+      const drawSpark = (propCtx, x, y, size = 2) => {
+        propCtx.fillStyle = "rgba(255,255,255,0.92)";
+        propCtx.fillRect(x, y, size, size);
+        propCtx.fillStyle = "rgba(255,255,255,0.36)";
+        propCtx.fillRect(x - 1, y, size + 2, 1);
+        propCtx.fillRect(x, y - 1, 1, size + 2);
+      };
+
+      for (let frame = 0; frame < 3; frame += 1) {
+        let texture;
+        let propCtx;
+        const offset = frame - 1;
+
+        [texture, propCtx] = makeOre(`ore-glint-metal-${frame}`);
+        propCtx.fillStyle = "rgba(255,246,202,0.16)";
+        propCtx.fillRect(7 + offset, 8, 4, 2);
+        propCtx.fillRect(18, 18 - offset, 5, 2);
+        drawSpark(propCtx, 11 + frame * 3, 11 + offset, frame === 1 ? 3 : 2);
+        propCtx.fillStyle = "rgba(255,214,128,0.42)";
+        propCtx.fillRect(19 - offset, 21, 3, 1);
+        texture.refresh();
+
+        [texture, propCtx] = makeOre(`ore-glint-gem-${frame}`);
+        propCtx.fillStyle = "rgba(210,255,250,0.22)";
+        propCtx.fillRect(9, 7 + offset, 3, 9);
+        propCtx.fillRect(18, 14 - offset, 5, 8);
+        drawSpark(propCtx, 15 + offset * 2, 10, 2);
+        drawSpark(propCtx, 21, 20 - frame, 2);
+        texture.refresh();
+
+        [texture, propCtx] = makeOre(`ore-glint-shadow-${frame}`);
+        propCtx.fillStyle = "rgba(210,196,255,0.16)";
+        propCtx.fillRect(8 + frame, 10, 3, 8);
+        propCtx.fillRect(20 - frame, 18, 3, 6);
+        propCtx.fillStyle = "rgba(255,255,255,0.2)";
+        propCtx.fillRect(13 + offset, 13, 2, 2);
+        propCtx.fillRect(23 - offset, 23, 2, 1);
+        texture.refresh();
+      }
+    };
+    drawOrePropTextures();
+
     // ---- Player sprite sheet: 8 frames of 28x36 ---------------------------
     const FRAME_W = 28;
     const FRAME_H = 36;

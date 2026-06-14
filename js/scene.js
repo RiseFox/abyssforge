@@ -171,6 +171,15 @@
         .setScrollFactor(0)
         .setDepth(79);
       this.tileFx = this.add.graphics().setDepth(9);
+      this.orePropPool = Array.from({ length: 160 }, () =>
+        this.add.image(0, 0, "ore-glint-metal-0")
+          .setDepth(8.6)
+          .setVisible(false)
+          .setOrigin(0.5, 0.5)
+          .setBlendMode(Phaser.BlendModes.ADD)
+      );
+      this.visibleOrePropCount = 0;
+      this.nextOrePropScanAt = 0;
       this.lightPropPool = Array.from({ length: 128 }, () =>
         this.add.image(0, 0, "light-torch-0")
           .setDepth(9.5)
@@ -534,6 +543,7 @@
       this.updateObserverAwareness(dt, { vx, left, right, up, down, jumpPressed, onFloor, onLadder, pointer });
       this.updateSky();
       this.drawAnimatedTileFx();
+      this.updateOreProps();
       this.updateLightProps();
       this.updateChestProps();
       this.updateDarkness();
@@ -821,6 +831,81 @@
           fx.fillCircle(x + TILE / 2, y + TILE / 2, 10 + pulse * 4);
         }
       }
+    }
+
+    orePropFrameKeys() {
+      return [
+        "ore-glint-metal-0",
+        "ore-glint-metal-1",
+        "ore-glint-metal-2",
+        "ore-glint-gem-0",
+        "ore-glint-gem-1",
+        "ore-glint-gem-2",
+        "ore-glint-shadow-0",
+        "ore-glint-shadow-1",
+        "ore-glint-shadow-2"
+      ].filter((key) => this.textures.exists(key));
+    }
+
+    isOrePropTile(tile) {
+      return tile === Tile.COAL
+        || tile === Tile.COPPER
+        || tile === Tile.IRON
+        || tile === Tile.CRYSTAL
+        || tile === Tile.GOLD
+        || tile === Tile.OBSIDIAN
+        || tile === Tile.AMBER
+        || tile === Tile.QUARTZ
+        || tile === Tile.EMBER
+        || tile === Tile.VOIDGLASS;
+    }
+
+    orePropTextureKey(tile, now, x, y) {
+      const frame = Math.abs(Math.floor(now / 210 + x * 0.17 + y * 0.29)) % 3;
+      if (tile === Tile.CRYSTAL || tile === Tile.QUARTZ || tile === Tile.VOIDGLASS) return `ore-glint-gem-${frame}`;
+      if (tile === Tile.COAL || tile === Tile.OBSIDIAN) return `ore-glint-shadow-${frame}`;
+      return `ore-glint-metal-${frame}`;
+    }
+
+    orePropTint(tile) {
+      return ML.BLOCK_TINTS?.[tile] || 0xffffff;
+    }
+
+    updateOreProps(force = false) {
+      if (!this.orePropPool?.length) return;
+      const now = this.time.now || 0;
+      if (!force && now < this.nextOrePropScanAt) return;
+      this.nextOrePropScanAt = now + 220;
+      const cam = this.cameras.main;
+      const minX = clamp(Math.floor((cam.scrollX - 64) / TILE), 0, this.worldWidthTiles() - 1);
+      const maxX = clamp(Math.ceil((cam.scrollX + cam.width + 64) / TILE), 0, this.worldWidthTiles() - 1);
+      const minY = clamp(Math.floor((cam.scrollY - 64) / TILE), 0, this.worldHeightTiles() - 1);
+      const maxY = clamp(Math.ceil((cam.scrollY + cam.height + 64) / TILE), 0, this.worldHeightTiles() - 1);
+      let used = 0;
+      for (let y = minY; y <= maxY && used < this.orePropPool.length; y += 1) {
+        for (let x = minX; x <= maxX && used < this.orePropPool.length; x += 1) {
+          const tile = this.sim.tileAt(x, y);
+          if (!this.isOrePropTile(tile)) continue;
+          const key = this.orePropTextureKey(tile, now, x, y);
+          if (!key || !this.textures.exists(key)) continue;
+          const sprite = this.orePropPool[used];
+          used += 1;
+          const rare = tile === Tile.CRYSTAL || tile === Tile.GOLD || tile === Tile.EMBER || tile === Tile.VOIDGLASS;
+          const pulse = rare ? 1 + Math.sin(now / 360 + x * 0.41 + y * 0.23) * 0.025 : 1;
+          const alpha = tile === Tile.COAL ? 0.22 : tile === Tile.OBSIDIAN ? 0.38 : rare ? 0.58 : 0.42;
+          sprite
+            .setTexture(key)
+            .setPosition(x * TILE + TILE / 2, y * TILE + TILE / 2)
+            .setTint(this.orePropTint(tile))
+            .setScale(pulse)
+            .setAlpha(alpha)
+            .setVisible(true);
+        }
+      }
+      for (let i = used; i < this.orePropPool.length; i += 1) {
+        this.orePropPool[i].setVisible(false);
+      }
+      this.visibleOrePropCount = used;
     }
 
     lightPropFrameKeys() {

@@ -85,6 +85,9 @@ const MAX_HUD_NODES = Number(process.env.MAX_HUD_NODES || 1200);
       assetIconCount: document.querySelectorAll(".asset-icon").length,
       chestPropPool: scene?.chestPropPool?.length || 0,
       visibleChestProps: scene?.visibleChestPropCount || 0,
+      orePropPool: scene?.orePropPool?.length || 0,
+      visibleOreProps: scene?.visibleOrePropCount || 0,
+      orePropFrameCount: scene?.orePropFrameKeys?.().length || 0,
       lightPropPool: scene?.lightPropPool?.length || 0,
       visibleLightProps: scene?.visibleLightPropCount || 0,
       lightPropFrameCount: scene?.lightPropFrameKeys?.().length || 0
@@ -113,6 +116,8 @@ const MAX_HUD_NODES = Number(process.env.MAX_HUD_NODES || 1200);
   if ((snapshot.externalAssets?.sheetIconCount || 0) < 4) failures.push("expected sliced sheet item icons");
   if ((snapshot.assetIconCount || 0) < 1) failures.push("expected at least one external asset icon in the HUD");
   if ((snapshot.chestPropPool || 0) < 48) failures.push("expected pooled chest prop sprites");
+  if ((snapshot.orePropPool || 0) < 128) failures.push("expected pooled ore prop sprites");
+  if ((snapshot.orePropFrameCount || 0) < 9) failures.push("expected animated ore prop frames");
   if ((snapshot.lightPropPool || 0) < 96) failures.push("expected pooled light prop sprites");
   if ((snapshot.lightPropFrameCount || 0) < 9) failures.push("expected animated light prop frames");
 

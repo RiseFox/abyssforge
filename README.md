@@ -37,7 +37,7 @@ The player should always have a practical reason to continue: a better pick, a s
 | Enemy archetypes | 7 mob/boss types |
 | Hidden lore | 19 notes, 8 goals |
 | External asset layer | 25 packed CC0 image assets, 48 normalized runtime textures, 24 derived UI item icons |
-| Animated world props | Pooled cache, campfire, torch, glow-cap, and mob-wake overlays |
+| Animated world props | Pooled cache, ore glint, campfire, torch, glow-cap, and mob-wake overlays |
 
 ## Game Pillars
 
@@ -123,7 +123,7 @@ AbyssForge now uses a dedicated **WorldGen Director** instead of scattering ever
 - **Crafting progression:** recipe visibility opens through discovery, not a full catalog dump on spawn.
 - **Backpack and quick belt:** the bottom bar is immediate access; the backpack is the larger material memory.
 - **Controlled asset pipeline:** the base style stays canvas-first, while approved CC0 sprites are packed into a local runtime bundle, normalized into item, chest, and mob textures, and checked by hash before use.
-- **Animated world props:** caches, campfires, torches, glow caps, and mob wake markers use pooled sprite overlays so important objects feel alive without unbounded object creation.
+- **Animated world props:** caches, ore seams, campfires, torches, glow caps, and mob wake markers use pooled sprite overlays so important objects feel alive without unbounded object creation.
 - **Contextual loot:** surface, road, grove, lowland, village, watcher, cave, fungal, iron, crystal, abyss, and secret chest tables.
 - **Campfires:** rest, heal, recover energy, set respawn anchors, and support recall routes.
 - **Contracts:** short expedition orders provide direction and rewards.
@@ -181,7 +181,7 @@ npm run assets:all
 
 - `test:spawn` checks 300 generated seeds for spawn support, starter camp reachability, mob ecology rules, progression disclosure, chest interaction, vertical expansion, horizontal expansion, POI behavior, light/lamp behavior, lore hooks, Watcher runtime, combat line of sight, worldgen director content, and external asset runtime normalization.
 - `test:perf` boots the game at 1280x720 and checks browser errors, RAF FPS, average frame time, p95 frame time, HUD DOM weight, minimap default state, canvas availability, pooled world props, and that the HUD has loaded external item icons.
-- `test:assets` checks that normalized cache sprites, animated light props, cache-opening frames, mob-wake frames, sliced sheet icons, derived CSS icons, and recover-heart FX are actually instantiated, not only present in the packed asset bundle.
+- `test:assets` checks that normalized cache sprites, animated ore/light props, cache-opening frames, mob-wake frames, sliced sheet icons, derived CSS icons, and recover-heart FX are actually instantiated, not only present in the packed asset bundle.
 
 ## Project Shape
 

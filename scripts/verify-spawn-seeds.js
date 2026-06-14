@@ -654,6 +654,8 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const externalCacheProfile = firstChest ? scene.cacheVisualProfile?.(firstChest.x, firstChest.y) || null : null;
     const chestPropPoolSize = scene?.chestPropPool?.length || 0;
     const chestPropCount = scene?.visibleChestPropCount || 0;
+    const orePropPoolSize = scene?.orePropPool?.length || 0;
+    const orePropFrameCount = scene?.orePropFrameKeys?.().length || 0;
     const lightPropPoolSize = scene?.lightPropPool?.length || 0;
     const lightPropFrameCount = scene?.lightPropFrameKeys?.().length || 0;
     const externalSlicedIconUrls = ["sealedLetter", "strangeKey", "watcherToken", "battery"]
@@ -739,11 +741,14 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       externalCacheProfile,
       chestPropPoolSize,
       chestPropCount,
+      orePropPoolSize,
+      orePropFrameCount,
       lightPropPoolSize,
       lightPropFrameCount,
       externalKitHotbarIcon,
       externalKitPackIcon,
       watcherRuntime: typeof scene?.spawnWatcherSighting === "function" && typeof scene?.updateShadowPressure === "function" && typeof scene?.dismissWatcher === "function" && typeof scene?.leaveWatcherTrace === "function",
+      orePropRuntime: typeof scene?.updateOreProps === "function" && typeof scene?.orePropTextureKey === "function",
       lightPropRuntime: typeof scene?.updateLightProps === "function" && typeof scene?.lightPropTextureKey === "function",
       mobWakeRuntime: typeof scene?.mobWakeInfo === "function" && typeof scene?.queueMobMaterialize === "function" && typeof scene?.updatePendingMobSpawns === "function" && typeof scene?.cancelPendingMobSpawn === "function",
       smartMobRuntime: typeof scene?.enemyInstinct === "function",
@@ -1061,11 +1066,14 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.externalSlicedIconUnique < 4
     || !progressionCheck.externalCacheProfile?.kind
     || progressionCheck.chestPropPoolSize < 48
+    || progressionCheck.orePropPoolSize < 128
+    || progressionCheck.orePropFrameCount < 9
     || progressionCheck.lightPropPoolSize < 96
     || progressionCheck.lightPropFrameCount < 9
     || !progressionCheck.externalKitHotbarIcon
     || !progressionCheck.externalKitPackIcon
     || !progressionCheck.watcherRuntime
+    || !progressionCheck.orePropRuntime
     || !progressionCheck.lightPropRuntime
     || !progressionCheck.mobWakeRuntime
     || !progressionCheck.smartMobRuntime
