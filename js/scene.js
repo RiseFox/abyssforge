@@ -111,6 +111,15 @@
       this.observerPulseUntil = 0;
       this.observerRifts = [];
       this.nextRecallAt = 0;
+      this.physicalKeys = {
+        left: false,
+        right: false,
+        up: false,
+        down: false,
+        jump: false,
+        sprint: false
+      };
+      this.physicalJumpQueued = false;
       this.physics.world.resume();
       this.sim.ensureContract();
 
@@ -171,12 +180,11 @@
         .setScrollFactor(0)
         .setDepth(79);
       this.tileFx = this.add.graphics().setDepth(9);
-      this.orePropPool = Array.from({ length: 160 }, () =>
+      this.orePropPool = Array.from({ length: 96 }, () =>
         this.add.image(0, 0, "ore-glint-metal-0")
           .setDepth(8.6)
           .setVisible(false)
           .setOrigin(0.5, 0.5)
-          .setBlendMode(Phaser.BlendModes.ADD)
       );
       this.visibleOrePropCount = 0;
       this.nextOrePropScanAt = 0;
@@ -247,6 +255,7 @@
         });
       }
       this.prepareGameInputFocus();
+      this.bindPhysicalKeyboard();
 
       this.input.on("wheel", (_pointer, _objects, _dx, dy) => {
         if (this.craftOpen || this.campOpen || this.helpOpen || this.packOpen) return;
@@ -363,6 +372,74 @@
       this.focusGameInput();
     }
 
+    bindPhysicalKeyboard() {
+      const movementCodes = {
+        KeyA: "left",
+        ArrowLeft: "left",
+        KeyD: "right",
+        ArrowRight: "right",
+        KeyW: "up",
+        ArrowUp: "up",
+        KeyS: "down",
+        ArrowDown: "down",
+        Space: "jump",
+        ShiftLeft: "sprint",
+        ShiftRight: "sprint"
+      };
+      const gameControlCodes = new Set([
+        ...Object.keys(movementCodes),
+        "KeyE", "KeyC", "KeyB", "KeyI", "KeyM", "KeyF", "KeyR", "Escape",
+        "Digit1", "Digit2", "Digit3", "Digit4", "Digit5", "Digit6", "Digit7", "Digit8", "Digit9"
+      ]);
+      this._physicalKeyDown = (event) => {
+        if (event.altKey || event.ctrlKey || event.metaKey) return;
+        if (!this.physicalKeys) return;
+        const handled = gameControlCodes.has(event.code);
+        if (handled) {
+          event.preventDefault();
+          event.stopImmediatePropagation?.();
+        }
+        const move = movementCodes[event.code];
+        if (move) {
+          if (move === "jump" && !this.physicalKeys.jump) this.physicalJumpQueued = true;
+          this.physicalKeys[move] = true;
+        }
+        if (!handled || event.repeat) return;
+        if (this.dead && event.code !== "Escape") return;
+        const selected = /^Digit([1-9])$/.exec(event.code);
+        if (selected) {
+          this.sim.selected = Number(selected[1]) - 1;
+          ML.renderHotbar(this.sim);
+          ML.audio.play("click");
+          return;
+        }
+        if (event.code === "Escape") this.setPaused(!this.pausedByUI);
+        else if (!this.pausedByUI && event.code === "KeyE") this.interactOrCraft();
+        else if (!this.pausedByUI && event.code === "KeyC") this.toggleCamp();
+        else if (!this.pausedByUI && (event.code === "KeyB" || event.code === "KeyI")) this.togglePack();
+        else if (!this.pausedByUI && event.code === "KeyM") ML.toggleMinimap();
+        else if (!this.pausedByUI && event.code === "KeyF") this.attack();
+        else if (!this.pausedByUI && event.code === "KeyR") this.recallToCamp();
+      };
+      this._physicalKeyUp = (event) => {
+        if (!this.physicalKeys) return;
+        const move = movementCodes[event.code];
+        if (move) {
+          event.preventDefault();
+          event.stopImmediatePropagation?.();
+          this.physicalKeys[move] = false;
+        }
+      };
+      window.addEventListener("keydown", this._physicalKeyDown, { capture: true });
+      window.addEventListener("keyup", this._physicalKeyUp, { capture: true });
+      this.events.once("shutdown", () => {
+        window.removeEventListener("keydown", this._physicalKeyDown, { capture: true });
+        window.removeEventListener("keyup", this._physicalKeyUp, { capture: true });
+        this._physicalKeyDown = null;
+        this._physicalKeyUp = null;
+      });
+    }
+
     focusGameInput() {
       const canvas = this.game?.canvas;
       if (!canvas) return;
@@ -383,6 +460,10 @@
       ML.mobile.mineTap = false;
       ML.mobile.placeTap = false;
       ML.mobile.attackTap = false;
+      this.physicalJumpQueued = false;
+      if (this.physicalKeys) {
+        for (const key of Object.keys(this.physicalKeys)) this.physicalKeys[key] = false;
+      }
       if (this.input?.keyboard?.resetKeys) this.input.keyboard.resetKeys();
       if (this.keys) {
         for (const key of Object.values(this.keys)) {
@@ -417,11 +498,14 @@
         ML.audio.setMusicMode(this.currentMusicMode());
       }
 
-      const left = this.keys.left.isDown || this.keys.altLeft.isDown || ML.mobile.left;
-      const right = this.keys.right.isDown || this.keys.altRight.isDown || ML.mobile.right;
-      const up = this.keys.up.isDown || this.keys.altUp.isDown;
-      const down = this.keys.down.isDown || this.keys.altDown.isDown;
-      const jumpPressed = Phaser.Input.Keyboard.JustDown(this.keys.jump) || ML.mobile.jumpTap;
+      const physical = this.physicalKeys || {};
+      const left = this.keys.left.isDown || this.keys.altLeft.isDown || physical.left || ML.mobile.left;
+      const right = this.keys.right.isDown || this.keys.altRight.isDown || physical.right || ML.mobile.right;
+      const up = this.keys.up.isDown || this.keys.altUp.isDown || physical.up;
+      const down = this.keys.down.isDown || this.keys.altDown.isDown || physical.down;
+      const physicalJump = this.physicalJumpQueued;
+      this.physicalJumpQueued = false;
+      const jumpPressed = Phaser.Input.Keyboard.JustDown(this.keys.jump) || physicalJump || ML.mobile.jumpTap;
       const pointer = this.input.activePointer;
       if (left || right || up || down || jumpPressed || pointer.isDown || ML.mobile.mineTap || ML.mobile.placeTap || ML.mobile.attackTap) {
         this.lastObserverInputAt = this.time.now;
@@ -867,6 +951,13 @@
       return `ore-glint-metal-${frame}`;
     }
 
+    isOrePropCandidate(tile, x, y) {
+      if (!this.isOrePropTile(tile)) return false;
+      if (tile === Tile.CRYSTAL || tile === Tile.GOLD || tile === Tile.EMBER || tile === Tile.VOIDGLASS) return true;
+      const spacing = tile === Tile.COAL || tile === Tile.OBSIDIAN ? 5 : 3;
+      return Math.abs((x * 31 + y * 17 + tile * 13) % spacing) === 0;
+    }
+
     orePropTint(tile) {
       return ML.BLOCK_TINTS?.[tile] || 0xffffff;
     }
@@ -875,7 +966,15 @@
       if (!this.orePropPool?.length) return;
       const now = this.time.now || 0;
       if (!force && now < this.nextOrePropScanAt) return;
-      this.nextOrePropScanAt = now + 220;
+      const perf = ML.performanceSnapshot;
+      const lowBudget = !force && perf && (perf.status === "warn" || perf.avgFrame > 24 || perf.fps < 45);
+      if (lowBudget) {
+        this.nextOrePropScanAt = now + 1200;
+        for (let i = 0; i < this.orePropPool.length; i += 1) this.orePropPool[i].setVisible(false);
+        this.visibleOrePropCount = 0;
+        return;
+      }
+      this.nextOrePropScanAt = now + 360;
       const cam = this.cameras.main;
       const minX = clamp(Math.floor((cam.scrollX - 64) / TILE), 0, this.worldWidthTiles() - 1);
       const maxX = clamp(Math.ceil((cam.scrollX + cam.width + 64) / TILE), 0, this.worldWidthTiles() - 1);
@@ -885,14 +984,14 @@
       for (let y = minY; y <= maxY && used < this.orePropPool.length; y += 1) {
         for (let x = minX; x <= maxX && used < this.orePropPool.length; x += 1) {
           const tile = this.sim.tileAt(x, y);
-          if (!this.isOrePropTile(tile)) continue;
+          if (!this.isOrePropCandidate(tile, x, y)) continue;
           const key = this.orePropTextureKey(tile, now, x, y);
           if (!key || !this.textures.exists(key)) continue;
           const sprite = this.orePropPool[used];
           used += 1;
           const rare = tile === Tile.CRYSTAL || tile === Tile.GOLD || tile === Tile.EMBER || tile === Tile.VOIDGLASS;
           const pulse = rare ? 1 + Math.sin(now / 360 + x * 0.41 + y * 0.23) * 0.025 : 1;
-          const alpha = tile === Tile.COAL ? 0.22 : tile === Tile.OBSIDIAN ? 0.38 : rare ? 0.58 : 0.42;
+          const alpha = tile === Tile.COAL ? 0.2 : tile === Tile.OBSIDIAN ? 0.32 : rare ? 0.5 : 0.34;
           sprite
             .setTexture(key)
             .setPosition(x * TILE + TILE / 2, y * TILE + TILE / 2)
@@ -3892,7 +3991,10 @@
         this.focusGameInput();
       }
       ML.ui.pauseIcon.innerHTML = paused ? '<path d="M8 5v14l11-7z"/>' : '<path d="M8 5v14"/><path d="M16 5v14"/>';
-      if (!options.silent) ML.showToast(paused ? "Paused." : "Back to the mine.", 1000);
+      if (!options.silent) {
+        if (paused) ML.ui.toast?.classList.remove("visible");
+        else ML.showToast("Back to the mine.", 1000);
+      }
     }
 
     failDescent(cause) {

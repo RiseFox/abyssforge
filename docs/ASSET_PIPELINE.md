@@ -26,6 +26,7 @@ An asset is runtime-ready only when all of these are true:
 
 - `npm run assets:audit` checks metadata, lock hashes, packed data URLs, and minimum packed asset count.
 - `npm run test:spawn` checks external asset counts inside the main systems gate.
+- `npm run test:input` checks keyboard-layout-safe physical controls, menu resume, and focus recovery.
 - `npm run test:perf` checks HUD/runtime counts and pooled chest/ore/light props.
 - `npm run test:assets` checks cache overlays, animated ore/light props, cache-opening animation frames, mob-wake animation frames, recover FX, derived CSS icons, and unique sliced sheet icons.
 - `npm run docs:screenshots` regenerates product screenshots from the current build.

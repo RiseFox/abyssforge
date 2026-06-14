@@ -748,7 +748,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       externalKitHotbarIcon,
       externalKitPackIcon,
       watcherRuntime: typeof scene?.spawnWatcherSighting === "function" && typeof scene?.updateShadowPressure === "function" && typeof scene?.dismissWatcher === "function" && typeof scene?.leaveWatcherTrace === "function",
-      orePropRuntime: typeof scene?.updateOreProps === "function" && typeof scene?.orePropTextureKey === "function",
+      orePropRuntime: typeof scene?.updateOreProps === "function" && typeof scene?.orePropTextureKey === "function" && typeof scene?.isOrePropCandidate === "function",
       lightPropRuntime: typeof scene?.updateLightProps === "function" && typeof scene?.lightPropTextureKey === "function",
       mobWakeRuntime: typeof scene?.mobWakeInfo === "function" && typeof scene?.queueMobMaterialize === "function" && typeof scene?.updatePendingMobSpawns === "function" && typeof scene?.cancelPendingMobSpawn === "function",
       smartMobRuntime: typeof scene?.enemyInstinct === "function",
@@ -1066,7 +1066,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.externalSlicedIconUnique < 4
     || !progressionCheck.externalCacheProfile?.kind
     || progressionCheck.chestPropPoolSize < 48
-    || progressionCheck.orePropPoolSize < 128
+    || progressionCheck.orePropPoolSize < 72
     || progressionCheck.orePropFrameCount < 9
     || progressionCheck.lightPropPoolSize < 96
     || progressionCheck.lightPropFrameCount < 9

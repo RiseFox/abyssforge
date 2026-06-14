@@ -92,7 +92,7 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
     for (let y = 0; y < sim.worldHeight(); y += 1) {
       for (let x = 0; x < sim.worldWidth(); x += 1) {
         const tile = sim.tileAt(x, y);
-        if (oreTiles.includes(tile)) {
+        if (oreTiles.includes(tile) && (!scene.isOrePropCandidate || scene.isOrePropCandidate(tile, x, y))) {
           firstOre = { x, y, tile };
           break;
         }
@@ -171,7 +171,7 @@ const SCREENSHOT_PATH = process.env.ASSET_VISUAL_SCREENSHOT || "";
   if ((snapshot.lightPropFrameCount || 0) < 9) failures.push("expected generated light prop animation frames");
   if (!snapshot.firstLightTexture?.startsWith?.("light-")) failures.push("expected animated light prop texture in scene");
   if (!snapshot.firstOre) failures.push("expected at least one ore prop source in the generated world");
-  if ((snapshot.orePropPoolSize || 0) < 128) failures.push("expected pooled ore prop sprites");
+  if ((snapshot.orePropPoolSize || 0) < 72) failures.push("expected pooled ore prop sprites");
   if ((snapshot.visibleOreProps || 0) < 1) failures.push("expected visible ore prop overlay");
   if ((snapshot.orePropFrameCount || 0) < 9) failures.push("expected generated ore prop animation frames");
   if (!snapshot.firstOreTexture?.startsWith?.("ore-glint-")) failures.push("expected animated ore glint texture in scene");

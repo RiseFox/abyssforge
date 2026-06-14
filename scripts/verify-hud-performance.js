@@ -116,7 +116,7 @@ const MAX_HUD_NODES = Number(process.env.MAX_HUD_NODES || 1200);
   if ((snapshot.externalAssets?.sheetIconCount || 0) < 4) failures.push("expected sliced sheet item icons");
   if ((snapshot.assetIconCount || 0) < 1) failures.push("expected at least one external asset icon in the HUD");
   if ((snapshot.chestPropPool || 0) < 48) failures.push("expected pooled chest prop sprites");
-  if ((snapshot.orePropPool || 0) < 128) failures.push("expected pooled ore prop sprites");
+  if ((snapshot.orePropPool || 0) < 72) failures.push("expected pooled ore prop sprites");
   if ((snapshot.orePropFrameCount || 0) < 9) failures.push("expected animated ore prop frames");
   if ((snapshot.lightPropPool || 0) < 96) failures.push("expected pooled light prop sprites");
   if ((snapshot.lightPropFrameCount || 0) < 9) failures.push("expected animated light prop frames");

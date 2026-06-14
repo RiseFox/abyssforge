@@ -177,9 +177,10 @@ npm run assets:all
 
 ## Verification
 
-`npm test` runs three Playwright-backed gates:
+`npm test` runs four Playwright-backed gates:
 
 - `test:spawn` checks 300 generated seeds for spawn support, starter camp reachability, mob ecology rules, progression disclosure, chest interaction, vertical expansion, horizontal expansion, POI behavior, light/lamp behavior, lore hooks, Watcher runtime, combat line of sight, worldgen director content, and external asset runtime normalization.
+- `test:input` checks physical-key movement with non-English keyboard characters, pause-menu resume, blur/focus recovery, and Escape pause/resume behavior.
 - `test:perf` boots the game at 1280x720 and checks browser errors, RAF FPS, average frame time, p95 frame time, HUD DOM weight, minimap default state, canvas availability, pooled world props, and that the HUD has loaded external item icons.
 - `test:assets` checks that normalized cache sprites, animated ore/light props, cache-opening frames, mob-wake frames, sliced sheet icons, derived CSS icons, and recover-heart FX are actually instantiated, not only present in the packed asset bundle.
 

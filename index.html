@@ -151,17 +151,36 @@
         <div class="drawer-head">
           <div>
             <strong>AbyssForge</strong>
-            <span>Paused</span>
+            <span>Expedition paused</span>
           </div>
           <button id="closeMenu" class="icon-button" type="button" title="Resume">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg>
           </button>
         </div>
+        <div class="menu-hero">
+          <i class="menu-sigil" aria-hidden="true"></i>
+          <div>
+            <strong>Route Control</strong>
+            <span>Save, recover, or start a clean descent.</span>
+          </div>
+        </div>
         <div class="menu-actions">
-          <button id="resumeBtn" type="button">Resume</button>
-          <button id="menuSaveBtn" type="button">Save</button>
-          <button id="menuRespawnBtn" type="button">Restart at camp</button>
-          <button id="menuNewWorldBtn" type="button">New world</button>
+          <button id="resumeBtn" class="menu-action primary" type="button">
+            <i class="menu-icon icon-resume" aria-hidden="true"></i>
+            <span><b>Resume</b><small>Return to the current route</small></span>
+          </button>
+          <button id="menuSaveBtn" class="menu-action" type="button">
+            <i class="menu-icon icon-save-run" aria-hidden="true"></i>
+            <span><b>Save</b><small>Store the expedition state</small></span>
+          </button>
+          <button id="menuRespawnBtn" class="menu-action" type="button">
+            <i class="menu-icon icon-camp-run" aria-hidden="true"></i>
+            <span><b>Restart at camp</b><small>Recover at the active anchor</small></span>
+          </button>
+          <button id="menuNewWorldBtn" class="menu-action danger" type="button">
+            <i class="menu-icon icon-new-run" aria-hidden="true"></i>
+            <span><b>New world</b><small>Discard this descent and reroll</small></span>
+          </button>
         </div>
         <div class="achievement-panel">
           <div class="achievement-head">
