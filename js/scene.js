@@ -125,6 +125,18 @@
 
       ML.makeTextures(this);
 
+      // Cave back wall: a screen-space masonry backdrop behind the tilemap,
+      // world-locked via tilePosition and faded in only underground so the
+      // surface sky still shows. Adds depth to mined-out pockets.
+      this.caveWall = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, "caveWall")
+        .setOrigin(0, 0)
+        .setScrollFactor(0)
+        .setDepth(-10)
+        .setAlpha(0);
+      const onWallResize = (gameSize) => this.caveWall.setSize(gameSize.width, gameSize.height);
+      this.scale.on("resize", onWallResize);
+      this.events.once("shutdown", () => this.scale.off("resize", onWallResize));
+
       this.map = this.make.tilemap({ data: this.sim.world, tileWidth: TILE, tileHeight: TILE });
       const tileset = this.map.addTilesetImage("tiles", "tiles", TILE, TILE, 0, 0);
       this.layer = this.map.createLayer(0, tileset, 0, 0);
@@ -741,6 +753,16 @@
       const g = Math.round(SKY_NIGHT.g + (SKY_DAY.g - SKY_NIGHT.g) * t);
       const b = Math.round(SKY_NIGHT.b + (SKY_DAY.b - SKY_NIGHT.b) * t);
       this.cameras.main.setBackgroundColor(Phaser.Display.Color.GetColor(r, g, b));
+
+      if (this.caveWall) {
+        const cam = this.cameras.main;
+        // World-lock the backdrop so it reads as a fixed wall behind the tiles.
+        this.caveWall.tilePositionX = cam.scrollX;
+        this.caveWall.tilePositionY = cam.scrollY;
+        // Fade in over the first few metres of depth; gone at the surface.
+        const target = clamp((this.depthMeters() - 3) / 6, 0, 1);
+        this.caveWall.setAlpha(this.caveWall.alpha + (target - this.caveWall.alpha) * 0.15);
+      }
     }
 
     // ---- Light -------------------------------------------------------------

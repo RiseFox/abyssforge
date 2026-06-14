@@ -885,6 +885,33 @@
     wt.fillRect(6, 15, 12, 1);
     watcherTrace.refresh();
 
+    // ---- Cave back wall (tileable parallax-free backdrop) -----------------
+    // A dark masonry texture shown behind air pockets underground so caves
+    // read with depth instead of flat black. Kept very dark to never compete
+    // with foreground tiles.
+    const caveWall = freshCanvasTexture("caveWall", 64, 64);
+    const cw = caveWall.getContext();
+    cw.fillStyle = "#211d15";
+    cw.fillRect(0, 0, 64, 64);
+    // soft blotches for an uneven quarried look
+    for (let i = 0; i < 26; i += 1) {
+      cw.fillStyle = rnd() < 0.5 ? "#28241a" : "#191610";
+      const w = 6 + Math.floor(rnd() * 12);
+      const h = 5 + Math.floor(rnd() * 10);
+      cw.fillRect(Math.floor(rnd() * 64), Math.floor(rnd() * 64), w, h);
+    }
+    // brick courses, offset every other row
+    cw.fillStyle = "rgba(0,0,0,0.4)";
+    for (let y = 0; y < 64; y += 16) cw.fillRect(0, y, 64, 2);
+    for (let row = 0; row < 4; row += 1) {
+      const y = row * 16;
+      for (let x = row % 2 ? 16 : 0; x < 64; x += 32) cw.fillRect(x, y, 2, 16);
+    }
+    // faint top-edge highlight on each course for subtle relief
+    cw.fillStyle = "rgba(255,236,200,0.06)";
+    for (let y = 2; y < 64; y += 16) cw.fillRect(0, y, 64, 1);
+    caveWall.refresh();
+
     // ---- Particles + light mask -------------------------------------------
     const spark = freshCanvasTexture("spark", 7, 7);
     const sc = spark.getContext();
