@@ -600,71 +600,125 @@
     const mossling = freshCanvasTexture("mossling", 28, 18);
     const mc = mossling.getContext();
     mc.clearRect(0, 0, 28, 18);
-    mc.fillStyle = "#2f4a2c";
-    mc.fillRect(4, 9, 20, 6);
-    mc.fillStyle = "#6f9152";
-    mc.fillRect(7, 5, 14, 8);
-    mc.fillStyle = "#9fbe69";
-    mc.fillRect(9, 3, 4, 3);
-    mc.fillRect(17, 4, 5, 3);
+    mc.fillStyle = "rgba(0,0,0,0.25)";
+    mc.fillRect(5, 16, 18, 2);
+    mc.fillStyle = "#3c6b39"; // legs
+    mc.fillRect(6, 13, 4, 4);
+    mc.fillRect(18, 13, 4, 4);
+    mc.fillStyle = "#3c6b39"; // body base
+    mc.fillRect(5, 8, 18, 7);
+    mc.fillStyle = "#6f9152"; // upper body
+    mc.fillRect(6, 5, 16, 8);
+    mc.fillStyle = "#9fbe69"; // top highlight
+    mc.fillRect(8, 4, 12, 3);
+    mc.fillStyle = "#2f4a2c"; // belly shade
+    mc.fillRect(6, 12, 16, 2);
+    mc.fillStyle = "#b7d97e"; // moss tufts
+    mc.fillRect(9, 3, 2, 2);
+    mc.fillRect(15, 3, 2, 2);
+    mc.fillStyle = "#f4ecd8"; // eyes
+    mc.fillRect(9, 7, 4, 4);
+    mc.fillRect(16, 7, 4, 4);
     mc.fillStyle = "#1c2719";
-    mc.fillRect(10, 9, 3, 3);
-    mc.fillRect(18, 9, 3, 3);
-    mc.fillStyle = "#7a4f29";
-    mc.fillRect(5, 14, 5, 2);
-    mc.fillRect(18, 14, 5, 2);
+    mc.fillRect(11, 8, 2, 2);
+    mc.fillRect(18, 8, 2, 2);
+    mc.fillStyle = "#23351f"; // mouth
+    mc.fillRect(11, 12, 7, 1);
     mossling.refresh();
 
     const crawler = freshCanvasTexture("crawler", 30, 18);
     const cc = crawler.getContext();
     cc.clearRect(0, 0, 30, 18);
-    cc.fillStyle = "#563f67";
-    cc.fillRect(4, 6, 22, 9);
-    cc.fillStyle = "#7c5a91";
-    cc.fillRect(8, 3, 14, 8);
-    cc.fillStyle = "#e9ddc7";
+    cc.fillStyle = "rgba(0,0,0,0.25)";
+    cc.fillRect(5, 16, 20, 2);
+    cc.fillStyle = "#3a2a47"; // jointed legs
+    cc.fillRect(5, 13, 3, 4);
+    cc.fillRect(13, 14, 3, 3);
+    cc.fillRect(22, 13, 3, 4);
+    cc.fillStyle = "#4a3458"; // carapace base
+    cc.fillRect(4, 7, 22, 8);
+    cc.fillStyle = "#6b4d82"; // carapace
+    cc.fillRect(7, 4, 16, 8);
+    cc.fillStyle = "#8a68a3"; // ridge highlight
+    cc.fillRect(9, 3, 12, 2);
+    cc.fillStyle = "#3a2a47"; // segment lines
+    cc.fillRect(13, 4, 1, 10);
+    cc.fillRect(18, 5, 1, 9);
+    cc.fillStyle = "#2a1d36"; // mandibles
+    cc.fillRect(2, 9, 4, 2);
+    cc.fillRect(24, 9, 4, 2);
+    cc.fillStyle = "#ff9b6a"; // glowing eyes
     cc.fillRect(10, 7, 3, 3);
-    cc.fillRect(19, 7, 3, 3);
-    cc.fillStyle = "#3a2a47";
-    cc.fillRect(5, 14, 4, 3);
-    cc.fillRect(13, 14, 4, 3);
-    cc.fillRect(21, 14, 4, 3);
+    cc.fillRect(18, 7, 3, 3);
+    cc.fillStyle = "#fff0d8";
+    cc.fillRect(11, 7, 1, 1);
+    cc.fillRect(19, 7, 1, 1);
     crawler.refresh();
 
     const bat = freshCanvasTexture("bat", 26, 20);
     const bc = bat.getContext();
     bc.clearRect(0, 0, 26, 20);
-    bc.fillStyle = "#4a3a5e";
+    bc.fillStyle = "#3a2d4d"; // wing membrane
     bc.beginPath();
-    bc.moveTo(1, 4);
-    bc.lineTo(10, 9);
-    bc.lineTo(3, 13);
+    bc.moveTo(0, 3);
+    bc.lineTo(11, 10);
+    bc.lineTo(2, 15);
     bc.closePath();
     bc.fill();
     bc.beginPath();
-    bc.moveTo(25, 4);
-    bc.lineTo(16, 9);
-    bc.lineTo(23, 13);
+    bc.moveTo(26, 3);
+    bc.lineTo(15, 10);
+    bc.lineTo(24, 15);
     bc.closePath();
     bc.fill();
-    bc.fillStyle = "#6d5586";
-    bc.fillRect(9, 5, 8, 10);
-    bc.fillStyle = "#f0c7c7";
+    bc.strokeStyle = "#5a4775"; // wing bones
+    bc.lineWidth = 1;
+    bc.beginPath();
+    bc.moveTo(3, 5);
+    bc.lineTo(9, 10);
+    bc.moveTo(23, 5);
+    bc.lineTo(17, 10);
+    bc.stroke();
+    bc.fillStyle = "#6d5586"; // body
+    bc.fillRect(9, 5, 8, 11);
+    bc.fillStyle = "#5a4775"; // belly shade
+    bc.fillRect(9, 12, 8, 4);
+    bc.fillStyle = "#4a3a5e"; // ears
+    bc.fillRect(9, 3, 2, 3);
+    bc.fillRect(15, 3, 2, 3);
+    bc.fillStyle = "#ff9b6a"; // glowing eyes
     bc.fillRect(10, 8, 2, 2);
     bc.fillRect(14, 8, 2, 2);
+    bc.fillStyle = "#f0e8d8"; // fangs
+    bc.fillRect(11, 14, 1, 2);
+    bc.fillRect(14, 14, 1, 2);
     bat.refresh();
 
     const slime = freshCanvasTexture("slime", 28, 20);
     const slc = slime.getContext();
     slc.clearRect(0, 0, 28, 20);
-    slc.fillStyle = "#4f8f5f";
-    slc.fillRect(4, 8, 20, 10);
-    slc.fillRect(7, 4, 14, 6);
-    slc.fillStyle = "#79bd87";
-    slc.fillRect(8, 6, 6, 4);
+    slc.fillStyle = "rgba(0,0,0,0.22)";
+    slc.fillRect(5, 18, 18, 2);
+    slc.fillStyle = "#3f7d4f"; // base
+    slc.fillRect(4, 9, 20, 9);
+    slc.fillStyle = "#4f8f5f"; // mid
+    slc.fillRect(5, 6, 18, 10);
+    slc.fillRect(8, 4, 12, 4);
+    slc.fillStyle = "#8fd89b"; // gloss
+    slc.fillRect(8, 6, 5, 3);
+    slc.fillStyle = "rgba(255,255,255,0.5)";
+    slc.fillRect(9, 6, 2, 2);
+    slc.fillStyle = "#2f6a3e"; // nucleus
+    slc.fillRect(12, 12, 5, 4);
+    slc.fillStyle = "#f4ecd8"; // eyes
+    slc.fillRect(9, 10, 4, 4);
+    slc.fillRect(16, 10, 4, 4);
     slc.fillStyle = "#1f3a26";
-    slc.fillRect(10, 10, 3, 3);
-    slc.fillRect(17, 10, 3, 3);
+    slc.fillRect(11, 11, 2, 2);
+    slc.fillRect(18, 11, 2, 2);
+    slc.fillStyle = "#4f8f5f"; // drips
+    slc.fillRect(7, 17, 3, 2);
+    slc.fillRect(18, 17, 3, 2);
     slime.refresh();
 
     ML.ExternalAssets?.makeRuntimeTextures?.(scene);
@@ -672,20 +726,45 @@
     const golem = freshCanvasTexture("golem", 32, 36);
     const gc = golem.getContext();
     gc.clearRect(0, 0, 32, 36);
-    gc.fillStyle = "#5e6168";
+    gc.fillStyle = "rgba(0,0,0,0.25)";
+    gc.fillRect(6, 33, 20, 3);
+    gc.fillStyle = "#494c52"; // arms
+    gc.fillRect(2, 14, 6, 16);
+    gc.fillRect(24, 14, 6, 16);
+    gc.fillStyle = "#5e6168"; // arm light
+    gc.fillRect(2, 14, 3, 16);
+    gc.fillRect(24, 14, 3, 16);
+    gc.fillStyle = "#5e6168"; // body
     gc.fillRect(5, 8, 22, 26);
-    gc.fillStyle = "#494c52";
-    gc.fillRect(5, 8, 22, 5);
-    gc.fillRect(2, 14, 6, 14);
-    gc.fillRect(24, 14, 6, 14);
-    gc.fillStyle = "#74777e";
+    gc.fillStyle = "#6e7178"; // top light
+    gc.fillRect(5, 8, 22, 4);
+    gc.fillStyle = "#494c52"; // bottom shade
+    gc.fillRect(5, 28, 22, 6);
+    gc.strokeStyle = "#3a3d42"; // cracks
+    gc.lineWidth = 1;
+    gc.beginPath();
+    gc.moveTo(12, 12);
+    gc.lineTo(16, 20);
+    gc.lineTo(13, 28);
+    gc.moveTo(22, 14);
+    gc.lineTo(19, 22);
+    gc.stroke();
+    gc.fillStyle = "#74777e"; // head
     gc.fillRect(8, 3, 16, 8);
-    gc.fillStyle = "#f0a23e";
+    gc.fillStyle = "#ffb347"; // glowing eyes
     gc.fillRect(11, 6, 4, 3);
     gc.fillRect(18, 6, 4, 3);
-    gc.fillStyle = "#f0c75e";
-    gc.fillRect(13, 19, 6, 6);
-    gc.fillStyle = "#3a3d42";
+    gc.fillStyle = "#fff0c0";
+    gc.fillRect(12, 6, 1, 1);
+    gc.fillRect(19, 6, 1, 1);
+    gc.fillStyle = "#f0c75e"; // core
+    gc.fillRect(13, 18, 6, 7);
+    gc.fillStyle = "#fff0b0";
+    gc.fillRect(14, 19, 2, 2);
+    gc.fillStyle = "#5a7c3a"; // moss
+    gc.fillRect(7, 8, 4, 2);
+    gc.fillRect(20, 9, 3, 2);
+    gc.fillStyle = "#3a3d42"; // feet
     gc.fillRect(6, 30, 8, 4);
     gc.fillRect(18, 30, 8, 4);
     golem.refresh();
@@ -693,50 +772,80 @@
     const brood = freshCanvasTexture("broodmother", 56, 42);
     const br = brood.getContext();
     br.clearRect(0, 0, 56, 42);
-    br.fillStyle = "#33223d";
-    br.fillRect(5, 24, 9, 5);
-    br.fillRect(15, 27, 8, 5);
-    br.fillRect(33, 27, 8, 5);
-    br.fillRect(43, 24, 9, 5);
-    br.fillStyle = "#5e3f78";
-    br.fillRect(8, 14, 40, 18);
-    br.fillRect(14, 9, 28, 10);
-    br.fillStyle = "#7f5aa0";
-    br.fillRect(18, 6, 20, 8);
-    br.fillStyle = "#e9ddc7";
-    br.fillRect(19, 12, 4, 4);
-    br.fillRect(32, 12, 4, 4);
-    br.fillStyle = "#f0c75e";
-    br.fillRect(25, 19, 6, 5);
-    br.fillStyle = "#1f1627";
-    br.fillRect(7, 31, 8, 4);
+    br.fillStyle = "rgba(0,0,0,0.25)";
+    br.fillRect(10, 38, 36, 3);
+    br.fillStyle = "#33223d"; // legs
+    br.fillRect(5, 22, 9, 6);
+    br.fillRect(15, 26, 8, 6);
+    br.fillRect(33, 26, 8, 6);
+    br.fillRect(43, 22, 9, 6);
+    br.fillStyle = "#5e3f78"; // abdomen
+    br.fillRect(8, 14, 40, 20);
+    br.fillStyle = "#4a3160"; // belly shade
+    br.fillRect(8, 28, 40, 6);
+    br.fillStyle = "#3a2750"; // abdomen marking
+    br.fillRect(24, 22, 8, 8);
+    br.fillStyle = "#7f5aa0"; // thorax
+    br.fillRect(14, 9, 28, 12);
+    br.fillStyle = "#9a72bd"; // head light
+    br.fillRect(18, 6, 20, 7);
+    br.fillStyle = "#ff7a6a"; // eye cluster
+    br.fillRect(19, 11, 4, 4);
+    br.fillRect(32, 11, 4, 4);
+    br.fillRect(26, 9, 4, 3);
+    br.fillStyle = "#fff0d8";
+    br.fillRect(20, 11, 1, 1);
+    br.fillRect(33, 11, 1, 1);
+    br.fillStyle = "#f0c75e"; // egg sac
+    br.fillRect(25, 18, 6, 6);
+    br.fillStyle = "#fff0b0";
+    br.fillRect(26, 19, 2, 2);
+    br.fillStyle = "#1f1627"; // feet
+    br.fillRect(7, 31, 8, 5);
     br.fillRect(20, 33, 7, 4);
     br.fillRect(30, 33, 7, 4);
-    br.fillRect(42, 31, 8, 4);
+    br.fillRect(42, 31, 8, 5);
     brood.refresh();
 
     const warden = freshCanvasTexture("warden", 56, 64);
     const wc = warden.getContext();
     wc.clearRect(0, 0, 56, 64);
-    wc.fillStyle = "#24152d";
-    wc.fillRect(13, 16, 30, 38);
-    wc.fillStyle = "#3c2850";
-    wc.fillRect(9, 24, 9, 24);
-    wc.fillRect(38, 24, 9, 24);
-    wc.fillStyle = "#5c4278";
-    wc.fillRect(16, 7, 24, 16);
-    wc.fillStyle = "#1b1024";
-    wc.fillRect(18, 3, 20, 7);
-    wc.fillStyle = "#ff7a2e";
-    wc.fillRect(20, 13, 5, 4);
-    wc.fillRect(31, 13, 5, 4);
+    wc.fillStyle = "rgba(0,0,0,0.3)";
+    wc.fillRect(12, 60, 32, 3);
+    wc.fillStyle = "#3c2850"; // arms
+    wc.fillRect(9, 24, 9, 26);
+    wc.fillRect(38, 24, 9, 26);
+    wc.fillStyle = "#2a182f"; // robe body
+    wc.fillRect(13, 16, 30, 42);
+    wc.fillStyle = "#48315f"; // lit side
+    wc.fillRect(31, 16, 12, 42);
+    wc.fillStyle = "#17101d"; // tattered hem
+    wc.fillRect(13, 55, 6, 5);
+    wc.fillRect(23, 57, 6, 5);
+    wc.fillRect(33, 55, 6, 5);
+    wc.fillStyle = "#1b1024"; // hood
+    wc.fillRect(16, 5, 24, 16);
+    wc.fillStyle = "#5c4278"; // hood crown
+    wc.fillRect(18, 3, 20, 6);
+    wc.fillStyle = "#0c0712"; // face void
+    wc.fillRect(19, 11, 18, 9);
+    wc.fillStyle = "#ff7a2e"; // glowing eyes
+    wc.fillRect(21, 13, 5, 4);
+    wc.fillRect(30, 13, 5, 4);
     wc.fillStyle = "#ffd56a";
-    wc.fillRect(23, 30, 10, 9);
-    wc.fillStyle = "#6a4ba3";
-    wc.fillRect(18, 42, 20, 6);
-    wc.fillStyle = "#17101d";
-    wc.fillRect(14, 54, 10, 5);
-    wc.fillRect(32, 54, 10, 5);
+    wc.fillRect(22, 13, 1, 1);
+    wc.fillRect(31, 13, 1, 1);
+    wc.fillStyle = "#6a4ba3"; // chest core ring
+    wc.fillRect(22, 30, 12, 10);
+    wc.fillStyle = "#b98cff";
+    wc.fillRect(24, 32, 8, 6);
+    wc.fillStyle = "#ffffff";
+    wc.fillRect(26, 33, 2, 2);
+    wc.fillStyle = "#2a182f"; // belt
+    wc.fillRect(18, 42, 20, 4);
+    wc.fillStyle = "#17101d"; // boots
+    wc.fillRect(16, 56, 9, 4);
+    wc.fillRect(31, 56, 9, 4);
     warden.refresh();
 
     const watcher = freshCanvasTexture("watcher", 34, 52);
