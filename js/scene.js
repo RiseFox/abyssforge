@@ -215,8 +215,11 @@
         .setOrigin(0, 0)
         .setScrollFactor(0)
         .setDepth(80);
+      // ERASE blend so all light holes punch out in ONE batched draw pass
+      // instead of an FBO bind + pipeline flush per light.
       this.lightMask = this.make.image({ key: "lightOrb", add: false })
-        .setOrigin(0.5);
+        .setOrigin(0.5)
+        .setBlendMode(Phaser.BlendModes.ERASE);
       const onResize = (gameSize) => {
         if (this.darknessRT && this.darknessRT.resize) {
           this.darknessRT.resize(gameSize.width, gameSize.height);
@@ -521,7 +524,7 @@
 
       this.platformDrop = down && !onLadder;
 
-      const sprinting = this.keys.sprint.isDown && this.sim.energy > 6 && onFloor && !onLadder;
+      const sprinting = (this.keys.sprint.isDown || physical.sprint) && this.sim.energy > 6 && onFloor && !onLadder;
       let speed = sprinting ? 305 : 220;
       if (this.sim.speedBoost) speed *= sprinting ? 1.18 : 1.12;
       if (inLava) speed *= 0.5;
@@ -1178,15 +1181,27 @@
       const maxX = cam.scrollX + cam.width + margin;
       const minY = cam.scrollY - margin;
       const maxY = cam.scrollY + cam.height + margin;
+      // Collect every hole, then punch them all in a single beginDraw/endDraw
+      // batch. One FBO bind for the whole frame instead of one per light.
+      const punches = [];
       const punchLight = (screenX, screenY, radius) => {
         if (radius <= 1) return;
-        mask.setDisplaySize(radius * 2, radius * 2);
-        if (typeof rt.erase === "function") {
-          rt.erase(mask, screenX, screenY);
+        punches.push(screenX, screenY, radius);
+      };
+      const flushPunches = () => {
+        if (!punches.length) return;
+        if (typeof rt.beginDraw === "function") {
+          rt.beginDraw();
+          for (let i = 0; i < punches.length; i += 3) {
+            mask.setDisplaySize(punches[i + 2] * 2, punches[i + 2] * 2);
+            rt.batchDraw(mask, punches[i], punches[i + 1]);
+          }
+          rt.endDraw();
         } else {
-          mask.setBlendMode(Phaser.BlendModes.ERASE);
-          rt.draw(mask, screenX, screenY);
-          mask.setBlendMode(Phaser.BlendModes.NORMAL);
+          for (let i = 0; i < punches.length; i += 3) {
+            mask.setDisplaySize(punches[i + 2] * 2, punches[i + 2] * 2);
+            rt.draw(mask, punches[i], punches[i + 1]);
+          }
         }
       };
       const drawGlow = (screenX, screenY, radius, color, strength = 1) => {
@@ -1237,6 +1252,7 @@
         drawGlow(sx, sy, radius, color, strength);
         punchLight(sx, sy, radius);
       }
+      flushPunches();
     }
 
     // ---- Observer anomalies --------------------------------------------------
