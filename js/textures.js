@@ -470,22 +470,68 @@
     const pc = sheet.getContext();
     pc.clearRect(0, 0, FRAME_W * frames.length, FRAME_H);
 
-    // bob shifts the body, legL/legR offset each boot (x, y), spread widens stance
+    // Faces right by default (scene flips with setFlipX).
+    // bob shifts the upper body; legL/legR offset each boot (x, y).
     const drawMiner = (ox, { bob = 0, legL = [0, 0], legR = [0, 0] } = {}) => {
       const b = bob;
-      pc.fillStyle = "#c78a4b"; // face
-      pc.fillRect(ox + 7, 9 + b, 14, 11);
-      pc.fillStyle = "#f1c46b"; // helmet
+
+      // Trousers + boots (behind the torso).
+      pc.fillStyle = "#2b3d4d";
+      pc.fillRect(ox + 7, 27, 6, 6);
+      pc.fillRect(ox + 15, 27, 6, 6);
+      pc.fillStyle = "#26333d";
+      pc.fillRect(ox + 5 + legL[0], 31 + legL[1], 8, 4 - Math.min(0, legL[1]));
+      pc.fillRect(ox + 15 + legR[0], 31 + legR[1], 8, 4 - Math.min(0, legR[1]));
+      pc.fillStyle = "#3d525f"; // boot toe shine
+      pc.fillRect(ox + 11 + legL[0], 31 + legL[1], 2, 1);
+      pc.fillRect(ox + 21 + legR[0], 31 + legR[1], 2, 1);
+
+      // Jacket torso with side shading.
+      pc.fillStyle = "#3a5068";
+      pc.fillRect(ox + 6, 19 + b, 16, 10 - b);
+      pc.fillStyle = "#48637f"; // lit front (right)
+      pc.fillRect(ox + 15, 19 + b, 7, 10 - b);
+      pc.fillStyle = "#2c4051"; // shaded back (left)
+      pc.fillRect(ox + 6, 19 + b, 3, 10 - b);
+      pc.fillStyle = "#5a7c9e"; // collar
+      pc.fillRect(ox + 8, 19 + b, 12, 2);
+
+      // Tool belt with buckle.
+      pc.fillStyle = "#5e3f22";
+      pc.fillRect(ox + 6, 26, 16, 3);
+      pc.fillStyle = "#7a5526";
+      pc.fillRect(ox + 6, 26, 16, 1);
+      pc.fillStyle = "#d8b25c";
+      pc.fillRect(ox + 12, 26, 4, 3);
+
+      // Face with a single forward eye.
+      pc.fillStyle = "#c78a4b";
+      pc.fillRect(ox + 8, 10 + b, 13, 9);
+      pc.fillStyle = "#a9713a"; // jaw + back-of-head shadow
+      pc.fillRect(ox + 8, 10 + b, 3, 9);
+      pc.fillRect(ox + 8, 17 + b, 13, 2);
+      pc.fillStyle = "rgba(0,0,0,0.22)"; // helmet brow shadow
+      pc.fillRect(ox + 8, 10 + b, 13, 1);
+      pc.fillStyle = "#f4ecd8";
+      pc.fillRect(ox + 16, 12 + b, 3, 3);
+      pc.fillStyle = "#2a2622";
+      pc.fillRect(ox + 17, 12 + b, 2, 2);
+
+      // Hard hat: dome, highlight, shade, brim.
+      pc.fillStyle = "#efbe5e";
       pc.fillRect(ox + 6, 5 + b, 16, 5);
-      pc.fillStyle = "#e8d8ba"; // eyes strip
-      pc.fillRect(ox + 10, 11 + b, 8, 6);
-      pc.fillStyle = "#3d5670"; // torso
-      pc.fillRect(ox + 6, 20 + b, 16, 12 - b);
-      pc.fillStyle = "#26333d"; // boots
-      pc.fillRect(ox + 5 + legL[0], 31 + legL[1], 7, 4 - Math.min(0, legL[1]));
-      pc.fillRect(ox + 16 + legR[0], 31 + legR[1], 7, 4 - Math.min(0, legR[1]));
-      pc.fillStyle = "#f4dc83"; // headlamp
+      pc.fillStyle = "#f6d484";
+      pc.fillRect(ox + 8, 5 + b, 8, 2);
+      pc.fillStyle = "#cf9b40";
+      pc.fillRect(ox + 6, 8 + b, 16, 2);
+      pc.fillStyle = "#7a5526";
+      pc.fillRect(ox + 5, 9 + b, 18, 2);
+
+      // Headlamp lens on the brim, glowing forward.
+      pc.fillStyle = "#3a3026";
       pc.fillRect(ox + 19, 7 + b, 5, 4);
+      pc.fillStyle = "#fff4c0";
+      pc.fillRect(ox + 20, 8 + b, 3, 2);
     };
 
     drawMiner(0 * FRAME_W, {});
