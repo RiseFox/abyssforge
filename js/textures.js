@@ -506,8 +506,8 @@
       { head: "#a9aca6", dark: "#676c66", edge: "#d0d2cc", spot: null }, // stone
       { head: "#d58b55", dark: "#824725", edge: "#f0ba7a", spot: "#7a3d21" }, // copper
       { head: "#e8e4d8", dark: "#8d8a82", edge: "#fff9e9", spot: null }, // iron
-      { head: "#8df2e0", dark: "#2f8a83", edge: "#d8fff8", spot: "#40b6b2" }, // crystal
-      { head: "#ffd76a", dark: "#a96f23", edge: "#fff2b4", spot: "#ff9b44" } // starforged
+      { head: "#8df2e0", dark: "#2f8a83", edge: "#d8fff8", spot: "#40b6b2", glow: "rgba(150,255,244,0.95)" }, // crystal
+      { head: "#ffd76a", dark: "#a96f23", edge: "#fff2b4", spot: "#ff9b44", glow: "rgba(255,228,140,0.95)" } // starforged
     ];
     const picks = freshCanvasTexture("picks", PICK_W * pickHeads.length, PICK_W);
     const pk = picks.getContext();
@@ -535,6 +535,16 @@
       if (style.spot) {
         drawBlock(ox + 11, 7, 3, 2, style.spot);
         drawBlock(ox + 22, 7, 2, 2, style.edge);
+      }
+      // Diagonal metallic shine across the head.
+      drawBlock(ox + 10, 8, 8, 1, style.edge);
+      drawBlock(ox + 12, 9, 4, 1, "rgba(255,255,255,0.55)");
+      // High-tier heads sparkle and cast a faint glow.
+      if (style.glow) {
+        drawBlock(ox + 6, 6, 2, 2, style.glow);
+        drawBlock(ox + 25, 9, 2, 2, style.glow);
+        drawBlock(ox + 20, 5, 1, 1, "rgba(255,255,255,0.95)");
+        drawBlock(ox + 9, 12, 1, 1, "rgba(255,255,255,0.8)");
       }
     });
     pickHeads.forEach((_, i) => picks.add(`pick${i}`, 0, i * PICK_W, 0, PICK_W, PICK_W));
