@@ -32,25 +32,150 @@
       }
     };
 
-    pixelNoise(Tile.GRASS, "#6f9152", "#c7d277");
-    ctx.fillStyle = "#4e7e3c";
-    ctx.fillRect(Tile.GRASS * TILE, 0, TILE, 7);
-    pixelNoise(Tile.DIRT, "#785331", "#b18455", 32);
-    pixelNoise(Tile.STONE, "#777a76", "#a7aaa2", 32);
-    pixelNoise(Tile.COAL, "#686b68", "#1f2020", 34);
-    for (let i = 0; i < 8; i += 1) {
-      ctx.fillStyle = "#202020";
-      ctx.fillRect(Tile.COAL * TILE + 6 + i * 3, 7 + (i % 3) * 6, 4, 4);
-    }
-    pixelNoise(Tile.COPPER, "#756e62", "#d18a55", 32);
-    pixelNoise(Tile.IRON, "#6f716d", "#d7d2c4", 32);
-    pixelNoise(Tile.CRYSTAL, "#4c777e", "#a5fff1", 42);
-    pixelNoise(Tile.DEEP, "#45474c", "#747982", 24);
-    pixelNoise(Tile.BEDROCK, "#242426", "#55555a", 20);
-    pixelNoise(Tile.WOOD, "#74471f", "#b97836", 18);
+    // Deterministic per-tile noise so the look is stable between boots.
+    let _seed = 0x9e3779b9 >>> 0;
+    const rnd = () => {
+      _seed = (_seed + 0x6D2B79F5) >>> 0;
+      let t = _seed;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+
+    // A rocky matrix: solid fill plus soft blotches (not uniform specks).
+    const rock = (id, base, shades, blotches = 11) => {
+      const x0 = id * TILE;
+      ctx.fillStyle = base;
+      ctx.fillRect(x0, 0, TILE, TILE);
+      for (let i = 0; i < blotches; i += 1) {
+        ctx.fillStyle = shades[Math.floor(rnd() * shades.length)];
+        const w = 3 + Math.floor(rnd() * 6);
+        const h = 2 + Math.floor(rnd() * 5);
+        ctx.fillRect(x0 + Math.floor(rnd() * (TILE - w)), Math.floor(rnd() * (TILE - h)), w, h);
+      }
+    };
+
+    // Carve a 3D bevel: lit top/left edge, shadowed bottom/right edge.
+    // sides="all" bevels every edge; "skipTop" leaves the top clean (grass).
+    const bevel = (id, light = "rgba(255,255,255,0.15)", dark = "rgba(0,0,0,0.36)", sides = "all") => {
+      const x0 = id * TILE;
+      ctx.fillStyle = light;
+      if (sides !== "skipTop") ctx.fillRect(x0, 0, TILE, 2);
+      ctx.fillRect(x0, 0, 2, TILE);
+      ctx.fillStyle = dark;
+      ctx.fillRect(x0, TILE - 3, TILE, 3);
+      ctx.fillRect(x0 + TILE - 2, 0, 2, TILE);
+    };
+
+    // Scatter mineral inclusions with a highlight + shadow so they read as 3D.
+    // shape: "lump" (nuggets), "shard" (faceted gems), "streak" (metal veins).
+    const nuggets = (id, count, opts) => {
+      const { core, light, dark, size = 4, shape = "lump", spark = false } = opts;
+      const x0 = id * TILE;
+      for (let i = 0; i < count; i += 1) {
+        const s = size + Math.floor(rnd() * 2);
+        const px = x0 + 3 + Math.floor(rnd() * Math.max(1, TILE - s - 6));
+        const py = 3 + Math.floor(rnd() * Math.max(1, TILE - s - 6));
+        if (shape === "shard") {
+          ctx.fillStyle = dark;
+          ctx.fillRect(px, py, s, s);
+          ctx.fillStyle = core;
+          ctx.fillRect(px + 1, py, s - 2, s);
+          ctx.fillRect(px, py + 1, s, s - 2);
+          ctx.fillStyle = light;
+          ctx.fillRect(px + 1, py + 1, 2, 2);
+        } else if (shape === "streak") {
+          ctx.fillStyle = dark;
+          ctx.fillRect(px, py + 1, s + 3, 2);
+          ctx.fillStyle = core;
+          ctx.fillRect(px, py, s + 3, 2);
+          ctx.fillStyle = light;
+          ctx.fillRect(px, py, 2, 1);
+        } else {
+          ctx.fillStyle = dark;
+          ctx.fillRect(px, py, s, s);
+          ctx.fillStyle = core;
+          ctx.fillRect(px, py, s - 1, s - 1);
+          ctx.fillStyle = light;
+          ctx.fillRect(px, py, 2, 1);
+          ctx.fillRect(px, py, 1, 2);
+        }
+        if (spark) {
+          ctx.fillStyle = "rgba(255,255,255,0.92)";
+          ctx.fillRect(px + s - 1, py + s - 2, 1, 1);
+        }
+      }
+    };
+
+    // --- Dirt + grass cap ---
+    rock(Tile.DIRT, "#7a5230", ["#6a4527", "#895d38", "#5a3a22", "#9a7048"], 13);
+    nuggets(Tile.DIRT, 3, { core: "#9a7048", light: "#b88a58", dark: "#553620", size: 3, shape: "lump" });
+    bevel(Tile.DIRT);
+
+    const grassX = Tile.GRASS * TILE;
+    rock(Tile.GRASS, "#7a5230", ["#6a4527", "#895d38", "#5a3a22"], 9);
+    ctx.fillStyle = "#54863e";
+    ctx.fillRect(grassX, 0, TILE, 9);
+    ctx.fillStyle = "#69a64c";
+    ctx.fillRect(grassX, 0, TILE, 4);
+    ctx.fillStyle = "#7cbb59";
+    for (let i = 0; i < TILE; i += 4) ctx.fillRect(grassX + i, 8, 2, 2 + Math.floor(rnd() * 4));
     ctx.fillStyle = "rgba(0,0,0,0.22)";
-    for (let x = 3; x < TILE; x += 8) ctx.fillRect(Tile.WOOD * TILE + x, 0, 2, TILE);
-    pixelNoise(Tile.LEAVES, "#456d3e", "#85ac58", 34);
+    ctx.fillRect(grassX, 9, TILE, 1);
+    bevel(Tile.GRASS, "rgba(255,255,255,0.12)", "rgba(0,0,0,0.34)", "skipTop");
+
+    // --- Stone family ---
+    rock(Tile.STONE, "#7e817b", ["#6e716b", "#8d9089", "#62655f"], 13);
+    ctx.strokeStyle = "rgba(0,0,0,0.16)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(Tile.STONE * TILE + 8, 6);
+    ctx.lineTo(Tile.STONE * TILE + 20, 18);
+    ctx.stroke();
+    bevel(Tile.STONE);
+
+    rock(Tile.DEEP, "#4a4d52", ["#3f4146", "#565a60", "#383b40"], 12);
+    bevel(Tile.DEEP, "rgba(255,255,255,0.10)", "rgba(0,0,0,0.42)");
+
+    rock(Tile.BEDROCK, "#26262a", ["#1c1c20", "#323238", "#161619"], 12);
+    bevel(Tile.BEDROCK, "rgba(255,255,255,0.06)", "rgba(0,0,0,0.5)");
+
+    // --- Ores: stone matrix + identity inclusions ---
+    rock(Tile.COAL, "#63655f", ["#54564f", "#70726b"], 8);
+    nuggets(Tile.COAL, 7, { core: "#1d1e20", light: "#45474a", dark: "#0c0c0d", size: 4, shape: "lump" });
+    bevel(Tile.COAL);
+
+    rock(Tile.COPPER, "#6f6a5e", ["#5f5b50", "#7d7868"], 8);
+    nuggets(Tile.COPPER, 6, { core: "#cf7f3a", light: "#f2ab5e", dark: "#874826", size: 4, shape: "lump" });
+    bevel(Tile.COPPER);
+
+    rock(Tile.IRON, "#6f716b", ["#5f615c", "#7e807a"], 8);
+    nuggets(Tile.IRON, 6, { core: "#cbc6b8", light: "#f1ede1", dark: "#7c7a70", size: 4, shape: "streak" });
+    bevel(Tile.IRON);
+
+    rock(Tile.CRYSTAL, "#2f4f55", ["#284449", "#365d63"], 9);
+    nuggets(Tile.CRYSTAL, 6, { core: "#76ecdb", light: "#cafff8", dark: "#2c7b74", size: 5, shape: "shard", spark: true });
+    bevel(Tile.CRYSTAL, "rgba(180,255,248,0.13)", "rgba(0,0,0,0.4)");
+
+    // --- Wood + leaves ---
+    const woodX = Tile.WOOD * TILE;
+    ctx.fillStyle = "#7a4d24";
+    ctx.fillRect(woodX, 0, TILE, TILE);
+    for (let i = 0; i < TILE; i += 2) {
+      ctx.fillStyle = i % 4 === 0 ? "#895a2c" : "#693f1f";
+      ctx.fillRect(woodX + i, 0, 2, TILE);
+    }
+    ctx.fillStyle = "rgba(0,0,0,0.24)";
+    ctx.fillRect(woodX + 10, 0, 2, TILE);
+    ctx.fillRect(woodX + 22, 0, 2, TILE);
+    ctx.fillStyle = "#5a3617";
+    ctx.fillRect(woodX + 13, 12, 5, 4);
+    ctx.fillStyle = "#8a5a2c";
+    ctx.fillRect(woodX + 14, 13, 3, 2);
+    bevel(Tile.WOOD, "rgba(255,255,255,0.10)", "rgba(0,0,0,0.3)");
+
+    rock(Tile.LEAVES, "#3f6a36", ["#356030", "#4d7d40", "#2c5228"], 16);
+    nuggets(Tile.LEAVES, 5, { core: "#6fa84f", light: "#8cc163", dark: "#2c5228", size: 4, shape: "lump" });
 
     const torchX = Tile.TORCH * TILE;
     ctx.clearRect(torchX, 0, TILE, TILE);
@@ -78,16 +203,15 @@
     ctx.fillStyle = "rgba(255,255,255,0.12)";
     ctx.fillRect(platformX, 8, TILE, 2);
 
-    pixelNoise(Tile.GOLD, "#74695a", "#ffd76a", 30);
-    ctx.fillStyle = "#f7e08e";
-    const goldX = Tile.GOLD * TILE;
-    ctx.fillRect(goldX + 7, 8, 4, 4);
-    ctx.fillRect(goldX + 19, 16, 5, 4);
-    ctx.fillRect(goldX + 12, 23, 4, 3);
+    // Gold: bright nuggets with a sparkle in a warm stone matrix.
+    rock(Tile.GOLD, "#6b6354", ["#5b5447", "#7a7160"], 8);
+    nuggets(Tile.GOLD, 5, { core: "#f3c34a", light: "#fff0a6", dark: "#9c6f1e", size: 4, shape: "lump", spark: true });
+    bevel(Tile.GOLD, "rgba(255,240,170,0.13)", "rgba(0,0,0,0.38)");
 
-    pixelNoise(Tile.OBSIDIAN, "#191024", "#3f2a63", 26);
+    // Obsidian: glassy violet-black with conchoidal sheen.
+    rock(Tile.OBSIDIAN, "#16101f", ["#0f0a17", "#251a36"], 8);
     const obsX = Tile.OBSIDIAN * TILE;
-    ctx.strokeStyle = "rgba(155,110,225,0.4)";
+    ctx.strokeStyle = "rgba(155,110,225,0.42)";
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(obsX + 5, 26);
@@ -95,34 +219,36 @@
     ctx.moveTo(obsX + 17, 27);
     ctx.lineTo(obsX + 26, 12);
     ctx.stroke();
+    nuggets(Tile.OBSIDIAN, 3, { core: "#3f2a63", light: "#9b7ee0", dark: "#0c0814", size: 5, shape: "shard" });
+    bevel(Tile.OBSIDIAN, "rgba(170,140,255,0.12)", "rgba(0,0,0,0.5)");
 
-    pixelNoise(Tile.AMBER, "#6b5335", "#e1a84d", 34);
-    const amberX = Tile.AMBER * TILE;
-    ctx.fillStyle = "#f5c166";
-    ctx.fillRect(amberX + 9, 9, 5, 5);
-    ctx.fillRect(amberX + 18, 18, 4, 4);
-    ctx.fillStyle = "rgba(75,42,16,0.34)";
-    ctx.fillRect(amberX + 10, 10, 2, 2);
+    // Amber: glossy resin blobs trapped in dark earth.
+    rock(Tile.AMBER, "#5b4528", ["#4d3a21", "#6b5331", "#3f2f1a"], 9);
+    nuggets(Tile.AMBER, 4, { core: "#e3a948", light: "#f8d488", dark: "#8a5a1e", size: 6, shape: "lump", spark: true });
+    bevel(Tile.AMBER, "rgba(255,220,140,0.12)", "rgba(0,0,0,0.36)");
 
-    pixelNoise(Tile.QUARTZ, "#657271", "#d8fff7", 36);
-    const quartzX = Tile.QUARTZ * TILE;
-    ctx.fillStyle = "#f3fffb";
-    ctx.fillRect(quartzX + 8, 7, 4, 13);
-    ctx.fillRect(quartzX + 18, 12, 5, 11);
-    ctx.fillStyle = "#91d8d1";
-    ctx.fillRect(quartzX + 10, 20, 9, 3);
+    // Quartz: milky faceted prisms.
+    rock(Tile.QUARTZ, "#5e6b6a", ["#52605f", "#6c7a78"], 8);
+    nuggets(Tile.QUARTZ, 5, { core: "#e9fffb", light: "#ffffff", dark: "#9fbab6", size: 5, shape: "shard", spark: true });
+    bevel(Tile.QUARTZ);
 
-    pixelNoise(Tile.EMBER, "#3d2d2a", "#df5d35", 30);
+    // Ember shale: scorched rock veined with glowing heat.
+    rock(Tile.EMBER, "#382826", ["#2c1f1d", "#46302c"], 11);
     const emberX = Tile.EMBER * TILE;
-    ctx.fillStyle = "#ff8a3d";
-    ctx.fillRect(emberX + 7, 20, 5, 4);
-    ctx.fillRect(emberX + 17, 9, 4, 5);
-    ctx.fillStyle = "#ffd26a";
-    ctx.fillRect(emberX + 19, 10, 2, 2);
+    ctx.strokeStyle = "rgba(255,120,48,0.6)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(emberX + 6, 24);
+    ctx.lineTo(emberX + 15, 12);
+    ctx.lineTo(emberX + 24, 20);
+    ctx.stroke();
+    nuggets(Tile.EMBER, 5, { core: "#ff7a30", light: "#ffd062", dark: "#7a2f12", size: 4, shape: "lump", spark: true });
+    bevel(Tile.EMBER, "rgba(255,150,80,0.13)", "rgba(0,0,0,0.45)");
 
-    pixelNoise(Tile.VOIDGLASS, "#120d1f", "#5e50c8", 28);
+    // Voidglass: near-black with violet fractures that catch the light.
+    rock(Tile.VOIDGLASS, "#160f24", ["#100a1b", "#221733"], 8);
     const voidX = Tile.VOIDGLASS * TILE;
-    ctx.strokeStyle = "rgba(155,135,255,0.55)";
+    ctx.strokeStyle = "rgba(150,135,255,0.6)";
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(voidX + 5, 8);
@@ -130,6 +256,8 @@
     ctx.moveTo(voidX + 18, 5);
     ctx.lineTo(voidX + 9, 28);
     ctx.stroke();
+    nuggets(Tile.VOIDGLASS, 3, { core: "#8b78ff", light: "#cabdff", dark: "#0e0a18", size: 5, shape: "shard", spark: true });
+    bevel(Tile.VOIDGLASS, "rgba(160,145,255,0.12)", "rgba(0,0,0,0.5)");
 
     const lavaX = Tile.LAVA * TILE;
     ctx.fillStyle = "#c43d14";
