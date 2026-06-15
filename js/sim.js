@@ -180,6 +180,18 @@
       // lights are built so any setpiece torches/campfires register as lights.
       this.populateHomeSurface(mulberry32(seed ^ 0x5f3759df));
       this.buildStartingCamp();
+      // Seed a few distinct underground POIs (survey/pump/shrine/cache) into the
+      // home world's depths so they're encounterable without expanding first.
+      this.generateUndergroundLandmarks({
+        source: "home",
+        xMin: 4,
+        xMax: this.worldWidth() - 5,
+        yMinForX: (x) => (this.surface[x] || 24) + 16,
+        yMax: this.worldHeight() - 9,
+        minDepth: 22,
+        target: 6,
+        rand: mulberry32(seed ^ 0x2545f491)
+      });
       this.player = this.safeSpawnPixels();
       this.rebuildLights();
       this.mobs = this.generateMobs(mulberry32(seed ^ 0x9e3779b9));

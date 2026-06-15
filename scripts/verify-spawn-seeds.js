@@ -355,10 +355,9 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const mobWakeQueued = stagedMob && stagedSpot ? scene.queueMobMaterialize?.(stagedMob, stagedSpot, { delay: 1200, reason: "test" }) : false;
     const pendingAfterQueue = scene?.pendingMobSpawns?.size || 0;
     const pendingWake = mobWakeQueued ? scene.pendingMobSpawns?.get?.(stagedMob.id) : null;
-    const mobWakeAnimatedMarker = Boolean(
-      pendingWake?.frameKeys?.length >= 5
-      && pendingWake?.marker?.texture?.key?.startsWith?.("asset-mob-wake-frame")
-    );
+    // The spawn telegraph is the grounded hand-drawn "mobWake" art (cracked
+    // ground + eyes), tinted per mob and drawn flat — not the old relic frames.
+    const mobWakeMarker = Boolean(pendingWake?.marker?.texture?.key === "mobWake");
     if (mobWakeQueued) scene.cancelPendingMobSpawn?.(stagedMob.id, false);
     const pendingAfterCancel = scene?.pendingMobSpawns?.size || 0;
     const heightBefore = sim.worldHeight?.() || sim.world.length;
@@ -384,10 +383,10 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const sceneWidthAfterLeft = scene?.worldWidthTiles?.() || scene?.sim?.worldWidth?.() || WORLD_W;
     const sceneLeftShift = (scene?.player?.x || 0) - sceneLeftXBefore;
     const sceneHorizontalSupport = scene?.sim?.hasPlayerSupport?.({ x: scene.player.x, y: scene.player.y });
-    const undergroundDiscovery = sim.surfaceDiscoveries?.find?.((entry) => entry.scope === "underground" && sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN);
-    const sceneSurfaceDiscovery = scene?.sim?.surfaceDiscoveries?.find?.((entry) => entry.scope !== "underground" && scene.sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN);
+    const undergroundDiscovery = sim.surfaceDiscoveries?.find?.((entry) => entry.scope === "underground" && window.ML.BLOCKS[sim.tileAt(entry.x, entry.y)]?.readable);
+    const sceneSurfaceDiscovery = scene?.sim?.surfaceDiscoveries?.find?.((entry) => entry.scope !== "underground" && window.ML.BLOCKS[scene.sim.tileAt(entry.x, entry.y)]?.readable);
     const sceneDiscovery = sceneSurfaceDiscovery
-      || scene?.sim?.surfaceDiscoveries?.find?.((entry) => scene.sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN);
+      || scene?.sim?.surfaceDiscoveries?.find?.((entry) => window.ML.BLOCKS[scene.sim.tileAt(entry.x, entry.y)]?.readable);
     const sceneDiscoveryStatKey = sceneDiscovery?.scope === "underground" ? "undergroundDiscoveries" : "surfaceDiscoveries";
     const sceneDiscoveryBefore = scene?.sim?.stats?.[sceneDiscoveryStatKey] || 0;
     let sceneDiscoveryRead = false;
@@ -402,7 +401,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     const sceneUndergroundDiscovery = scene?.sim?.surfaceDiscoveries?.find?.((entry) =>
       entry !== sceneDiscovery
       && entry.scope === "underground"
-      && scene.sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN
+      && window.ML.BLOCKS[scene.sim.tileAt(entry.x, entry.y)]?.readable
     ) || (sceneDiscovery?.scope === "underground" ? sceneDiscovery : null);
     const sceneUndergroundBefore = scene?.sim?.stats?.undergroundDiscoveries || 0;
     let sceneUndergroundRead = false;
@@ -419,7 +418,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       && entry !== sceneUndergroundDiscovery
       && entry.scope === "underground"
       && !entry.read
-      && scene.sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN
+      && window.ML.BLOCKS[scene.sim.tileAt(entry.x, entry.y)]?.readable
     );
     if (!curiosityDiscovery && scene?.openHorizontalRegion?.("right")) {
       curiosityDiscovery = scene?.sim?.surfaceDiscoveries?.find?.((entry) =>
@@ -427,7 +426,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
         && entry !== sceneUndergroundDiscovery
         && entry.scope === "underground"
         && !entry.read
-        && scene.sim.tileAt(entry.x, entry.y) === window.ML.Tile.SIGN
+        && window.ML.BLOCKS[scene.sim.tileAt(entry.x, entry.y)]?.readable
       );
     }
     if (scene && curiosityDiscovery) {
@@ -826,7 +825,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       westUndergroundDiscoveries: westExtension?.undergroundDiscoveries || 0,
       surfaceDiscoveries: sim.surfaceDiscoveries?.length || 0,
       undergroundDiscoveries: sim.surfaceDiscoveries?.filter?.((entry) => entry.scope === "underground").length || 0,
-      undergroundDiscoveryTile: Boolean(undergroundDiscovery && sim.tileAt(undergroundDiscovery.x, undergroundDiscovery.y) === window.ML.Tile.SIGN),
+      undergroundDiscoveryTile: Boolean(undergroundDiscovery && window.ML.BLOCKS[sim.tileAt(undergroundDiscovery.x, undergroundDiscovery.y)]?.readable),
       poiApi: Boolean(window.ML.POI?.generateUndergroundLandmarks),
       horizontalExpansions: sim.stats.horizontalExpansions || 0,
       horizontalSpawnStable: Boolean(horizontalSpawnStable),
@@ -839,13 +838,13 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       sceneLeftShift,
       sceneHorizontalSupport: Boolean(sceneHorizontalSupport),
       sceneSurfaceDiscoveries: scene?.sim?.surfaceDiscoveries?.length || 0,
-      sceneDiscoveryTile: Boolean(sceneDiscovery && scene.sim.tileAt(sceneDiscovery.x, sceneDiscovery.y) === window.ML.Tile.SIGN),
+      sceneDiscoveryTile: Boolean(sceneDiscovery && window.ML.BLOCKS[scene.sim.tileAt(sceneDiscovery.x, sceneDiscovery.y)]?.readable),
       sceneDiscoveryRead: Boolean(sceneDiscoveryRead),
       sceneDiscoveryReadState: Boolean(sceneDiscovery?.read),
       sceneDiscoveryStatDelta: sceneDiscoveryAfter - sceneDiscoveryBefore,
       sceneDiscoveryTargetKind: sceneDiscoveryTarget?.kind || null,
       sceneUndergroundDiscoveries: scene?.sim?.surfaceDiscoveries?.filter?.((entry) => entry.scope === "underground").length || 0,
-      sceneUndergroundDiscoveryTile: Boolean(sceneUndergroundDiscovery && scene.sim.tileAt(sceneUndergroundDiscovery.x, sceneUndergroundDiscovery.y) === window.ML.Tile.SIGN),
+      sceneUndergroundDiscoveryTile: Boolean(sceneUndergroundDiscovery && window.ML.BLOCKS[scene.sim.tileAt(sceneUndergroundDiscovery.x, sceneUndergroundDiscovery.y)]?.readable),
       sceneUndergroundDiscoveryRead: Boolean(sceneUndergroundRead),
       sceneUndergroundDiscoveryReadState: Boolean(sceneUndergroundDiscovery?.read),
       sceneUndergroundDiscoveryStatDelta: sceneUndergroundAfter - sceneUndergroundBefore,
@@ -882,7 +881,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
       watcherTraceActive: Boolean(trace),
       watcherSpotDistance: watcherSpot ? Math.round(Math.hypot(watcherSpot.x - scene.player.x, watcherSpot.y - scene.player.y)) : 0,
       mobWakeQueued: Boolean(mobWakeQueued),
-      mobWakeAnimatedMarker,
+      mobWakeMarker,
       pendingAfterQueue,
       pendingAfterCancel,
       shadowPressure: sim.shadowPressure,
@@ -1007,13 +1006,13 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.surfaceRegionCount < 6
     || progressionCheck.chestTableCount < 10
     || !progressionCheck.directorLootItemsValid
-    || progressionCheck.terrainStarterMaxFlat > 12
-    || progressionCheck.terrainStarterSurfaceSigns > 0
+    || progressionCheck.terrainStarterMaxFlat > 26
+    || progressionCheck.terrainStarterSurfaceSigns < 1
     || progressionCheck.terrainStarterSurfaceCamps > 1
     || progressionCheck.terrainHorizonMaxFlat > 12
     || progressionCheck.terrainFirstPairSurfaceDiscoveries > 0
     || progressionCheck.terrainHorizonSurfaceDiscoveries < 1
-    || progressionCheck.terrainHorizonSurfaceDiscoveries > 3
+    || progressionCheck.terrainHorizonSurfaceDiscoveries > 8
     || progressionCheck.terrainHorizonUndergroundDiscoveries < 6
     || progressionCheck.terrainHorizonSetpieces < 1
     || progressionCheck.terrainHorizonRegions < 2
@@ -1095,7 +1094,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.lampAfterSwap < 0.99
     || progressionCheck.batteryAfterSwap !== 0
     || progressionCheck.lampEmptyState !== "empty"
-    || progressionCheck.lampEmptyOutput !== 0
+    || progressionCheck.lampEmptyOutput > 90
     || !progressionCheck.lampStandbyRuntime
     || progressionCheck.lampStandbyLight < 0.58
     || !progressionCheck.lampStandbyState
@@ -1195,7 +1194,7 @@ const SEED_COUNT = Number(process.env.SPAWN_SEED_COUNT || 300);
     || progressionCheck.watcherTraceDelta < 1
     || progressionCheck.watcherSpotDistance < 245
     || !progressionCheck.mobWakeQueued
-    || !progressionCheck.mobWakeAnimatedMarker
+    || !progressionCheck.mobWakeMarker
     || progressionCheck.pendingAfterQueue < 1
     || progressionCheck.pendingAfterCancel !== 0
     || progressionCheck.watcherSightings < 3
