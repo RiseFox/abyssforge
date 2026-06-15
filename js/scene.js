@@ -147,6 +147,12 @@
       this.layer = this.map.createLayer(0, tileset, 0, 0);
       this.initCollision();
 
+      // Fixed-step Arcade (no physics.fps set) runs 1/60s substeps. At max fall
+      // speed the body moves vy/60 px per substep (1150/60 ~= 19.2). Arcade
+      // rejects floor/platform separation when penetration exceeds World.TILE_BIAS,
+      // so the default 16 lets a fast fall tunnel 1-tile-thick floors/platforms.
+      // Raising it to 24 makes the safe ceiling 24*60 = 1440 px/s, covering 1150.
+      this.physics.world.TILE_BIAS = 24;
       this.physics.world.setBounds(0, 0, this.worldWidthTiles() * TILE, this.worldHeightTiles() * TILE);
       this.player = this.physics.add.sprite(this.sim.player.x, this.sim.player.y, "playerSheet", "idle0");
       this.player.setCollideWorldBounds(true);
@@ -2337,14 +2343,26 @@
       const result = this.sim.extendHorizontal(side);
       if (!result) return false;
       const shiftPx = (result.shiftTiles || 0) * TILE;
+      // Rebuild geometry + bounds FIRST, then move the body into the new
+      // coordinate space. A left-expand prepends columns, so the player must
+      // shift +shiftPx to stay over the same tiles.
+      this.rebuildWorldLayer();
       if (shiftPx) {
-        this.player.x += shiftPx;
+        this.player.setPosition(this.player.x + shiftPx, this.player.y);
+        // Snap the body's position AND its prev so the next step sees deltaX=0
+        // (no swept-tunnel artifact), but PRESERVE velocity — the teleport is
+        // purely horizontal over a preserved column, so motion stays seamless.
+        const body = this.player.body;
+        if (body) {
+          body.position.x += shiftPx;
+          if (body.prev) body.prev.x += shiftPx;
+          if (body.prevFrame) body.prevFrame.x += shiftPx;
+        }
         this.cameras.main.scrollX += shiftPx;
         this.mineTarget = null;
         this.mineProgress = 0;
         this.mineGraphics?.clear();
       }
-      this.rebuildWorldLayer();
       ML.minimap.init(this.sim);
       this.refreshMobActivation();
       this.cameras.main.shake(160, 0.004);
@@ -2561,10 +2579,16 @@
       const placeTile = meta.tile;
       if (placeTile === undefined) return;
 
+      // Use the physics BODY (20x30), not getBounds() (the 28x36 sprite frame),
+      // so the "too close" guard matches what actually collides — you can wall
+      // and bridge flush next to yourself wherever the body wouldn't overlap.
+      const b = this.player.body;
+      const bodyRect = new Phaser.Geom.Rectangle(b.x, b.y, b.width, b.height);
+
       // Dropping a solid block into lava hardens it to stone.
       if (target.tile === Tile.LAVA && BLOCKS[placeTile].solid) {
         const lavaRect = new Phaser.Geom.Rectangle(target.x * TILE, target.y * TILE, TILE, TILE);
-        if (Phaser.Geom.Intersects.RectangleToRectangle(lavaRect, this.player.getBounds())) {
+        if (Phaser.Geom.Intersects.RectangleToRectangle(lavaRect, bodyRect)) {
           this.setAction("Too close", 900);
           ML.showToast("Step out of the lava first.");
           return;
@@ -2585,7 +2609,7 @@
         return;
       }
       const rect = new Phaser.Geom.Rectangle(target.x * TILE, target.y * TILE, TILE, TILE);
-      if (BLOCKS[placeTile].solid && !BLOCKS[placeTile].platform && Phaser.Geom.Intersects.RectangleToRectangle(rect, this.player.getBounds())) {
+      if (BLOCKS[placeTile].solid && !BLOCKS[placeTile].platform && Phaser.Geom.Intersects.RectangleToRectangle(rect, bodyRect)) {
         this.setAction("Too close", 900);
         ML.showToast("Too close.");
         return;

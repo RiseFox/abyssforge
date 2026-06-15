@@ -42,12 +42,22 @@
     const y = Math.floor(worldY / ML.TILE);
     const cx = x * ML.TILE + ML.TILE / 2;
     const cy = y * ML.TILE + ML.TILE / 2;
-    const distanceTiles = Math.hypot(cx - player.x, cy - player.y) / ML.TILE;
+    // Anchor reach + line-of-sight at the physics body CENTRE, not the sprite
+    // origin (the 28x36 frame's origin sits ~2px above the 20x30 body centre).
+    const ax = player.body ? player.body.center.x : player.x;
+    const ay = player.body ? player.body.center.y : player.y;
+    const distanceTiles = Math.hypot(cx - ax, cy - ay) / ML.TILE;
     const width = sim.worldWidth?.() || sim.world?.[0]?.length || ML.WORLD_W;
     const height = sim.worldHeight?.() || sim.world?.length || ML.WORLD_H;
     if (x < 0 || y < 0 || x >= width || y >= height) return { ok: false, reason: "outside", x, y };
     if (distanceTiles > rangeTiles) return { ok: false, reason: "range", x, y, distanceTiles };
-    if (!hasWorldLineOfSight(sim, player.x, player.y, cx, cy)) return { ok: false, reason: "blocked", x, y, distanceTiles };
+    // A block you're physically touching (chebyshev <=1) is always reachable —
+    // skip LOS there so flush/point-blank mining works (the ray would otherwise
+    // graze the corner of the same wall and falsely report "blocked").
+    const ptx = Math.floor(ax / ML.TILE);
+    const pty = Math.floor(ay / ML.TILE);
+    const adjacent = Math.abs(x - ptx) <= 1 && Math.abs(y - pty) <= 1;
+    if (!adjacent && !hasWorldLineOfSight(sim, ax, ay, cx, cy)) return { ok: false, reason: "blocked", x, y, distanceTiles };
     return { ok: true, x, y, tile: sim.tileAt(x, y), distanceTiles };
   }
 
