@@ -957,9 +957,11 @@
     const oc = orb.getContext();
     oc.clearRect(0, 0, 256, 256);
     const og = oc.createRadialGradient(128, 128, 0, 128, 128, 128);
+    // Solid core out to ~60% for a clear lit pool, then a short falloff —
+    // avoids the big washy gradient ring that bled over the back wall.
     og.addColorStop(0, "rgba(255,255,255,1)");
-    og.addColorStop(0.45, "rgba(255,255,255,0.85)");
-    og.addColorStop(0.75, "rgba(255,255,255,0.35)");
+    og.addColorStop(0.6, "rgba(255,255,255,0.97)");
+    og.addColorStop(0.82, "rgba(255,255,255,0.5)");
     og.addColorStop(1, "rgba(255,255,255,0)");
     oc.fillStyle = og;
     oc.fillRect(0, 0, 256, 256);

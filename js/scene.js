@@ -687,7 +687,9 @@
     }
 
     surfaceBrightness() {
-      return clamp(0.22 + 0.85 * Math.max(0, this.sunHeight()), 0.22, 1);
+      // Full daylight across most of the day (plateau at 1), dipping only at
+      // dawn/dusk and into night — so the lit surface has no darkness halo.
+      return clamp(0.2 + 1.7 * Math.max(0, this.sunHeight()), 0.2, 1);
     }
 
     phaseName() {
@@ -789,8 +791,10 @@
     ambientLight() {
       const depth = this.depthMeters();
       const biome = this.currentBiome();
-      const df = clamp(1 - depth / 46, 0, 1);
-      const floor = biome?.ambientFloor ?? 0.08;
+      // Stay bright for the first few metres, then ease into the dark over a
+      // longer ramp so shallow caves are navigable, not pitch black.
+      const df = clamp(1 - Math.max(0, depth - 4) / 64, 0, 1);
+      const floor = biome?.ambientFloor ?? 0.12;
       return clamp(Math.max(floor, df * this.surfaceBrightness()), floor, 1);
     }
 
@@ -800,8 +804,8 @@
       const surfaceY = this.sim.surface[tx] || 24;
       const depth = Math.max(0, ty - surfaceY);
       const biome = ML.BiomeSystem?.biomeAt?.(this.sim, tx, ty) || this.currentBiome();
-      const floor = biome?.ambientFloor ?? 0.08;
-      const depthFalloff = clamp(1 - depth / 46, 0, 1);
+      const floor = biome?.ambientFloor ?? 0.12;
+      const depthFalloff = clamp(1 - Math.max(0, depth - 4) / 64, 0, 1);
       let best = clamp(Math.max(floor, depthFalloff * this.surfaceBrightness()), floor, 1);
       if (this.sim.ward) best = Math.max(best, 0.18);
       if (this.caveEvent?.id === "lanternDraft") best = Math.max(best, 0.38);
@@ -1189,8 +1193,10 @@
     drawDarkness() {
       const cam = this.cameras.main;
       const ambient = this.ambientLight();
-      const pressureBoost = clamp((this.shadowPressure || 0) / 100 * 0.1, 0, 0.1);
-      const alpha = clamp(0.86 - ambient * 0.86 + pressureBoost, 0, 0.9);
+      const pressureBoost = clamp((this.shadowPressure || 0) / 100 * 0.08, 0, 0.08);
+      // Cap below full black so the deep stays moody but navigable — you can
+      // still read tile silhouettes and the back wall outside lit pools.
+      const alpha = clamp(0.8 - ambient * 0.82 + pressureBoost, 0, 0.8);
       const rt = this.darknessRT;
       const glow = this.lightGlow;
       if (glow) glow.clear();
@@ -1228,10 +1234,10 @@
       };
       const drawGlow = (screenX, screenY, radius, color, strength = 1) => {
         if (!glow || radius <= 1) return;
-        glow.fillStyle(color, 0.10 * strength);
-        glow.fillCircle(screenX, screenY, radius * 1.15);
-        glow.fillStyle(color, 0.18 * strength);
-        glow.fillCircle(screenX, screenY, radius * 0.58);
+        glow.fillStyle(color, 0.08 * strength);
+        glow.fillCircle(screenX, screenY, radius * 0.95);
+        glow.fillStyle(color, 0.16 * strength);
+        glow.fillCircle(screenX, screenY, radius * 0.5);
       };
       const drawHeadlampBeam = (screenX, screenY, radius) => {
         if (!glow || radius <= 1) return;
