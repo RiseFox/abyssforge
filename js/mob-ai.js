@@ -56,13 +56,25 @@
     } else if (!sensor?.canSeePlayer && sensor?.hasMemory) {
       mode = "stalk";
     } else if (cfg.boss) {
-      mode = playerDistance > 260 ? "guard" : playerWeak ? "pressure" : "press";
-    } else if (observed && !playerWeak && playerDistance > 82 && playerDistance < 360 && ["stalker", "ambusher", "guardian", "harrier"].includes(ai.mind)) {
+      if (ai.mind === "warden") {
+        // Warden: relentless siege — closes and presses, only repositions at
+        // extreme range, never backs off (courage/patience 1.0).
+        mode = playerDistance > 320 ? "press" : "pressure";
+      } else if (ai.mind === "brood") {
+        // Broodmother: presses hard up close or when you are weak, but hangs
+        // back at mid-range to keep summoning her swarm.
+        mode = playerDistance > 300 ? "guard" : (playerWeak || playerDistance < 150) ? "pressure" : "press";
+      } else {
+        mode = playerDistance > 260 ? "guard" : playerWeak ? "pressure" : "press";
+      }
+    } else if (observed && !playerWeak && playerDistance > 80 && playerDistance < 340 && ["stalker", "ambusher", "guardian", "harrier"].includes(ai.mind)) {
       mode = "watch";
     } else if (hpRatio < 0.38 && (ai.courage || 0.5) < 0.75 && localLight > 0.34) {
       mode = "retreat";
-    } else if (localLight > (0.48 + (ai.courage || 0.5) * 0.22) && (ai.lightFear || 0) > 0.28) {
-      mode = "circle";
+    } else if ((ai.lightFear || 0) > 0.3 && localLight > (0.45 + (ai.courage || 0.5) * 0.2) && !playerWeak) {
+      // Light genuinely deters light-fearing mobs: they back out of bright
+      // pools, so a placed lamp or torch becomes a real tactical tool.
+      mode = "retreat";
     } else if (ai.mind === "ambusher" && playerDistance > 125 && !playerWeak) {
       mode = "wait";
     } else if (ai.mind === "guardian" && playerDistance > 230) {
@@ -207,6 +219,13 @@
         enemy.setFlipX(dir < 0);
         if (enemy.body.blocked.down && (enemy.body.blocked.left || enemy.body.blocked.right) && Math.random() < 0.03) {
           enemy.setVelocityY(-300);
+        }
+        // Ground slam: a heavy guardian stomps when you close in — it plants,
+        // shakes the ground, and shocks anything caught in range (on a cooldown).
+        if (enemy.body.blocked.down && intent.playerDistance < 118 && now > (enemy.nextSpecialAt || 0)) {
+          enemy.nextSpecialAt = now + 3200 + Math.random() * 2000;
+          enemy.setVelocityX(0);
+          scene.bossShockwave(enemy);
         }
         break;
       }
