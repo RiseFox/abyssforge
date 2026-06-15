@@ -133,7 +133,10 @@
         .setScrollFactor(0)
         .setDepth(-10)
         .setAlpha(0);
-      const onWallResize = (gameSize) => this.caveWall.setSize(gameSize.width, gameSize.height);
+      const onWallResize = (gameSize) => {
+        if (gameSize.width <= 0 || gameSize.height <= 0) return;
+        this.caveWall.setSize(gameSize.width, gameSize.height);
+      };
       this.scale.on("resize", onWallResize);
       this.events.once("shutdown", () => this.scale.off("resize", onWallResize));
 
@@ -233,8 +236,15 @@
         .setOrigin(0.5)
         .setBlendMode(Phaser.BlendModes.ERASE);
       const onResize = (gameSize) => {
+        if (gameSize.width <= 0 || gameSize.height <= 0) return;
         if (this.darknessRT && this.darknessRT.resize) {
           this.darknessRT.resize(gameSize.width, gameSize.height);
+          // resize() erases the RT framebuffer. Repaint same-frame and bypass
+          // the idle throttle so the overlay is never left blank — that blank
+          // window (held up to 72ms by the throttle) is the blue/black flicker.
+          this.nextDarknessDrawAt = 0;
+          this.darknessDrawKey = "";
+          if (this.player) this.drawDarkness();
         }
       };
       this.scale.on("resize", onResize);
@@ -757,13 +767,20 @@
       this.cameras.main.setBackgroundColor(Phaser.Display.Color.GetColor(r, g, b));
 
       if (this.caveWall) {
-        const cam = this.cameras.main;
-        // World-lock the backdrop so it reads as a fixed wall behind the tiles.
-        this.caveWall.tilePositionX = cam.scrollX;
-        this.caveWall.tilePositionY = cam.scrollY;
-        // Fade in over the first few metres of depth; gone at the surface.
         const target = clamp((this.depthMeters() - 3) / 6, 0, 1);
-        this.caveWall.setAlpha(this.caveWall.alpha + (target - this.caveWall.alpha) * 0.15);
+        if (target <= 0 && this.caveWall.alpha <= 0.01) {
+          // Fully on the surface: hide so a full-screen quad never composites
+          // over the sky every frame (the lerp never settles to exactly 0).
+          if (this.caveWall.visible) this.caveWall.setVisible(false);
+        } else {
+          const cam = this.cameras.main;
+          if (!this.caveWall.visible) this.caveWall.setVisible(true);
+          this.caveWall.tilePositionX = cam.scrollX;
+          this.caveWall.tilePositionY = cam.scrollY;
+          let a = this.caveWall.alpha + (target - this.caveWall.alpha) * 0.15;
+          if (Math.abs(target - a) < 0.01) a = target;
+          this.caveWall.setAlpha(a);
+        }
       }
     }
 
@@ -1198,8 +1215,11 @@
       // still read tile silhouettes and the back wall outside lit pools.
       const alpha = clamp(0.8 - ambient * 0.82 + pressureBoost, 0, 0.8);
       const rt = this.darknessRT;
-      const glow = this.lightGlow;
-      if (glow) glow.clear();
+      if (this.lightGlow) this.lightGlow.clear();
+      // Skip the tessellated fillCircle halos when the frame budget is tight.
+      const perf = ML.performanceSnapshot;
+      const allowGlow = !(perf && (perf.status === "warn" || perf.status === "bad" || perf.avgFrame > 22 || perf.fps < 48));
+      const glow = allowGlow ? this.lightGlow : null;
       rt.clear();
 
       const mask = this.lightMask;
