@@ -389,6 +389,7 @@
       knownNotes,
       activeGoal,
       completedGoals,
+      truthProgress,
       phase,
       phaseIndex
     }

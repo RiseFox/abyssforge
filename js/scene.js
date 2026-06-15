@@ -4076,6 +4076,11 @@
           ML.showToast(`${afterPhase.title}: ${afterPhase.summary}`, 4600);
         }
       }
+      // Finale: once every truth lock clicks, the forge reveals itself to the
+      // PLAYER. Latched via lore.truthRevealed so it fires exactly once.
+      if (!this.dead && !this.sim.lore.truthRevealed && ML.LoreSystem.truthProgress?.(this.sim)?.done) {
+        this.triggerForgeFinale();
+      }
       if (!unlocked.length) {
         ML.renderMystery?.(this.sim);
         return [];
@@ -4092,6 +4097,40 @@
       ML.renderAll(this.sim);
       this.checkAchievements();
       return unlocked;
+    }
+
+    triggerForgeFinale() {
+      if (this.sim.lore.truthRevealed) return;
+      this.sim.lore.truthRevealed = true;
+      // A strong "noticed" beat — the frame reacts, then the forge speaks to YOU.
+      const now = this.time.now || 0;
+      this.observerPulseStart = now;
+      this.observerPulseUntil = now + 2600;
+      this.floatText(this.player.x - 30, this.player.y - 58, "IT KNOWS YOU", "#d8b6ff");
+      if (!this.reducedMotion) this.cameras.main.flash(420, 26, 14, 40, false);
+      ML.audio.play("secret");
+      this.setPaused(true, { silent: true });
+      ML.showForgeTruth?.(this.sim, { completed: Boolean(this.sim.lore.completedTruth) });
+      this.saveGame?.();
+    }
+
+    dismissForgeTruth() {
+      ML.hideForgeTruth?.();
+      this.setPaused(false);
+    }
+
+    completeRescue() {
+      this.sim.lore.completedTruth = true;
+      this.sim.lore.newGamePlus = true; // flag for a future New Game+ seed
+      ML.hideForgeTruth?.();
+      this.setPaused(false);
+      this.floatText(this.player.x - 44, this.player.y - 54, "THE WAYFIRES ANSWER", "#9efff0");
+      this.setAction("Rescue cycle complete", 2400);
+      ML.audio.play("achievement");
+      ML.showToast("You complete the rescue cycle. The wayfire network breathes again and the forge can finally rest. Keep mining, or begin a new descent.", 6000);
+      this.checkAchievements?.();
+      this.saveGame?.();
+      ML.renderAll?.(this.sim);
     }
 
     // ---- UI plumbing ------------------------------------------------------------------

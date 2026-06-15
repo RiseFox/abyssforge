@@ -1483,6 +1483,16 @@ canvas:focus { outline: none; }
 .death-panel h1 { margin: 0 0 8px; font-size: 24px; letter-spacing: 0; }
 .death-panel p { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
 
+/* Forge finale: the meta payoff — lavender/cyan accent, not death-red. */
+.forge-panel {
+  border-color: rgba(180, 150, 230, 0.6);
+  background: rgba(15, 13, 22, 0.97);
+  box-shadow: 0 18px 60px rgba(40, 20, 70, 0.6), inset 0 0 44px rgba(150, 200, 240, 0.07);
+  z-index: 40;
+}
+.forge-panel h1 { color: #d8b6ff; }
+.forge-panel #forgeBody { color: #cfe8ee; font-size: 13.5px; line-height: 1.5; }
+
 .pause-menu {
   position: absolute;
   left: 50%;

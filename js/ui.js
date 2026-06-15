@@ -94,6 +94,11 @@
     deathStats: document.getElementById("deathStats"),
     respawnBtn: document.getElementById("respawnBtn"),
     newWorldBtn: document.getElementById("newWorldBtn"),
+    forgePanel: document.getElementById("forgePanel"),
+    forgeTitle: document.getElementById("forgeTitle"),
+    forgeBody: document.getElementById("forgeBody"),
+    forgeCompleteBtn: document.getElementById("forgeCompleteBtn"),
+    forgeKeepBtn: document.getElementById("forgeKeepBtn"),
     damageFlash: document.getElementById("damageFlash"),
     interactPrompt: document.getElementById("interactPrompt"),
     interactKey: document.getElementById("interactKey"),
@@ -1175,6 +1180,22 @@
     ui.deathPanel.classList.add("hidden");
   }
 
+  function showForgeTruth(sim, opts = {}) {
+    if (!ui.forgePanel) return;
+    if (ui.forgeTitle) ui.forgeTitle.textContent = opts.title || "The forge answers";
+    if (ui.forgeBody) {
+      ui.forgeBody.textContent = opts.body
+        || "The abyss forge was a rescue engine — still building anchors and lamps for a collapse that never stopped spreading. It has been reaching back along the one hand that still moves the dark: yours. It mistakes you for the rescue it was built to wait for.";
+    }
+    if (ui.forgeCompleteBtn) ui.forgeCompleteBtn.classList.toggle("hidden", Boolean(opts.completed));
+    if (ui.forgeKeepBtn) ui.forgeKeepBtn.textContent = opts.completed ? "Return to the dark" : "Keep mining";
+    ui.forgePanel.classList.remove("hidden");
+  }
+
+  function hideForgeTruth() {
+    ui.forgePanel?.classList.add("hidden");
+  }
+
   function bindUi(scene) {
     if (bindUi.bound) return;
     bindUi.bound = true;
@@ -1220,6 +1241,8 @@
     ui.menuNewWorldBtn?.addEventListener("click", () => activeScene().restartWorld());
     ui.respawnBtn.addEventListener("click", () => activeScene().respawn());
     ui.newWorldBtn.addEventListener("click", () => activeScene().restartWorld());
+    ui.forgeCompleteBtn?.addEventListener("click", () => activeScene().completeRescue());
+    ui.forgeKeepBtn?.addEventListener("click", () => activeScene().dismissForgeTruth());
     document.addEventListener("contextmenu", (event) => event.preventDefault());
     document.addEventListener("pointerdown", () => ML.audio.unlock(), { once: true });
     document.addEventListener("pointerdown", () => activeScene().focusGameInput?.());
@@ -1304,6 +1327,8 @@
     resetRenderCache,
     showAchievement,
     hideDeath,
+    showForgeTruth,
+    hideForgeTruth,
     bindUi
   });
 })();
