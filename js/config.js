@@ -373,7 +373,7 @@ window.ML = window.ML || {};
     { id: "ironEdge", cat: "tools", name: "Iron edge", cost: { coal: 2, iron: 8 }, blade: 2, note: "+2 attack damage" },
     { id: "crystalEdge", cat: "tools", name: "Crystal edge", cost: { gold: 4, crystal: 6 }, blade: 3, note: "+4 attack damage" },
     { id: "abyssEdge", cat: "tools", name: "Abyss edge", cost: { fang: 3, relic: 1, crystal: 5 }, blade: 4, note: "+7 attack damage from boss fangs" },
-    { id: "caveBoots", cat: "tools", name: "Cave boots", cost: { wood: 3, iron: 4 }, boots: true, note: "Double jump, softer landings" },
+    { id: "caveBoots", cat: "tools", name: "Cave boots", cost: { wood: 3, iron: 4 }, boots: true, note: "Triple jump, softer landings, less fall damage" },
     { id: "minerLamp", cat: "tools", name: "Miner lamp", cost: { copper: 4, coal: 6 }, lamp: 1, note: "Wider personal light, but it drains lamp cells" },
     { id: "beaconLamp", cat: "tools", name: "Beacon lamp", cost: { gold: 6, crystal: 4 }, lamp: 2, note: "Huge light cone with a hungry battery draw" },
     { id: "clockworkRegulator", cat: "tools", name: "Clockwork regulator", cost: { clockwork: 1, quartz: 3, copper: 2 }, cellEfficiency: true, note: "Lamp cells drain slower under a tuned regulator" },

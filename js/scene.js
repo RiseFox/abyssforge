@@ -563,62 +563,10 @@
       }
       ML.mobile.jumpTap = false;
 
-      const tileX = Math.floor(this.player.x / TILE);
-      const tileY = Math.floor(this.player.y / TILE);
-      const standingTile = this.sim.tileAt(tileX, tileY);
-      const onLadder = standingTile === Tile.LADDER || this.sim.tileAt(tileX, tileY + 1) === Tile.LADDER;
-      const onFloor = this.player.body.blocked.down || this.player.body.onFloor();
-      const inLava = this.touchingLava();
-
-      this.platformDrop = down && !onLadder;
-
-      const sprinting = (this.keys.sprint.isDown || physical.sprint) && this.sim.energy > 6 && onFloor && !onLadder;
-      let speed = sprinting ? 305 : 220;
-      if (this.sim.speedBoost) speed *= sprinting ? 1.18 : 1.12;
-      if (inLava) speed *= 0.5;
-      let vx = 0;
-      if (left) vx -= speed;
-      if (right) vx += speed;
-      this.player.setVelocityX(vx);
-      this.player.setFlipX(vx < 0 ? true : vx > 0 ? false : this.player.flipX);
-
-      if (onLadder) {
-        this.player.body.allowGravity = false;
-        this.jumpsUsed = 0;
-        this.wasAirborne = false;
-        this.peakFallVy = 0;
-        if (up) {
-          this.player.setVelocityY(-170);
-        } else if (down) {
-          this.player.setVelocityY(170);
-        } else {
-          this.player.setVelocityY(0);
-        }
-        if (jumpPressed && (left || right)) {
-          this.player.body.allowGravity = true;
-          this.player.setVelocityY(-335);
-          ML.audio.play("jump");
-        }
-      } else {
-        this.player.body.allowGravity = true;
-        if (onFloor) this.jumpsUsed = 0;
-        if (jumpPressed) {
-          if (onFloor) {
-            this.player.setVelocityY(inLava ? -300 : -455);
-            this.jumpsUsed = 1;
-            ML.audio.play("jump");
-          } else if (this.sim.boots && this.jumpsUsed < 2) {
-            this.player.setVelocityY(-400);
-            this.jumpsUsed = 2;
-            this.peakFallVy = 0; // boots arrest the fall — no phantom landing damage
-            ML.audio.play("doubleJump");
-            this.emitDust(this.player.x, this.player.y + 14, 4);
-          }
-        }
-      }
-
-      this.trackFall(onFloor, onLadder);
-      this.updatePlayerAnim(vx, onFloor, onLadder);
+      // Locomotion + jump/ladder/lava state lives in ML.Character; the scene
+      // keeps input plumbing above and every downstream system below.
+      const move = ML.Character.update(this, { left, right, up, down, jumpPressed }, dt);
+      const { vx, onFloor, onLadder, inLava, sprinting } = move;
 
       if (!this.actionHoldUntil || this.time.now > this.actionHoldUntil) {
         if (onLadder) {
