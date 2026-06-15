@@ -1882,6 +1882,16 @@ canvas:focus { outline: none; }
   border-radius: 8px;
   background: rgba(20, 18, 15, 0.82);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  touch-action: manipulation; /* kill double-tap zoom + the 300ms tap delay */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.05s ease, background 0.05s ease;
+}
+
+.mobile-controls button:active {
+  background: rgba(92, 80, 58, 0.96); /* visible pressed feedback on touch */
+  transform: scale(0.92);
 }
 
 .mobile-controls button.tall { height: 62px; }
@@ -3028,6 +3038,11 @@ canvas:focus { outline: none; }
   .inventory-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .death-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mobile-controls { display: flex; }
+  .interact-prompt {
+    /* Lift the prompt above the touch controls (same offset as the toast) so it
+       no longer sits on top of the move/action pad. */
+    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 154px);
+  }
   .toast {
     left: 12px;
     right: 12px;

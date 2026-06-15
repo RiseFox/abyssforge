@@ -374,7 +374,10 @@
       ML.renderAll(this.sim, { force: true });
       this.checkLore("load", { silent: true });
       this.checkAchievements();
-      ML.showToast("Pickaxe ready. LMB mines, RMB places or uses, E opens nearby objects or crafts, F attacks.", 4600);
+      const touch = (navigator.maxTouchPoints > 0) || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+      ML.showToast(touch
+        ? "Pickaxe ready. Tap a block to mine, the on-screen pad to move/jump, and the action buttons to place, use, and attack."
+        : "Pickaxe ready. LMB mines, RMB places or uses, E opens nearby objects or crafts, F attacks.", 4600);
     }
 
     createAnims() {
@@ -3966,7 +3969,11 @@
       if (noticed) {
         this.floatText(this.player.x - 34, this.player.y - 48, "SOMETHING WATCHES", "#d8b6ff");
         ML.audio.play("secret");
-        ML.showToast("A silhouette watches from the edge of your light.", 2800);
+        // First sighting teaches the meta hook so the Watcher arc is discoverable,
+        // not accidental: it surfaces in the dark/deep and it is counting you.
+        ML.showToast(firstSighting
+          ? "A silhouette watches from the edge of your light — it shows itself in the dark deep, and it is counting."
+          : "A silhouette watches from the edge of your light.", firstSighting ? 4200 : 2800);
       }
       this.tweens.add({
         targets: this.watcher,
@@ -4052,7 +4059,10 @@
       const darkThreshold = biome?.darkThreshold ?? 0.22;
       if (darkPressure > 0 && depth > darkDepth && light < darkThreshold) {
         const wardFactor = this.sim.ward ? 0.45 : 1;
-        this.applyDamage(darkPressure * 2.05 * wardFactor * dt, "dark");
+        // Soft-cap the dark drain so no biome tuning can turn this into an
+        // instant-death zone — you always get a window to torch up or climb out.
+        const darkDps = Math.min(darkPressure * 2.05, 6.5) * wardFactor;
+        this.applyDamage(darkDps * dt, "dark");
         if (now - this.lastDarkWarnAt > 12000) {
           this.lastDarkWarnAt = now;
           ML.showToast(`${biome.name} is crushing your light. Place a torch or craft a lamp.`, 2800);

@@ -81,6 +81,7 @@
         this.inventory || {}
       );
       ML.Progression?.ensureKnownItems?.(this);
+      if (!Array.isArray(this.surface)) this.surface = [];
       if (!Array.isArray(this.secrets)) this.secrets = [];
       if (!Array.isArray(this.surfaceDiscoveries)) this.surfaceDiscoveries = [];
       if (!Array.isArray(this.lights)) this.rebuildLights();
@@ -1793,7 +1794,9 @@
         const raw = localStorage.getItem(ML.SAVE_KEY);
         if (!raw) return null;
         const data = JSON.parse(raw);
-        if (!data || data.version !== 9 || !data.state || !Array.isArray(data.state.world)) return null;
+        // Require both the world AND the surface array — a save missing/corrupt
+        // surface would otherwise load and then crash on the first surface[x] read.
+        if (!data || data.version !== 9 || !data.state || !Array.isArray(data.state.world) || !Array.isArray(data.state.surface)) return null;
         return data.state;
       } catch {
         return null;

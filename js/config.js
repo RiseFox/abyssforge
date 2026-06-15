@@ -305,7 +305,7 @@ window.ML = window.ML || {};
         { tile: Tile.CRYSTAL, minDepth: 150, chance: 0.014 },
         { tile: Tile.QUARTZ, minDepth: 150, chance: 0.012 },
         { tile: Tile.EMBER, minDepth: 176, chance: 0.008 },
-        { tile: Tile.OBSIDIAN, minDepth: 210, chance: 0.006 }
+        { tile: Tile.OBSIDIAN, minDepth: 210, chance: 0.012 }
       ]
     },
     {

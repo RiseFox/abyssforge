@@ -1244,7 +1244,10 @@
     ui.resumeBtn?.addEventListener("click", () => activeScene().setPaused(false));
     ui.menuSaveBtn?.addEventListener("click", saveActive);
     ui.menuRespawnBtn?.addEventListener("click", () => activeScene().restartAtSpawn());
-    ui.menuNewWorldBtn?.addEventListener("click", () => activeScene().restartWorld());
+    ui.menuNewWorldBtn?.addEventListener("click", () => {
+      // Discarding a LIVE descent — guard against a misclick wiping hours of run.
+      if (window.confirm("Start a new world? This discards your current descent and all progress.")) activeScene().restartWorld();
+    });
     ui.respawnBtn.addEventListener("click", () => activeScene().respawn());
     ui.newWorldBtn.addEventListener("click", () => activeScene().restartWorld());
     ui.forgeCompleteBtn?.addEventListener("click", () => activeScene().completeRescue());
