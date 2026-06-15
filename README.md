@@ -50,7 +50,7 @@ The first layer is tactile and immediate. The player mines blocks, places ladder
 
 ### 2. Light Is A Resource
 
-Torches, campfires, glow caps, and battery-fed lamps all matter. The lamp no longer behaves like a permanent upgrade: it has charge, battery refill logic, standby behavior near external light, and failure states in deep darkness. Low light builds **Shadow pressure** before it becomes lethal, which gives the player time to react and makes dark zones feel mechanically different instead of only darker.
+Torches, campfires, glow caps, and battery-fed lamps all matter. The lamp no longer behaves like a permanent upgrade: it has charge, battery refill logic, standby behavior near external light, and failure states in deep darkness — though under the open sky it runs free, so a headlamp only burns cells once you are roofed in. Low light builds **Shadow pressure** before it becomes lethal, which gives the player time to react and makes dark zones feel mechanically different instead of only darker. Placed light is also tactical: light-fearing mobs back out of torch and lamp pools, so lighting a room genuinely shapes who can reach you.
 
 ### 3. The World Expands
 
@@ -85,6 +85,8 @@ Underneath the Watcher sits a slower fourth-wall arc. A single "attention" — t
 ## World Generation
 
 AbyssForge now uses a dedicated **WorldGen Director** instead of scattering every landmark and loot rule through the simulation. It controls surface pacing, contextual chest tables, biome-aware spawn budgets, and region-specific setpieces.
+
+The underground is shaped per stratum, not one uniform field of holes: each depth band scales its cave count, tunnel length, and shape (tight rootline tunnels, wide ironfault galleries, branching crystal chambers) from its own profile, lava and glow-cap density follow the stratum, and ore forms **veins** — connected seams worth following — rather than an even scatter.
 
 ### Surface Regions
 
@@ -133,8 +135,8 @@ AbyssForge now uses a dedicated **WorldGen Director** instead of scattering ever
 - **Contracts:** short expedition orders provide direction and rewards.
 - **Achievements:** unlocks track survival, depth, crafting, exploration, secrets, lore, and anomalies.
 - **Enemy ecology:** cave mobs, surface mobs, bosses, and ambushes have spawn rules by layer, depth, biome, and sightline; deeper mobs use packed CC0 sprites for distinct silhouettes.
-- **Smarter mobs:** enemies react to light, noise, weakness, allies, line of sight, nearby POI, and their own health.
-- **Surface life:** ambient critters (birds, beetles) and a camp keeper give the overworld inhabitants instead of empty terrain.
+- **Smarter mobs:** enemies react to light, noise, weakness, allies, line of sight, nearby POI, and their own health, and back out of placed light by personality. Bosses fight to type — the Warden lays a relentless siege, the Broodmother presses while summoning her swarm — and the golem stomps a ground-slam shock when you close in.
+- **Ambient life:** surface critters (birds, beetles) and a **talking camp keeper** inhabit the overworld, while bioluminescent glow-worms drift through the shallow caves — so neither the surface nor the dark reads as empty.
 - **Underground setpieces:** geodes, bone beds, fossils, derelict pumps, shrines, and forge marks surface as readable deep objects, not just ore.
 - **Cave events:** ore surge, lantern draft, depth swarm, tremor, and echo-vein events vary with story phase.
 - **Hidden lore:** field notes, mystery panel, wayfire goals, cache marks, Warden clues, Watcher sightings, Observer moments, and the forge-lock finale.
@@ -162,7 +164,18 @@ AbyssForge now uses a dedicated **WorldGen Director** instead of scattering ever
 
 ## Run Locally
 
-Open `index.html` directly in a browser, or install dependencies and run the verification suite:
+The reliable way to play is over a local web server (a `file://` page can mute
+audio and dim the sky). With Node installed, from the project folder:
+
+```bash
+npx --yes http-server -p 8741 -c-1 .
+```
+
+Then open **http://localhost:8741** in your browser. Any static server works —
+e.g. `python -m http.server 8741`. Opening `index.html` directly also runs, just
+with the caveats above.
+
+Install dependencies and run the verification suite:
 
 ```bash
 npm install
