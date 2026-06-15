@@ -596,6 +596,16 @@
     pickHeads.forEach((_, i) => picks.add(`pick${i}`, 0, i * PICK_W, 0, PICK_W, PICK_W));
     picks.refresh();
 
+    // Export each pick frame as a data URL so the HUD can show the real sprite
+    // (tier-correct) instead of a hand-drawn CSS pickaxe.
+    ML.pickIconUrls = pickHeads.map((_, i) => {
+      const fc = document.createElement("canvas");
+      fc.width = PICK_W;
+      fc.height = PICK_W;
+      fc.getContext("2d").drawImage(pk.canvas, i * PICK_W, 0, PICK_W, PICK_W, 0, 0, PICK_W, PICK_W);
+      return fc.toDataURL();
+    });
+
     // ---- Enemies ----------------------------------------------------------
     const mossling = freshCanvasTexture("mossling", 28, 18);
     const mc = mossling.getContext();

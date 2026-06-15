@@ -17,6 +17,7 @@
     shadowText: document.getElementById("shadowText"),
     shadowBar: document.getElementById("shadowBar"),
     worldLabel: document.getElementById("worldLabel"),
+    pickIcon: document.querySelector(".pick-icon"),
     pickHudText: document.getElementById("pickHudText"),
     pickTierText: document.getElementById("pickTierText"),
     pickText: document.getElementById("pickText"),
@@ -322,6 +323,13 @@
     setText(ui.pickText, pickName);
     setText(ui.pickHudText, pickName);
     setText(ui.pickTierText, `Tier ${sim.pickLevel}`);
+    if (ui.pickIcon && ML.pickIconUrls) {
+      const url = ML.pickIconUrls[clamp(sim.pickLevel - 1, 0, ML.pickIconUrls.length - 1)];
+      if (url && ui.pickIcon.dataset.url !== url) {
+        ui.pickIcon.dataset.url = url;
+        ui.pickIcon.style.backgroundImage = `url("${url}")`;
+      }
+    }
     setText(ui.damageText, `${sim.attackDamage()} · ${BLADES[sim.blade].name}`);
     const cells = sim.inventory?.battery || 0;
     const lampMode = scene?.lampStandby ? "standby" : scene?.lampDemand > 1.05 ? "draw" : "active";

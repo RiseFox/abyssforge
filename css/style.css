@@ -206,39 +206,13 @@ canvas:focus { outline: none; }
   height: 38px;
   border-radius: 7px;
   border: 1px solid rgba(236, 205, 135, 0.22);
-  background: rgba(255, 255, 255, 0.06);
+  background-color: rgba(255, 255, 255, 0.05);
+  /* The actual generated pick sprite is set as a background-image by ui.js. */
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 30px 30px;
+  image-rendering: pixelated;
   overflow: hidden;
-}
-
-.pick-icon::before,
-.pick-icon::after {
-  content: "";
-  position: absolute;
-  left: 17px;
-  top: 6px;
-  transform-origin: center bottom;
-  border-radius: 3px;
-}
-
-.pick-icon::before {
-  width: 6px;
-  height: 27px;
-  left: 17px;
-  top: 13px;
-  transform: rotate(37deg);
-  transform-origin: center top;
-  background: linear-gradient(90deg, #4b2c1a 0 28%, #9d612e 29% 72%, #d08a43 73%);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
-}
-
-.pick-icon::after {
-  width: 26px;
-  height: 7px;
-  left: 5px;
-  top: 9px;
-  transform: rotate(-11deg);
-  background: linear-gradient(180deg, #efeade 0 32%, #b5b2a7 33% 62%, #626761 63%);
-  box-shadow: inset 0 -2px rgba(0, 0, 0, 0.22);
 }
 
 .tool-copy {

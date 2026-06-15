@@ -1307,10 +1307,10 @@
     drawDarkness() {
       const cam = this.cameras.main;
       const ambient = this.ambientLight();
-      const pressureBoost = clamp((this.shadowPressure || 0) / 100 * 0.08, 0, 0.08);
-      // Cap below full black so the deep stays moody but navigable — you can
-      // still read tile silhouettes and the back wall outside lit pools.
-      const alpha = clamp(0.8 - ambient * 0.82 + pressureBoost, 0, 0.8);
+      const pressureBoost = clamp((this.shadowPressure || 0) / 100 * 0.07, 0, 0.07);
+      // Cap below full black so the deep/night stays moody but navigable — you
+      // can still read tile silhouettes and the back wall outside lit pools.
+      const alpha = clamp(0.74 - ambient * 0.78 + pressureBoost, 0, 0.7);
       const rt = this.darknessRT;
       if (this.lightGlow) this.lightGlow.clear();
       // Skip the tessellated fillCircle halos when the frame budget is tight.
@@ -3978,17 +3978,25 @@
     floatText(x, y, text, color = "#f5d77a") {
       const label = this.add.text(x, y, text, {
         fontFamily: "monospace",
-        fontSize: "12px",
+        fontSize: "13px",
+        fontStyle: "bold",
         color,
-        stroke: "#1b1510",
-        strokeThickness: 3
+        stroke: "#140f0a",
+        strokeThickness: 4
       }).setDepth(90);
+      // Drift up slowly and hold fully visible, then fade — readable, not a blink.
       this.tweens.add({
         targets: label,
-        y: y - 24,
+        y: y - 26,
+        duration: 1800,
+        ease: "Sine.easeOut"
+      });
+      this.tweens.add({
+        targets: label,
         alpha: 0,
-        duration: 850,
-        ease: "Sine.easeOut",
+        delay: 1200,
+        duration: 700,
+        ease: "Sine.easeIn",
         onComplete: () => label.destroy()
       });
     }
