@@ -370,6 +370,7 @@
   }
 
   function surfaceLabel(type) {
+    if (type === "camp") return "GUILD CAMP";
     if (type === "hamlet") return "SILENT HAMLET";
     if (type === "waypost") return "WAYPOST";
     if (type === "watcher") return "WATCHER MARK";

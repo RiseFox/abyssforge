@@ -227,6 +227,13 @@
       );
       this.visibleChestPropCount = 0;
       this.nextChestPropScanAt = 0;
+      this.campKeeperPool = Array.from({ length: 4 }, () =>
+        this.add.image(0, 0, "campKeeper")
+          .setDepth(9.4)
+          .setVisible(false)
+          .setOrigin(0.5, 1)
+      );
+      this.nextCampKeeperScanAt = 0;
       this.watcher = this.add.image(this.player.x, this.player.y, "watcher")
         .setOrigin(0.5, 1)
         .setDepth(82)
@@ -628,6 +635,7 @@
       this.drawAnimatedTileFx();
       this.updateOreProps();
       this.updateLightProps();
+      this.updateCampKeepers();
       this.updateChestProps();
       this.updateDarkness();
       this.updatePickaxeVisual(Boolean(this.mineTarget));
@@ -1185,6 +1193,39 @@
         this.lightPropPool[i].setVisible(false);
       }
       this.visibleLightPropCount = used;
+    }
+
+    updateCampKeepers(force = false) {
+      // A hooded guild keeper idles beside every lit campfire (surface camp and
+      // cave wayfires alike) — the cheapest believable NPC presence, reusing the
+      // light-prop scan pattern.
+      if (!this.campKeeperPool?.length) return;
+      const now = this.time.now || 0;
+      if (!force && now < this.nextCampKeeperScanAt) return;
+      this.nextCampKeeperScanAt = now + 200;
+      const cam = this.cameras.main;
+      const minX = Math.floor((cam.scrollX - 64) / TILE);
+      const maxX = Math.ceil((cam.scrollX + cam.width + 64) / TILE);
+      const minY = Math.floor((cam.scrollY - 64) / TILE);
+      const maxY = Math.ceil((cam.scrollY + cam.height + 64) / TILE);
+      let used = 0;
+      for (const light of (this.sim?.lights || [])) {
+        if (used >= this.campKeeperPool.length) break;
+        if (light.t !== Tile.CAMPFIRE) continue;
+        if (light.x < minX || light.x > maxX || light.y < minY || light.y > maxY) continue;
+        if (this.sim.tileAt(light.x, light.y) !== Tile.CAMPFIRE) continue;
+        const keeper = this.campKeeperPool[used];
+        used += 1;
+        const side = (light.x % 2 === 0) ? -1 : 1; // sit to one side, facing the fire
+        const bob = Math.sin(now / 620 + light.x * 0.5) * 0.7;
+        keeper
+          .setPosition(light.x * TILE + TILE / 2 + side * 14, light.y * TILE + TILE + bob)
+          .setFlipX(side < 0)
+          .setVisible(true);
+      }
+      for (let i = used; i < this.campKeeperPool.length; i += 1) {
+        this.campKeeperPool[i].setVisible(false);
+      }
     }
 
     chestTableIdAt(x, y, secret = null) {

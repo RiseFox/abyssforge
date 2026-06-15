@@ -176,6 +176,7 @@
       // Populate the starting surface (signs, wayposts, shelters, caches) before
       // lights are built so any setpiece torches/campfires register as lights.
       this.populateHomeSurface(mulberry32(seed ^ 0x5f3759df));
+      this.buildStartingCamp();
       this.player = this.safeSpawnPixels();
       this.rebuildLights();
       this.mobs = this.generateMobs(mulberry32(seed ^ 0x9e3779b9));
@@ -699,6 +700,32 @@
         ML.WorldGenDirector?.decorateSurfaceRegion?.(this, start, end, side, rand, { home: true });
       }
       return (this.surfaceDiscoveries || []).length - before;
+    }
+
+    buildStartingCamp() {
+      // One-time guild trailhead at spawn: the lore promises a surface camp but
+      // gen otherwise left only a lone campfire. Add an intro sign + a starter
+      // cache on the flattened spawn pad. newWorld ONLY (never on load), so an
+      // opened starter chest never refills.
+      if (!this.world || !this.shaft) return;
+      const sx = this.shaft.x;
+      const floorY = (this.shaft.y ?? this.spawn.y) + 2;
+      const width = this.worldWidth();
+      // Flatten a small pad to the right of the ladder so the props sit on clean,
+      // cleared ground (repairSpawnShaft only sets the floor row, not the air above).
+      this.flattenSurfaceRange(clamp(sx + 1, 2, width - 3), clamp(sx + 5, 2, width - 3), floorY);
+      const chestX = clamp(sx + 4, 2, width - 3);
+      if (this.world[floorY - 1]) {
+        this.world[floorY - 1][chestX] = Tile.CHEST;
+        this.registerChestTag(chestX, floorY - 1, { type: "road", source: "startingCamp", surfaceRegion: "camp" });
+      }
+      this.placeSurfaceSign(
+        clamp(sx + 2, 2, width - 3),
+        "camp",
+        "Guild trailhead",
+        "The shaft drops into the dark from here. Bank what you can carry at the fire — the deep keeps whatever you can't.",
+        mulberry32((this.seed ?? 0) ^ 0x1b873593)
+      );
     }
 
     generateUndergroundLandmarks(options = {}) {

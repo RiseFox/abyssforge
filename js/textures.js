@@ -1067,6 +1067,38 @@
     mw.fillRect(30, 12, 3, 3);
     mobWake.refresh();
 
+    // Camp keeper — a hooded guild figure who mans a lit campfire, giving the
+    // camps a visible NPC presence (placed beside any fire by updateCampKeepers).
+    const keeper = freshCanvasTexture("campKeeper", 18, 26);
+    const kc = keeper.getContext();
+    kc.clearRect(0, 0, 18, 26);
+    kc.fillStyle = "rgba(0,0,0,0.32)"; // ground shadow
+    kc.fillRect(3, 24, 12, 2);
+    kc.fillStyle = "#46371f"; // cloak base
+    kc.fillRect(5, 12, 8, 12);
+    kc.fillStyle = "#5c4a2c"; // fire-lit side
+    kc.fillRect(5, 12, 3, 12);
+    kc.fillStyle = "#33281a"; // shadow side
+    kc.fillRect(11, 12, 2, 12);
+    kc.fillStyle = "#46371f"; // shoulders
+    kc.fillRect(4, 11, 10, 2);
+    kc.fillStyle = "#caa06a"; // face
+    kc.fillRect(6, 7, 6, 5);
+    kc.fillStyle = "#332617"; // hood crown
+    kc.fillRect(5, 4, 8, 4);
+    kc.fillStyle = "#2a2016"; // hood sides
+    kc.fillRect(5, 6, 1, 6);
+    kc.fillRect(12, 6, 1, 6);
+    kc.fillStyle = "#241a10"; // eye shade
+    kc.fillRect(8, 9, 3, 1);
+    kc.fillStyle = "#ffd98a"; // eye glint
+    kc.fillRect(9, 9, 1, 1);
+    kc.fillStyle = "rgba(245,180,92,0.45)"; // warm rim from the fire
+    kc.fillRect(5, 5, 1, 19);
+    kc.fillStyle = "#2c2114"; // hem
+    kc.fillRect(5, 23, 8, 1);
+    keeper.refresh();
+
     const orb = freshCanvasTexture("lightOrb", 256, 256);
     const oc = orb.getContext();
     oc.clearRect(0, 0, 256, 256);
