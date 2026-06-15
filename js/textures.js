@@ -332,6 +332,51 @@
     ctx.fillStyle = "#2f2014";
     ctx.fillRect(signX + 9, 11, 10, 2);
     ctx.fillRect(signX + 9, 14, 14, 2);
+
+    // --- Underground surprises ---
+    // Geode pocket: dark mineral rind with a hollow lined in glinting crystal.
+    const geodeX = Tile.GEODE * TILE;
+    rock(Tile.GEODE, "#3a3340", ["#2f2935", "#473e50", "#262030"], 10);
+    ctx.fillStyle = "#221d29"; // hollow
+    ctx.fillRect(geodeX + 8, 8, 16, 16);
+    ctx.fillStyle = "#16121c";
+    ctx.fillRect(geodeX + 10, 10, 12, 12);
+    nuggets(Tile.GEODE, 5, { core: "#9efff0", light: "#e6fffb", dark: "#3a8f86", size: 5, shape: "shard", spark: true });
+    bevel(Tile.GEODE, "rgba(180,255,248,0.14)", "rgba(0,0,0,0.46)");
+
+    // Lost miner: bone-pale remains set into earthy stone.
+    const bonesX = Tile.BONES * TILE;
+    rock(Tile.BONES, "#6b6359", ["#5b554c", "#7a7268", "#534d44"], 9);
+    ctx.fillStyle = "#d8d2c0"; // skull
+    ctx.fillRect(bonesX + 7, 9, 8, 7);
+    ctx.fillRect(bonesX + 8, 16, 6, 2); // jaw
+    ctx.fillRect(bonesX + 17, 11, 9, 2); // ribs
+    ctx.fillRect(bonesX + 18, 15, 8, 2);
+    ctx.fillRect(bonesX + 17, 19, 9, 2);
+    ctx.fillStyle = "#9a9384"; // bone shade
+    ctx.fillRect(bonesX + 7, 15, 8, 1);
+    ctx.fillRect(bonesX + 17, 12, 9, 1);
+    ctx.fillStyle = "#241f18"; // eye sockets
+    ctx.fillRect(bonesX + 9, 11, 2, 2);
+    ctx.fillRect(bonesX + 12, 11, 2, 2);
+    bevel(Tile.BONES);
+
+    // Amber fossil: a warm resin blob with a dark curled shell, locked in stone.
+    const fossilX = Tile.FOSSIL * TILE;
+    rock(Tile.FOSSIL, "#6e675a", ["#5e574c", "#7d7666", "#564f45"], 9);
+    ctx.fillStyle = "#b9742a"; // amber rim
+    ctx.fillRect(fossilX + 8, 8, 16, 16);
+    ctx.fillStyle = "#e0953c"; // amber body
+    ctx.fillRect(fossilX + 9, 9, 14, 14);
+    ctx.fillStyle = "#f4c06a"; // sheen
+    ctx.fillRect(fossilX + 10, 10, 6, 5);
+    ctx.fillStyle = "#5a3a1c"; // curled fossil
+    ctx.fillRect(fossilX + 13, 13, 7, 2);
+    ctx.fillRect(fossilX + 18, 13, 2, 6);
+    ctx.fillRect(fossilX + 13, 17, 7, 2);
+    ctx.fillRect(fossilX + 13, 14, 2, 4);
+    bevel(Tile.FOSSIL, "rgba(255,220,150,0.12)", "rgba(0,0,0,0.42)");
+
     tiles.refresh();
 
     const drawLightPropTextures = () => {

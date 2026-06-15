@@ -381,6 +381,21 @@
         }
       }
 
+      // Strange objects embedded in rock — seeded surprises you turn up while
+      // digging: lost miners (coins), amber fossils, and crystal geodes, each
+      // gated deeper than the last.
+      for (let x = 3; x < WORLD_W - 3; x += 1) {
+        for (let y = surface[x] + 18; y < WORLD_H - 8; y += 1) {
+          const t = world[y][x];
+          if (t !== Tile.STONE && t !== Tile.DEEP && t !== Tile.DIRT) continue;
+          const depth = y - surface[x];
+          const r = rand();
+          if (r < 0.0011) world[y][x] = Tile.BONES;
+          else if (r < 0.0022 && depth > 26) world[y][x] = Tile.FOSSIL;
+          else if (r < 0.0033 && depth > 50) world[y][x] = Tile.GEODE;
+        }
+      }
+
       [
         { tier: 1, min: 38, max: 78 },
         { tier: 1, min: 58, max: 108 },
