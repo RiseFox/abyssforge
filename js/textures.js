@@ -1033,24 +1033,38 @@
 
     const mobWake = freshCanvasTexture("mobWake", 48, 28);
     const mw = mobWake.getContext();
+    // Spawn telegraph: something claws up through cracked ground. Drawn in
+    // neutral greys with WHITE eyes so the runtime per-mob tint colours it; no
+    // arcane purple, no additive glow (see queueMobMaterialize).
     mw.clearRect(0, 0, 48, 28);
-    mw.fillStyle = "rgba(0,0,0,0.48)";
-    mw.fillRect(7, 21, 34, 4);
-    mw.fillStyle = "rgba(216,182,255,0.34)";
-    mw.fillRect(8, 17, 31, 2);
-    mw.fillRect(13, 13, 21, 2);
-    mw.fillRect(18, 9, 12, 2);
-    mw.fillStyle = "#5a3d78";
-    mw.fillRect(11, 18, 7, 3);
-    mw.fillRect(27, 18, 8, 3);
-    mw.fillStyle = "#8d6db3";
-    mw.fillRect(15, 15, 4, 2);
-    mw.fillRect(30, 14, 4, 2);
-    mw.fillStyle = "#d8b6ff";
-    mw.fillRect(17, 7, 3, 3);
-    mw.fillRect(30, 8, 3, 3);
-    mw.fillStyle = "rgba(255,213,106,0.58)";
-    mw.fillRect(22, 19, 7, 1);
+    // Dark fracture / hole — near-black so it stays dark under any tint.
+    mw.fillStyle = "rgba(0,0,0,0.5)";
+    mw.fillRect(9, 22, 30, 4);
+    mw.fillRect(13, 20, 22, 2);
+    // Broken rubble lip around the break.
+    mw.fillStyle = "#564f46";
+    mw.fillRect(11, 19, 6, 3);
+    mw.fillRect(20, 20, 7, 2);
+    mw.fillRect(30, 19, 6, 3);
+    mw.fillStyle = "#7b7367"; // top-lit edge of the rubble
+    mw.fillRect(11, 19, 6, 1);
+    mw.fillRect(30, 19, 6, 1);
+    // Twin cracks splitting upward from the break.
+    mw.fillStyle = "#1b1712";
+    mw.fillRect(22, 13, 2, 8);
+    mw.fillRect(27, 15, 1, 6);
+    // Faint dust lifting off (low alpha, tints softly).
+    mw.fillStyle = "rgba(235,228,214,0.22)";
+    mw.fillRect(15, 11, 3, 1);
+    mw.fillRect(31, 10, 2, 1);
+    mw.fillRect(23, 7, 2, 1);
+    // Twin eyes glinting in the dark — the focal tell (white -> takes the tint).
+    mw.fillStyle = "rgba(255,255,255,0.32)"; // eye haze
+    mw.fillRect(13, 12, 7, 5);
+    mw.fillRect(28, 11, 7, 5);
+    mw.fillStyle = "#ffffff"; // eye cores
+    mw.fillRect(15, 13, 3, 3);
+    mw.fillRect(30, 12, 3, 3);
     mobWake.refresh();
 
     const orb = freshCanvasTexture("lightOrb", 256, 256);

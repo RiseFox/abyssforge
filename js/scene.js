@@ -2961,21 +2961,24 @@
       const wx = spot.x * TILE + TILE / 2;
       const wy = spot.y * TILE + 12;
       const cfg = ENEMIES[mob.kind];
-      const frameKeys = ML.ExternalAssets?.mobWakeFrameKeys?.(this) || [];
-      const markerKey = frameKeys[0] || "mobWake";
+      // Grounded "something claws up through the floor" tell: the hand-drawn
+      // mobWake art (cracked ground + rubble + glowing eyes), tinted warm per
+      // mob and drawn FLAT (no additive blend) so it reads as eyes in the dark,
+      // not a floating magic fireball. Elite=gold, event/summon=arcane, else amber.
+      const markerKey = "mobWake";
+      const tint = mob.elite ? 0xf0c75e : (mob.event || mob.summoned) ? 0xc9a6ff : (cfg?.wakeTint || 0xe0935a);
       const marker = this.add.image(wx, wy + 6, markerKey)
         .setOrigin(0.5, 1)
         .setDepth(83)
         .setAlpha(0)
-        .setScale(cfg?.heavy ? 1.55 : 1.32);
-      marker.setTint(mob.elite ? 0xf0c75e : mob.event ? 0xd8b6ff : 0x8a6fa8);
-      marker.setBlendMode(Phaser.BlendModes.ADD);
+        .setScale(cfg?.heavy ? 1.5 : 1.22)
+        .setTint(tint);
       this.emitDust(wx, wy + 8, mob.event ? 5 : 3);
+      // Flicker in place (no upward float) — eyes glinting amid the rubble.
       this.tweens.add({
         targets: marker,
-        alpha: { from: 0.28, to: 0.9 },
-        y: wy + 1,
-        duration: 240,
+        alpha: { from: 0.5, to: 0.85 },
+        duration: 320,
         yoyo: true,
         repeat: -1,
         ease: "Sine.easeInOut"
@@ -2984,7 +2987,7 @@
         mob,
         spot,
         marker,
-        frameKeys,
+        frameKeys: [],
         frameIndex: 0,
         nextFrameAt: this.time.now,
         queuedAt: this.time.now,
@@ -3039,14 +3042,18 @@
           pending.readyAt = this.time.now + 420;
           continue;
         }
-        if (pending.frameKeys?.length && pending.marker?.active && this.time.now >= pending.nextFrameAt) {
+        if (pending.marker?.active) {
+          // Grow the tell slightly as it nears readiness; the flicker tween owns
+          // alpha. Texture-cycling only runs if external frames were supplied
+          // (none by default — the marker keeps the mobWake art).
           const progress = clamp((this.time.now - pending.queuedAt) / Math.max(1, pending.readyAt - pending.queuedAt), 0, 1);
-          const key = pending.frameKeys[pending.frameIndex % pending.frameKeys.length];
-          pending.frameIndex += 1;
-          pending.nextFrameAt = this.time.now + (pending.event ? 62 : 78);
-          pending.marker.setTexture(key);
-          pending.marker.setScale((pending.mob?.boss ? 1.74 : pending.mob?.elite ? 1.52 : 1.26) + progress * 0.22);
-          pending.marker.setAlpha(0.36 + progress * 0.52);
+          const baseScale = pending.mob?.boss ? 1.55 : pending.mob?.elite ? 1.36 : (ENEMIES[pending.mob?.kind]?.heavy ? 1.5 : 1.22);
+          pending.marker.setScale(baseScale + progress * 0.24);
+          if (pending.frameKeys?.length && this.time.now >= pending.nextFrameAt) {
+            pending.marker.setTexture(pending.frameKeys[pending.frameIndex % pending.frameKeys.length]);
+            pending.frameIndex += 1;
+            pending.nextFrameAt = this.time.now + (pending.event ? 62 : 78);
+          }
         }
         if (this.time.now < pending.readyAt) continue;
         if (this.enemies.countActive(true) >= 12) continue;
