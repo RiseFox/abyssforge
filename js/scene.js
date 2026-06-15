@@ -1223,11 +1223,13 @@
         if (this.sim.tileAt(light.x, light.y) !== Tile.CAMPFIRE) continue;
         const keeper = this.campKeeperPool[used];
         used += 1;
-        const side = (light.x % 2 === 0) ? -1 : 1; // sit to one side, facing the fire
+        const side = (light.x % 2 === 0) ? -1 : 1; // stand to one side of the fire
         const bob = Math.sin(now / 620 + light.x * 0.5) * 0.7;
         keeper
-          .setPosition(light.x * TILE + TILE / 2 + side * 14, light.y * TILE + TILE + bob)
-          .setFlipX(side < 0)
+          .setPosition(light.x * TILE + TILE / 2 + side * 18, light.y * TILE + TILE + bob)
+          // Face the fire: the dwarf sprite faces right by default, so flip it
+          // only when standing on the fire's right side.
+          .setFlipX(side > 0)
           .setVisible(true);
       }
       for (let i = used; i < this.campKeeperPool.length; i += 1) {

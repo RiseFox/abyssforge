@@ -1068,29 +1068,28 @@
     // the screen. Texture is 1024 wide so tiles are spaced far apart.
     const CLOUD_W = 1024;
     const CLOUD_H = 200;
-    const makeClouds = (key, clusters, puffAlpha) => {
+    // Defined puffy clouds (solid lobes + flat shading) instead of faint radial
+    // smudges. Drawn near-opaque; updateSkyDecor controls how visible they get.
+    const makeClouds = (key, clusters, alpha) => {
       const tex = freshCanvasTexture(key, CLOUD_W, CLOUD_H);
       const c = tex.getContext();
       c.clearRect(0, 0, CLOUD_W, CLOUD_H);
+      const disc = (x, y, r, fill) => { c.fillStyle = fill; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); };
       for (let i = 0; i < clusters; i += 1) {
         const cx = rnd() * CLOUD_W;
-        const cy = 40 + rnd() * 70;
-        const w = 60 + rnd() * 80;
-        for (let b = 0; b < 5; b += 1) {
-          const bx = cx + (rnd() - 0.5) * w;
-          const by = cy + (rnd() - 0.5) * 20;
-          const brad = 10 + rnd() * 16;
-          const g = c.createRadialGradient(bx, by, 1, bx, by, brad);
-          g.addColorStop(0, `rgba(255,255,255,${puffAlpha})`);
-          g.addColorStop(1, "rgba(255,255,255,0)");
-          c.fillStyle = g;
-          c.fillRect(bx - brad, by - brad, brad * 2, brad * 2);
-        }
+        const cy = 55 + rnd() * 55;
+        const lobes = 4 + Math.floor(rnd() * 3);
+        const w = 70 + rnd() * 90;
+        const lobe = [];
+        for (let b = 0; b < lobes; b += 1) lobe.push({ x: cx + (b / (lobes - 1) - 0.5) * w, r: 15 + rnd() * 16 });
+        for (const l of lobe) disc(l.x, cy + l.r * 0.32, l.r, `rgba(198,212,232,${alpha.toFixed(2)})`); // shaded underside
+        for (const l of lobe) disc(l.x, cy, l.r, `rgba(246,250,255,${alpha.toFixed(2)})`);              // body
+        for (const l of lobe) disc(l.x, cy - l.r * 0.34, l.r * 0.62, `rgba(255,255,255,${Math.min(1, alpha + 0.12).toFixed(2)})`); // top light
       }
       tex.refresh();
     };
-    makeClouds("skyCloudFar", 3, 0.3);
-    makeClouds("skyCloudNear", 2, 0.42);
+    makeClouds("skyCloudFar", 4, 0.78);
+    makeClouds("skyCloudNear", 3, 0.92);
 
     // ---- Particles + light mask -------------------------------------------
     const spark = freshCanvasTexture("spark", 7, 7);
