@@ -140,6 +140,8 @@
       this.scale.on("resize", onWallResize);
       this.events.once("shutdown", () => this.scale.off("resize", onWallResize));
 
+      this.createSky();
+
       this.map = this.make.tilemap({ data: this.sim.world, tileWidth: TILE, tileHeight: TILE });
       const tileset = this.map.addTilesetImage("tiles", "tiles", TILE, TILE, 0, 0);
       this.layer = this.map.createLayer(0, tileset, 0, 0);
@@ -759,12 +761,103 @@
       );
     }
 
+    createSky() {
+      // Layered surface backdrop, all screen-space (scrollFactor 0), strictly
+      // BELOW the caveWall (-10) and the tilemap (0), so terrain occludes it and
+      // it never touches the darkness RT. Faded out underground.
+      const W = this.scale.width;
+      const H = this.scale.height;
+      this.sky = {
+        vis: 0,
+        glow: this.add.image(0, 0, "skyGlow").setOrigin(0, 0).setScrollFactor(0).setDepth(-40).setDisplaySize(W, H).setVisible(false),
+        stars: this.add.tileSprite(0, 0, W, H, "skyStars").setOrigin(0, 0).setScrollFactor(0).setDepth(-39).setVisible(false),
+        moon: this.add.image(0, 0, "skyMoon").setScrollFactor(0).setDepth(-38).setVisible(false),
+        sun: this.add.image(0, 0, "skySun").setScrollFactor(0).setDepth(-38).setVisible(false),
+        cloudFar: this.add.tileSprite(0, 0, W, H, "skyCloudFar").setOrigin(0, 0).setScrollFactor(0).setDepth(-36).setVisible(false),
+        cloudNear: this.add.tileSprite(0, 0, W, H, "skyCloudNear").setOrigin(0, 0).setScrollFactor(0).setDepth(-35).setVisible(false)
+      };
+      const onSkyResize = (gs) => {
+        if (gs.width <= 0 || gs.height <= 0 || !this.sky) return;
+        this.sky.glow.setDisplaySize(gs.width, gs.height);
+        this.sky.stars.setSize(gs.width, gs.height);
+        this.sky.cloudFar.setSize(gs.width, gs.height);
+        this.sky.cloudNear.setSize(gs.width, gs.height);
+      };
+      this.scale.on("resize", onSkyResize);
+      this.events.once("shutdown", () => this.scale.off("resize", onSkyResize));
+    }
+
+    updateSkyDecor() {
+      const sky = this.sky;
+      if (!sky) return;
+      const cam = this.cameras.main;
+      // Fade the whole sky out over the first ~10 m underground.
+      const surfTarget = clamp(1 - this.depthMeters() / 10, 0, 1);
+      sky.vis += (surfTarget - sky.vis) * 0.2;
+      const vis = sky.vis;
+      const show = vis > 0.012;
+
+      const setShown = (obj, on) => { if (obj.visible !== on) obj.setVisible(on); };
+      if (!show) {
+        setShown(sky.glow, false); setShown(sky.stars, false); setShown(sky.sun, false);
+        setShown(sky.moon, false); setShown(sky.cloudFar, false); setShown(sky.cloudNear, false);
+        return;
+      }
+
+      const sun = this.sunHeight();           // -1..1
+      const tod = this.timeOfDay();           // 0..1
+      const day = clamp(sun * 1.6, 0, 1);     // 1 at midday
+      const night = clamp(-sun * 1.6, 0, 1);  // 1 at midnight
+      const dusk = clamp(1 - Math.abs(sun) * 3, 0, 1); // peaks at dawn/dusk
+      const W = cam.width;
+      const H = cam.height;
+      const horizonY = H * 0.72;
+
+      // Horizon glow: warm near dawn/dusk, pale blue by day.
+      setShown(sky.glow, true);
+      sky.glow.setTint(dusk > 0.35 ? 0xffb46e : 0x96c8f5);
+      sky.glow.setAlpha(vis * (0.22 + dusk * 0.5));
+
+      // Stars fade in at night and drift slowly.
+      const starsOn = night > 0.04;
+      setShown(sky.stars, starsOn);
+      if (starsOn) {
+        sky.stars.setAlpha(vis * night * 0.9);
+        sky.stars.tilePositionX = (sky.stars.tilePositionX + 0.05) % 256;
+        sky.stars.tilePositionY = (cam.scrollY * 0.02) % 256;
+      }
+
+      // Sun rides the first half of the day, moon the second; both sink at the horizon.
+      const sunOn = day > 0.02;
+      setShown(sky.sun, sunOn);
+      if (sunOn) {
+        sky.sun.setPosition(clamp(tod / 0.5, 0, 1) * W, horizonY - Math.max(0, sun) * H * 0.52).setScale(1.2).setAlpha(vis * day);
+      }
+      const moonOn = night > 0.02;
+      setShown(sky.moon, moonOn);
+      if (moonOn) {
+        sky.moon.setPosition(clamp((tod - 0.5) / 0.5, 0, 1) * W, horizonY - Math.max(0, -sun) * H * 0.52).setScale(1.1).setAlpha(vis * night);
+      }
+
+      // Clouds drift (parallax via tilePosition), dimmer at night, warm at dusk.
+      const cloudTint = dusk > 0.4 ? 0xffd2a8 : 0xffffff;
+      const cloudA = vis * (0.45 + day * 0.4);
+      setShown(sky.cloudFar, true);
+      sky.cloudFar.setTint(cloudTint).setAlpha(cloudA * 0.7);
+      sky.cloudFar.tilePositionX = (cam.scrollX * 0.04 + this.sim.time * 5) % 512;
+      setShown(sky.cloudNear, true);
+      sky.cloudNear.setTint(cloudTint).setAlpha(cloudA);
+      sky.cloudNear.tilePositionX = (cam.scrollX * 0.08 + this.sim.time * 9) % 512;
+    }
+
     updateSky() {
       const t = clamp((this.sunHeight() + 0.25) / 1.25, 0, 1);
       const r = Math.round(SKY_NIGHT.r + (SKY_DAY.r - SKY_NIGHT.r) * t);
       const g = Math.round(SKY_NIGHT.g + (SKY_DAY.g - SKY_NIGHT.g) * t);
       const b = Math.round(SKY_NIGHT.b + (SKY_DAY.b - SKY_NIGHT.b) * t);
       this.cameras.main.setBackgroundColor(Phaser.Display.Color.GetColor(r, g, b));
+
+      this.updateSkyDecor();
 
       if (this.caveWall) {
         const target = clamp((this.depthMeters() - 3) / 6, 0, 1);

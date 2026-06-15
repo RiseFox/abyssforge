@@ -912,6 +912,91 @@
     for (let y = 2; y < 64; y += 16) cw.fillRect(0, y, 64, 1);
     caveWall.refresh();
 
+    // ---- Sky decor (surface backdrop, all baked once) ---------------------
+    // Horizon glow: transparent at the top, white near the bottom, tinted per
+    // phase at runtime (warm dawn/dusk, pale-blue day).
+    const skyGlow = freshCanvasTexture("skyGlow", 8, 256);
+    const sgc = skyGlow.getContext();
+    const sgGrad = sgc.createLinearGradient(0, 0, 0, 256);
+    sgGrad.addColorStop(0, "rgba(255,255,255,0)");
+    sgGrad.addColorStop(0.5, "rgba(255,255,255,0.06)");
+    sgGrad.addColorStop(1, "rgba(255,255,255,0.62)");
+    sgc.fillStyle = sgGrad;
+    sgc.fillRect(0, 0, 8, 256);
+    skyGlow.refresh();
+
+    // Star field (tileable).
+    const stars = freshCanvasTexture("skyStars", 256, 256);
+    const stc = stars.getContext();
+    stc.clearRect(0, 0, 256, 256);
+    for (let i = 0; i < 70; i += 1) {
+      const sxp = Math.floor(rnd() * 256);
+      const syp = Math.floor(rnd() * 256);
+      const br = 0.4 + rnd() * 0.6;
+      const sz = rnd() < 0.18 ? 2 : 1;
+      stc.fillStyle = `rgba(255,255,255,${br.toFixed(2)})`;
+      stc.fillRect(sxp, syp, sz, sz);
+    }
+    stars.refresh();
+
+    // Sun: warm radial disc with a soft corona.
+    const sun = freshCanvasTexture("skySun", 96, 96);
+    const sunc = sun.getContext();
+    const sunGrad = sunc.createRadialGradient(48, 48, 4, 48, 48, 48);
+    sunGrad.addColorStop(0, "rgba(255,247,214,1)");
+    sunGrad.addColorStop(0.32, "rgba(255,223,134,0.95)");
+    sunGrad.addColorStop(0.66, "rgba(255,182,84,0.34)");
+    sunGrad.addColorStop(1, "rgba(255,170,70,0)");
+    sunc.fillStyle = sunGrad;
+    sunc.fillRect(0, 0, 96, 96);
+    sun.refresh();
+
+    // Moon: pale disc with craters and a faint halo.
+    const moon = freshCanvasTexture("skyMoon", 96, 96);
+    const moonc = moon.getContext();
+    const moonHalo = moonc.createRadialGradient(48, 48, 10, 48, 48, 48);
+    moonHalo.addColorStop(0, "rgba(226,235,255,0.5)");
+    moonHalo.addColorStop(0.5, "rgba(200,215,245,0.16)");
+    moonHalo.addColorStop(1, "rgba(200,215,245,0)");
+    moonc.fillStyle = moonHalo;
+    moonc.fillRect(0, 0, 96, 96);
+    moonc.fillStyle = "#dfe6f5";
+    moonc.beginPath();
+    moonc.arc(48, 48, 20, 0, Math.PI * 2);
+    moonc.fill();
+    moonc.fillStyle = "#c4cee0";
+    [[42, 43, 4], [54, 52, 3], [50, 40, 2]].forEach(([cx, cy, cr]) => {
+      moonc.beginPath();
+      moonc.arc(cx, cy, cr, 0, Math.PI * 2);
+      moonc.fill();
+    });
+    moon.refresh();
+
+    // Cloud bands (tileable puffs on transparent), far + near.
+    const makeClouds = (key, clusters, puffAlpha) => {
+      const tex = freshCanvasTexture(key, 512, 256);
+      const c = tex.getContext();
+      c.clearRect(0, 0, 512, 256);
+      for (let i = 0; i < clusters; i += 1) {
+        const cx = rnd() * 512;
+        const cy = 36 + rnd() * 150;
+        const w = 70 + rnd() * 130;
+        for (let b = 0; b < 5; b += 1) {
+          const bx = cx + (rnd() - 0.5) * w;
+          const by = cy + (rnd() - 0.5) * 34;
+          const brad = 18 + rnd() * 30;
+          const g = c.createRadialGradient(bx, by, 2, bx, by, brad);
+          g.addColorStop(0, `rgba(255,255,255,${puffAlpha})`);
+          g.addColorStop(1, "rgba(255,255,255,0)");
+          c.fillStyle = g;
+          c.fillRect(bx - brad, by - brad, brad * 2, brad * 2);
+        }
+      }
+      tex.refresh();
+    };
+    makeClouds("skyCloudFar", 5, 0.5);
+    makeClouds("skyCloudNear", 4, 0.72);
+
     // ---- Particles + light mask -------------------------------------------
     const spark = freshCanvasTexture("spark", 7, 7);
     const sc = spark.getContext();
