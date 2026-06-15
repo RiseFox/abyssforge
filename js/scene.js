@@ -2974,7 +2974,7 @@
         this.lastDay = day;
         this.repopulateMobs();
       }
-      if (this.surfaceBrightness() >= 0.5) this.despawnSurfaceMobs(); // raiders burrow away in daylight
+      if (this.surfaceBrightness() >= 0.46) this.despawnSurfaceMobs(); // raiders burrow away as day breaks
       else this.maybeNightRaid();
       this.refreshMobActivation();
     }
@@ -3240,7 +3240,9 @@
     // At night a few surface scavengers creep over open grass far away;
     // survivors burrow away at dawn. Cave-only mobs never use this path.
     maybeNightRaid() {
-      if (this.surfaceBrightness() >= 0.4) return;
+      // Same boundary as the dawn despawn (0.46) so there's no dead band where
+      // raiders neither spawn nor leave.
+      if (this.surfaceBrightness() >= 0.46) return;
       if (this.sim.mobs.filter((m) => m.surf).length >= 3) return;
       if (Math.random() > 0.12) return;
       const px = Math.floor(this.player.x / TILE);
@@ -3254,15 +3256,23 @@
     despawnSurfaceMobs() {
       const surfIds = new Set(this.sim.mobs.filter((m) => m.surf).map((m) => m.id));
       if (!surfIds.size) return;
+      const cam = this.cameras.main;
+      const margin = 96;
+      const onScreen = (e) => e.x > cam.scrollX - margin && e.x < cam.scrollX + cam.width + margin
+        && e.y > cam.scrollY - margin && e.y < cam.scrollY + cam.height + margin;
       const list = this.enemies.getChildren();
+      const kept = new Set(); // raiders still on-screen — let them finish, burrow once off-camera
       for (let i = list.length - 1; i >= 0; i -= 1) {
         const enemy = list[i];
         if (!enemy.active || !surfIds.has(enemy.mobId)) continue;
+        if (onScreen(enemy)) { kept.add(enemy.mobId); continue; }
         this.emitDust(enemy.x, enemy.y + 4, 4);
         this.activeMobIds.delete(enemy.mobId);
         enemy.destroy();
       }
-      this.sim.mobs = this.sim.mobs.filter((m) => !m.surf);
+      // Drop dormant + off-screen surf mobs; keep ones still visible so they
+      // don't vanish from under the player mid-fight at dawn.
+      this.sim.mobs = this.sim.mobs.filter((m) => !m.surf || kept.has(m.id));
     }
 
     // Each dawn a handful of creatures creep back into far-away caves, up to
@@ -3393,9 +3403,12 @@
     spawnEventSwarm() {
       const depth = this.depthMeters();
       const count = depth > 135 ? 4 : depth > 70 ? 3 : 2;
+      // Use the player's actual biome so deep swarms draw the right species
+      // instead of pickMobKind's default "stonewarrens" table.
+      const biomeId = this.sim.mobBiomeIdAt(Math.floor(this.player.x / TILE), Math.floor(this.player.y / TILE));
       let spawned = 0;
       for (let i = 0; i < count; i += 1) {
-        const kind = depth > 150 && Math.random() < 0.35 ? "golem" : this.sim.pickMobKind(depth, Math.random());
+        const kind = depth > 150 && Math.random() < 0.35 ? "golem" : this.sim.pickMobKind(depth, Math.random(), { biomeId });
         const elite = depth > 100 && i === 0 && Math.random() < 0.45;
         if (this.spawnEventMob(kind, elite)) spawned += 1;
       }
