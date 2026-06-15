@@ -973,19 +973,24 @@
     moon.refresh();
 
     // Cloud bands (tileable puffs on transparent), far + near.
+    // Wide, sparse cloud band. Puffs live only in the upper rows so the band
+    // (drawn as a fixed-height strip at the top of the sky) never repeats down
+    // the screen. Texture is 1024 wide so tiles are spaced far apart.
+    const CLOUD_W = 1024;
+    const CLOUD_H = 200;
     const makeClouds = (key, clusters, puffAlpha) => {
-      const tex = freshCanvasTexture(key, 512, 256);
+      const tex = freshCanvasTexture(key, CLOUD_W, CLOUD_H);
       const c = tex.getContext();
-      c.clearRect(0, 0, 512, 256);
+      c.clearRect(0, 0, CLOUD_W, CLOUD_H);
       for (let i = 0; i < clusters; i += 1) {
-        const cx = rnd() * 512;
-        const cy = 36 + rnd() * 150;
-        const w = 70 + rnd() * 130;
+        const cx = rnd() * CLOUD_W;
+        const cy = 40 + rnd() * 70;
+        const w = 60 + rnd() * 80;
         for (let b = 0; b < 5; b += 1) {
           const bx = cx + (rnd() - 0.5) * w;
-          const by = cy + (rnd() - 0.5) * 34;
-          const brad = 18 + rnd() * 30;
-          const g = c.createRadialGradient(bx, by, 2, bx, by, brad);
+          const by = cy + (rnd() - 0.5) * 20;
+          const brad = 10 + rnd() * 16;
+          const g = c.createRadialGradient(bx, by, 1, bx, by, brad);
           g.addColorStop(0, `rgba(255,255,255,${puffAlpha})`);
           g.addColorStop(1, "rgba(255,255,255,0)");
           c.fillStyle = g;
@@ -994,8 +999,8 @@
       }
       tex.refresh();
     };
-    makeClouds("skyCloudFar", 5, 0.5);
-    makeClouds("skyCloudNear", 4, 0.72);
+    makeClouds("skyCloudFar", 3, 0.3);
+    makeClouds("skyCloudNear", 2, 0.42);
 
     // ---- Particles + light mask -------------------------------------------
     const spark = freshCanvasTexture("spark", 7, 7);

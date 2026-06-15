@@ -237,20 +237,38 @@
       this.lightMask = this.make.image({ key: "lightOrb", add: false })
         .setOrigin(0.5)
         .setBlendMode(Phaser.BlendModes.ERASE);
-      const onResize = (gameSize) => {
-        if (gameSize.width <= 0 || gameSize.height <= 0) return;
+      // RenderTexture.resize() recreates the GL framebuffer (and blanks it).
+      // Under Scale.RESIZE the resize event can fire continuously (panel/zoom/
+      // DPR churn); recreating the framebuffer per frame is the blue/black
+      // flicker + the "Incomplete Attachment" error. So DEBOUNCE the actual
+      // resize: the RT just keeps rendering at its last size until things settle.
+      this._darkSizeW = this.scale.width;
+      this._darkSizeH = this.scale.height;
+      this._darkResizeTimer = 0;
+      const applyDarkResize = () => {
+        this._darkResizeTimer = 0;
+        const w = this.scale.width;
+        const h = this.scale.height;
+        if (w <= 0 || h <= 0 || (w === this._darkSizeW && h === this._darkSizeH)) return;
+        this._darkSizeW = w;
+        this._darkSizeH = h;
         if (this.darknessRT && this.darknessRT.resize) {
-          this.darknessRT.resize(gameSize.width, gameSize.height);
-          // resize() erases the RT framebuffer. Repaint same-frame and bypass
-          // the idle throttle so the overlay is never left blank — that blank
-          // window (held up to 72ms by the throttle) is the blue/black flicker.
+          this.darknessRT.resize(w, h);
           this.nextDarknessDrawAt = 0;
           this.darknessDrawKey = "";
           if (this.player) this.drawDarkness();
         }
       };
+      const onResize = (gameSize) => {
+        if (gameSize.width <= 0 || gameSize.height <= 0) return;
+        if (this._darkResizeTimer) clearTimeout(this._darkResizeTimer);
+        this._darkResizeTimer = window.setTimeout(applyDarkResize, 220);
+      };
       this.scale.on("resize", onResize);
-      this.events.once("shutdown", () => this.scale.off("resize", onResize));
+      this.events.once("shutdown", () => {
+        this.scale.off("resize", onResize);
+        if (this._darkResizeTimer) clearTimeout(this._darkResizeTimer);
+      });
 
       this.keys = this.input.keyboard.addKeys({
         left: "A",
@@ -773,15 +791,16 @@
         stars: this.add.tileSprite(0, 0, W, H, "skyStars").setOrigin(0, 0).setScrollFactor(0).setDepth(-39).setVisible(false),
         moon: this.add.image(0, 0, "skyMoon").setScrollFactor(0).setDepth(-38).setVisible(false),
         sun: this.add.image(0, 0, "skySun").setScrollFactor(0).setDepth(-38).setVisible(false),
-        cloudFar: this.add.tileSprite(0, 0, W, H, "skyCloudFar").setOrigin(0, 0).setScrollFactor(0).setDepth(-36).setVisible(false),
-        cloudNear: this.add.tileSprite(0, 0, W, H, "skyCloudNear").setOrigin(0, 0).setScrollFactor(0).setDepth(-35).setVisible(false)
+        cloudFar: this.add.tileSprite(0, 0, W, 200, "skyCloudFar").setOrigin(0, 0).setScrollFactor(0).setDepth(-36).setVisible(false),
+        cloudNear: this.add.tileSprite(0, 0, W, 200, "skyCloudNear").setOrigin(0, 0).setScrollFactor(0).setDepth(-35).setVisible(false)
       };
       const onSkyResize = (gs) => {
         if (gs.width <= 0 || gs.height <= 0 || !this.sky) return;
         this.sky.glow.setDisplaySize(gs.width, gs.height);
         this.sky.stars.setSize(gs.width, gs.height);
-        this.sky.cloudFar.setSize(gs.width, gs.height);
-        this.sky.cloudNear.setSize(gs.width, gs.height);
+        // Clouds keep their fixed 200px band height so they never tile downward.
+        this.sky.cloudFar.setSize(gs.width, 200);
+        this.sky.cloudNear.setSize(gs.width, 200);
       };
       this.scale.on("resize", onSkyResize);
       this.events.once("shutdown", () => this.scale.off("resize", onSkyResize));
@@ -841,13 +860,13 @@
 
       // Clouds drift (parallax via tilePosition), dimmer at night, warm at dusk.
       const cloudTint = dusk > 0.4 ? 0xffd2a8 : 0xffffff;
-      const cloudA = vis * (0.45 + day * 0.4);
+      const cloudA = vis * (0.3 + day * 0.3);
       setShown(sky.cloudFar, true);
-      sky.cloudFar.setTint(cloudTint).setAlpha(cloudA * 0.7);
-      sky.cloudFar.tilePositionX = (cam.scrollX * 0.04 + this.sim.time * 5) % 512;
+      sky.cloudFar.setTint(cloudTint).setAlpha(cloudA * 0.6);
+      sky.cloudFar.tilePositionX = (cam.scrollX * 0.04 + this.sim.time * 4) % 1024;
       setShown(sky.cloudNear, true);
-      sky.cloudNear.setTint(cloudTint).setAlpha(cloudA);
-      sky.cloudNear.tilePositionX = (cam.scrollX * 0.08 + this.sim.time * 9) % 512;
+      sky.cloudNear.setTint(cloudTint).setAlpha(cloudA * 0.85);
+      sky.cloudNear.tilePositionX = (cam.scrollX * 0.08 + this.sim.time * 7) % 1024;
     }
 
     updateSky() {
