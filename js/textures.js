@@ -1068,27 +1068,48 @@
     // the screen. Texture is 1024 wide so tiles are spaced far apart.
     const CLOUD_W = 1024;
     const CLOUD_H = 200;
-    // Defined puffy clouds (solid lobes + flat shading) instead of faint radial
-    // smudges. Drawn near-opaque; updateSkyDecor controls how visible they get.
+    // Soft, feathered clouds: each is a row of lobes sitting on a flat-ish base
+    // with a rounded, light-topped crown. Lobes use a solid core that feathers
+    // out at the rim, so clouds read as wispy puffs rather than hard discs.
     const makeClouds = (key, clusters, alpha) => {
       const tex = freshCanvasTexture(key, CLOUD_W, CLOUD_H);
       const c = tex.getContext();
       c.clearRect(0, 0, CLOUD_W, CLOUD_H);
-      const disc = (x, y, r, fill) => { c.fillStyle = fill; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); };
+      const softLobe = (x, y, r, rgb, a) => {
+        const g = c.createRadialGradient(x, y, r * 0.35, x, y, r);
+        g.addColorStop(0, `rgba(${rgb},${a})`);
+        g.addColorStop(0.62, `rgba(${rgb},${a})`);
+        g.addColorStop(1, `rgba(${rgb},0)`);
+        c.fillStyle = g;
+        c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+      };
       for (let i = 0; i < clusters; i += 1) {
-        const cx = rnd() * CLOUD_W;
-        const cy = 55 + rnd() * 55;
-        const lobes = 4 + Math.floor(rnd() * 3);
-        const w = 70 + rnd() * 90;
-        const lobe = [];
-        for (let b = 0; b < lobes; b += 1) lobe.push({ x: cx + (b / (lobes - 1) - 0.5) * w, r: 15 + rnd() * 16 });
-        for (const l of lobe) disc(l.x, cy + l.r * 0.32, l.r, `rgba(198,212,232,${alpha.toFixed(2)})`); // shaded underside
-        for (const l of lobe) disc(l.x, cy, l.r, `rgba(246,250,255,${alpha.toFixed(2)})`);              // body
-        for (const l of lobe) disc(l.x, cy - l.r * 0.34, l.r * 0.62, `rgba(255,255,255,${Math.min(1, alpha + 0.12).toFixed(2)})`); // top light
+        // Keep clusters away from the texture wrap edges so no cloud is split
+        // across the tiling seam.
+        const baseY = 74 + rnd() * 34;
+        const lobes = 5 + Math.floor(rnd() * 3);
+        const rMax = 24 + rnd() * 12;
+        // Step left->right by a fraction of each radius so adjacent lobes always
+        // overlap into one continuous mass (no detached orbs at the ends).
+        const arr = [];
+        let lx = 0;
+        for (let b = 0; b < lobes; b += 1) {
+          const f = lobes > 1 ? b / (lobes - 1) : 0.5;
+          const swell = Math.sin(f * Math.PI);            // small at ends, fat in the middle
+          const r = (14 + rMax * swell) * (0.88 + rnd() * 0.24);
+          arr.push({ x: lx, y: baseY - r * 0.5, r });
+          lx += r * 0.9;
+        }
+        const span = lx;
+        const cx = 150 + rnd() * (CLOUD_W - 300);
+        for (const l of arr) l.x += cx - span / 2;          // centre the cluster on cx
+        for (const l of arr) softLobe(l.x, l.y + l.r * 0.42, l.r * 0.94, "182,196,222", alpha * 0.5); // grounded underside
+        for (const l of arr) softLobe(l.x, l.y, l.r, "236,243,255", alpha);                           // body
+        for (const l of arr) softLobe(l.x, l.y - l.r * 0.4, l.r * 0.6, "255,255,255", Math.min(1, alpha + 0.05)); // crown
       }
       tex.refresh();
     };
-    makeClouds("skyCloudFar", 4, 0.78);
+    makeClouds("skyCloudFar", 4, 0.82);
     makeClouds("skyCloudNear", 3, 0.92);
 
     // ---- Particles + light mask -------------------------------------------

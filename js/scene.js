@@ -853,9 +853,13 @@
         sky.moon.setPosition(clamp((tod - 0.5) / 0.5, 0, 1) * W, horizonY - Math.max(0, -sun) * H * 0.52).setScale(1.1).setAlpha(vis * night);
       }
 
-      // Clouds drift (parallax via tilePosition), dimmer at night, warm at dusk.
-      const cloudTint = dusk > 0.4 ? 0xffd2a8 : 0xffffff;
-      const cloudA = vis * (0.3 + day * 0.3);
+      // Clouds drift (parallax via tilePosition). Warm at dusk, cool/moonlit at
+      // night (so white puffs don't read as muddy grey over the dark sky), and
+      // thinner at night so they never crowd the stars.
+      let cloudTint = 0xffffff;
+      if (dusk > 0.4) cloudTint = 0xffd2a8;
+      else if (night > 0.35) cloudTint = 0x9fb0d8;
+      const cloudA = vis * (0.22 + day * 0.4);
       setShown(sky.cloudFar, true);
       sky.cloudFar.setTint(cloudTint).setAlpha(cloudA * 0.6);
       sky.cloudFar.tilePositionX = (cam.scrollX * 0.04 + this.sim.time * 4) % 1024;
