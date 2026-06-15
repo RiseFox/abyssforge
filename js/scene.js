@@ -1297,25 +1297,10 @@
     }
 
     updateDarkness() {
-      const now = this.time.now || 0;
-      const speed = Math.hypot(this.player.body?.velocity?.x || 0, this.player.body?.velocity?.y || 0);
-      const key = [
-        Math.round(this.player.x / 5),
-        Math.round(this.player.y / 5),
-        Math.round(this.cameras.main.scrollX / 5),
-        Math.round(this.cameras.main.scrollY / 5),
-        Math.round((this.shadowPressure || 0) / 2),
-        Math.round((this.lampCharge || this.sim.lampCharge || 0) * 20),
-        Math.round((this.externalLight || 0) * 20),
-        Math.round(this.ambientLight() * 40),
-        this.sim.lamp,
-        this.lampStandby ? 1 : 0,
-        this.sim.lights?.length || 0
-      ].join("|");
-      const idleDelay = speed > 8 || this.caveEvent || this.hasActiveBoss() ? 0 : 72;
-      if (key === this.darknessDrawKey && now < this.nextDarknessDrawAt) return;
-      this.darknessDrawKey = key;
-      this.nextDarknessDrawAt = now + idleDelay;
+      // Redraw every frame. The old 72ms idle throttle made torch/lava light
+      // radii (which pulse via Math.sin every frame) step in 72ms jumps —
+      // invisible by day but a visible flicker once the night veil is up. The
+      // batched erase is cheap enough (~0.5ms) to run per frame for smooth light.
       this.drawDarkness();
     }
 
