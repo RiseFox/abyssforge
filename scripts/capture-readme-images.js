@@ -45,6 +45,7 @@ async function resetWorld(page, seed) {
     scene.toggleCamp?.(false);
     scene.toggleHelp?.(false);
     scene.setPaused?.(false, { silent: true });
+    scene.sim.time = window.ML.DAY_LENGTH * 0.25; // midday: bright surface; caves stay dark (depth-driven)
     window.ML.resetRenderCache?.();
     window.ML.renderAll(scene.sim, { force: true });
     scene.cameras.main.centerOn(safe.x, safe.y);
@@ -72,7 +73,7 @@ async function stageSurfaceCamp(page) {
     scene.player.setPosition(safe.x + 42, safe.y);
     scene.player.setVelocity(0, 0);
     scene.sim.player = { x: scene.player.x, y: scene.player.y };
-    scene.sim.time = 10.2;
+    scene.sim.time = window.ML.DAY_LENGTH * 0.25;
     scene.caveEvent = null;
     scene.setAction("Camp ready", 2400);
     window.ML.showToast("Surface camp secured. Build a route, then choose how far the mine gets to pull you.", 3200);
@@ -104,7 +105,7 @@ async function stageHorizon(page) {
     scene.player.setPosition(px + 80, py);
     scene.player.setVelocity(0, 0);
     scene.sim.player = { x: scene.player.x, y: scene.player.y };
-    scene.sim.time = 12.8;
+    scene.sim.time = window.ML.DAY_LENGTH * 0.25;
     scene.setAction("Horizon opened", 2400);
     window.ML.toggleMinimap(true);
     window.ML.showToast("The edge is not a wall now. New surface country stitches itself to the last columns.", 3600);
