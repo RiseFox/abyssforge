@@ -8,7 +8,7 @@
   } = ML;
 
   const SKY_DAY = { r: 0x6f, g: 0x9f, b: 0xd6 };
-  const SKY_NIGHT = { r: 0x0b, g: 0x0e, b: 0x1d };
+  const SKY_NIGHT = { r: 0x1a, g: 0x20, b: 0x3a };
 
   const DEATH_CAUSES = {
     mossling: "A night mossling caught you on the surface.",
@@ -672,8 +672,10 @@
 
     surfaceBrightness() {
       // Full daylight across most of the day (plateau at 1), dipping only at
-      // dawn/dusk and into night — so the lit surface has no darkness halo.
-      return clamp(0.2 + 1.7 * Math.max(0, this.sunHeight()), 0.2, 1);
+      // dawn/dusk and into night. The night floor stays moonlit (not pitch) so
+      // the open-air surface reads as a night sky, not a black void — caves stay
+      // dark via the deeper ambientFloor + depth falloff, which this doesn't touch.
+      return clamp(0.28 + 1.7 * Math.max(0, this.sunHeight()), 0.28, 1);
     }
 
     phaseName() {

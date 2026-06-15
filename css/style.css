@@ -2680,9 +2680,12 @@ canvas:focus { outline: none; }
   width: 46px;
   height: 46px;
   border-color: rgba(126, 230, 210, 0.24);
-  background:
-    radial-gradient(circle at 50% 44%, rgba(126, 230, 210, 0.18), transparent 58%),
-    rgba(0, 0, 0, 0.28);
+  /* Use longhands only — a `background:` shorthand here would reset the
+     background-size/repeat/position set above and crop the inline pick sprite.
+     `contain` keeps the whole pick visible and centred at any box size. */
+  background-color: rgba(0, 0, 0, 0.3);
+  background-size: contain;
+  box-shadow: inset 0 0 14px rgba(126, 230, 210, 0.16);
 }
 
 .tool-copy {
