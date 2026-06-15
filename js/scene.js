@@ -693,6 +693,14 @@
       return clamp(0.28 + 1.7 * Math.max(0, this.sunHeight()), 0.28, 1);
     }
 
+    skyAmbient() {
+      // Visual sky brightness used for lighting: full by day, moonlit (not pitch)
+      // by night so the open-air surface and stars stay readable. Deliberately
+      // separate from surfaceBrightness() (which drives mob day/night thresholds),
+      // so brightening the night look never affects spawning.
+      return clamp(0.42 + 0.58 * Math.max(0, this.sunHeight()), 0.42, 1);
+    }
+
     phaseName() {
       const tod = this.timeOfDay();
       if (tod < 0.07 || (tod >= 0.43 && tod < 0.5)) return tod < 0.07 ? "Dawn" : "Dusk";
@@ -759,8 +767,11 @@
       this.sky = {
         vis: 0,
         glow: this.add.image(0, 0, "skyGlow").setOrigin(0, 0).setScrollFactor(0).setDepth(-40).setDisplaySize(W, H).setVisible(false),
-        stars: this.add.tileSprite(0, 0, W, H, "skyStars").setOrigin(0, 0).setScrollFactor(0).setDepth(-39).setVisible(false),
-        moon: this.add.image(0, 0, "skyMoon").setScrollFactor(0).setDepth(-38).setVisible(false),
+        // Stars + moon sit ABOVE the screen-space darkness RT (depth 80) so they
+        // are not veiled to black at night; they stay gated by sky.vis (~0
+        // underground) and the night fade, so they only show in the open sky.
+        stars: this.add.tileSprite(0, 0, W, H, "skyStars").setOrigin(0, 0).setScrollFactor(0).setDepth(81).setVisible(false),
+        moon: this.add.image(0, 0, "skyMoon").setScrollFactor(0).setDepth(81).setVisible(false),
         sun: this.add.image(0, 0, "skySun").setScrollFactor(0).setDepth(-38).setVisible(false),
         cloudFar: this.add.tileSprite(0, 0, W, 200, "skyCloudFar").setOrigin(0, 0).setScrollFactor(0).setDepth(-36).setVisible(false),
         cloudNear: this.add.tileSprite(0, 0, W, 200, "skyCloudNear").setOrigin(0, 0).setScrollFactor(0).setDepth(-35).setVisible(false)
@@ -890,12 +901,13 @@
 
     ambientLight() {
       const depth = this.depthMeters();
-      const biome = this.currentBiome();
-      // Stay bright for the first few metres, then ease into the dark over a
-      // longer ramp so shallow caves are navigable, not pitch black.
-      const df = clamp(1 - Math.max(0, depth - 4) / 64, 0, 1);
-      const floor = biome?.ambientFloor ?? 0.12;
-      return clamp(Math.max(floor, df * this.surfaceBrightness()), floor, 1);
+      const floor = this.currentBiome()?.ambientFloor ?? 0.12;
+      // The sky's day/night light only reaches the cave mouth (~7 m); below that
+      // the cave's OWN brightness takes over, so underground lighting no longer
+      // swings with the time of day. Shallow caves stay navigable, deep goes dark.
+      const skyReach = clamp(1 - depth / 7, 0, 1);
+      const caveLit = depth < 4 ? 0 : clamp(1 - (depth - 4) / 64, 0, 1) * 0.7;
+      return clamp(Math.max(floor, this.skyAmbient() * skyReach, caveLit), floor, 1);
     }
 
     externalLightAt(x, y) {
@@ -905,8 +917,11 @@
       const depth = Math.max(0, ty - surfaceY);
       const biome = ML.BiomeSystem?.biomeAt?.(this.sim, tx, ty) || this.currentBiome();
       const floor = biome?.ambientFloor ?? 0.12;
-      const depthFalloff = clamp(1 - Math.max(0, depth - 4) / 64, 0, 1);
-      let best = clamp(Math.max(floor, depthFalloff * this.surfaceBrightness()), floor, 1);
+      // Same day/night-decoupled model as ambientLight (sky reaches only the cave
+      // mouth; deep cave light is time-independent).
+      const skyReach = clamp(1 - depth / 7, 0, 1);
+      const caveLit = depth < 4 ? 0 : clamp(1 - (depth - 4) / 64, 0, 1) * 0.7;
+      let best = clamp(Math.max(floor, this.skyAmbient() * skyReach, caveLit), floor, 1);
       if (this.sim.ward) best = Math.max(best, 0.18);
       if (this.caveEvent?.id === "lanternDraft") best = Math.max(best, 0.38);
       const px = x / TILE;
