@@ -324,20 +324,25 @@
       .reduce((latest, entry) => Math.max(latest, entry.expansion), -99);
   }
 
-  function surfaceLandmarkPlan(sim, minX, maxX, side, rand = Math.random) {
+  function surfaceLandmarkPlan(sim, minX, maxX, side, rand = Math.random, opts = {}) {
     const origin = originX(sim);
     const midpoint = Math.floor((minX + maxX) / 2);
     const distance = Math.abs(midpoint - origin);
     const region = surfaceRegionForRange(sim, minX, maxX);
-    if (distance < 150) return null;
-    const expansionIndex = sim.stats?.horizontalExpansions || 0;
-    if (expansionIndex - lastSurfaceExpansion(sim) < 3) return null;
-    const cadence = region.landmarkCadence || (distance < 520 ? 4 : 3);
-    const phase = Math.abs((sim.seed || 0) % cadence);
-    const sidePhase = side === "left" ? 2 : 0;
-    const cadenceHit = ((expansionIndex + sidePhase + phase) % cadence) === 0;
-    const distanceBonus = clamp(distance / 4200, 0, 0.18);
-    if (!cadenceHit && rand() >= (region.landmarkChance + distanceBonus)) return null;
+    // The home-world pass bypasses the far-from-spawn cadence gates (the whole
+    // starting surface sits inside distance<150, which is why it generated empty);
+    // the candidate scanners still keep a clear radius around the shaft.
+    if (!opts.home) {
+      if (distance < 150) return null;
+      const expansionIndex = sim.stats?.horizontalExpansions || 0;
+      if (expansionIndex - lastSurfaceExpansion(sim) < 3) return null;
+      const cadence = region.landmarkCadence || (distance < 520 ? 4 : 3);
+      const phase = Math.abs((sim.seed || 0) % cadence);
+      const sidePhase = side === "left" ? 2 : 0;
+      const cadenceHit = ((expansionIndex + sidePhase + phase) % cadence) === 0;
+      const distanceBonus = clamp(distance / 4200, 0, 0.18);
+      if (!cadenceHit && rand() >= (region.landmarkChance + distanceBonus)) return null;
+    }
     const roll = rand();
     if (region.id === "oldvillage" && roll < 0.5) return { type: "hamlet", structure: "hamlet", region };
     if (region.id === "watcherfield" && roll < 0.62) return { type: "watcher", structure: "sign", region };
@@ -387,14 +392,17 @@
   }
 
   function placeRoadBits(sim, spot, rand) {
+    // A flush plank boardwalk laid ON the surface. (Previously it set PLATFORM one
+    // tile ABOVE the ground — a floating run — plus a free-floating WOOD cube: the
+    // classic "random junk in an odd spot" artifact.) Replace the grass cap where
+    // there is solid support and clear air above.
     const len = 3 + Math.floor(rand() * 5);
     for (let i = 0; i < len; i += 1) {
       const x = spot.x + i;
       const y = sim.surfaceFloorY?.(x) ?? spot.y;
       if (!solidAt(sim, x, y) || !clearAbove(sim, x, y, 3)) continue;
-      setTile(sim, x, y - 1, Tile.PLATFORM);
+      setTile(sim, x, y, Tile.PLATFORM);
     }
-    if (rand() < 0.42) setTile(sim, spot.x - 1, spot.y - 1, Tile.WOOD);
     return { type: "road", chests: 0, camps: 0 };
   }
 
@@ -443,15 +451,19 @@
     return { type: "watcher", chests: 0, camps: 0 };
   }
 
-  function decorateSurfaceRegion(sim, regionStart, regionEnd, side, rand = Math.random) {
+  function decorateSurfaceRegion(sim, regionStart, regionEnd, side, rand = Math.random, opts = {}) {
     const minX = clamp(regionStart + 8, 4, widthOf(sim) - 6);
     const maxX = clamp(regionEnd - 8, minX, widthOf(sim) - 6);
     const region = surfaceRegionForRange(sim, minX, maxX);
     const distance = Math.abs(Math.floor((minX + maxX) / 2) - originX(sim));
-    const expansionIndex = sim.stats?.horizontalExpansions || 0;
-    const chance = region.setpieceChance + clamp(distance / 4600, 0, 0.16);
-    if (distance < 120 || rand() > chance) return { region: region.id, setpieces: 0, chests: 0, camps: 0 };
-    if (expansionIndex > 0 && expansionIndex % 2 === 1 && rand() > 0.45) return { region: region.id, setpieces: 0, chests: 0, camps: 0 };
+    // Home pass always attempts a setpiece (the chance/parity gates are for far
+    // expansions); findSurfaceCandidates still keeps a clear radius around spawn.
+    if (!opts.home) {
+      const expansionIndex = sim.stats?.horizontalExpansions || 0;
+      const chance = region.setpieceChance + clamp(distance / 4600, 0, 0.16);
+      if (distance < 120 || rand() > chance) return { region: region.id, setpieces: 0, chests: 0, camps: 0 };
+      if (expansionIndex > 0 && expansionIndex % 2 === 1 && rand() > 0.45) return { region: region.id, setpieces: 0, chests: 0, camps: 0 };
+    }
     const candidates = findSurfaceCandidates(sim, minX, maxX, rand, 6);
     if (!candidates.length) return { region: region.id, setpieces: 0, chests: 0, camps: 0 };
     const spot = candidates[Math.floor(rand() * candidates.length)];

@@ -173,6 +173,9 @@
       this.contractSeq = 0;
       this.contract = null;
       this.repairSpawnShaft();
+      // Populate the starting surface (signs, wayposts, shelters, caches) before
+      // lights are built so any setpiece torches/campfires register as lights.
+      this.populateHomeSurface(mulberry32(seed ^ 0x5f3759df));
       this.player = this.safeSpawnPixels();
       this.rebuildLights();
       this.mobs = this.generateMobs(mulberry32(seed ^ 0x9e3779b9));
@@ -672,8 +675,30 @@
       return ML.POI?.addSurfaceDiscovery?.(this, type, x, side, rand) || null;
     }
 
-    generateSurfaceLandmarks(regionStart, regionEnd, side, rand = Math.random) {
-      return ML.POI?.generateSurfaceLandmarks?.(this, regionStart, regionEnd, side, rand) || [];
+    generateSurfaceLandmarks(regionStart, regionEnd, side, rand = Math.random, opts = {}) {
+      return ML.POI?.generateSurfaceLandmarks?.(this, regionStart, regionEnd, side, rand, opts) || [];
+    }
+
+    populateHomeSurface(rand = Math.random) {
+      // The home world sits entirely inside the surface decorators' "too close to
+      // spawn" dead zone (distance < 120-150), which is why the starting surface
+      // generated empty — all signs/structures/caches only appeared in chunks the
+      // player expanded into. Run the same tested setpiece/landmark placement here
+      // with the home flag (gates bypassed); the candidate scanners keep a clear
+      // radius around the shaft so spawn stays open. addDiscovery already pushes
+      // into sim.surfaceDiscoveries, so we only count, not re-merge.
+      if (!this.world || !this.surface) return 0;
+      const width = this.worldWidth();
+      const before = (this.surfaceDiscoveries || []).length;
+      const win = 46;
+      const shaftX = this.shaft?.x ?? Math.floor(width / 2);
+      for (let start = 4; start < width - 6; start += win) {
+        const end = Math.min(width - 6, start + win - 1);
+        const side = (start + end) / 2 < shaftX ? "left" : "right";
+        this.generateSurfaceLandmarks(start, end, side, rand, { home: true });
+        ML.WorldGenDirector?.decorateSurfaceRegion?.(this, start, end, side, rand, { home: true });
+      }
+      return (this.surfaceDiscoveries || []).length - before;
     }
 
     generateUndergroundLandmarks(options = {}) {
@@ -1751,10 +1776,12 @@
     lampOutput() {
       const spec = this.lampSpec();
       const ratio = this.lampChargeRatio();
-      if (ratio <= 0) return { radius: 0, glow: 0, ratio, powered: false };
-      const fade = ratio < 0.18 ? 0.38 + ratio / 0.18 * 0.62 : 1;
+      // Even a dead lamp keeps a faint emergency glow so the player can always
+      // read the tiles right around them — the deep dark is only a few tiles out.
+      if (ratio <= 0) return { radius: 82, glow: 0.12, ratio: 0, powered: false };
+      const fade = ratio < 0.18 ? 0.55 + ratio / 0.18 * 0.45 : 1;
       return {
-        radius: spec.radius * fade,
+        radius: Math.max(82, spec.radius * fade),
         glow: spec.glow * fade,
         ratio,
         powered: true

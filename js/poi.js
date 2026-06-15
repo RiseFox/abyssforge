@@ -208,14 +208,14 @@
     return cadenceHit || rand() < rareChance;
   }
 
-  function generateSurfaceLandmarks(sim, regionStart, regionEnd, side, rand = Math.random) {
+  function generateSurfaceLandmarks(sim, regionStart, regionEnd, side, rand = Math.random, opts = {}) {
     ensureDiscoveries(sim);
     const width = widthOf(sim);
     const minX = clamp(regionStart + 6, 3, width - 4);
     const maxX = clamp(regionEnd - 6, 3, width - 4);
     const discoveries = [];
     const span = Math.max(1, maxX - minX);
-    const plan = ML.WorldGenDirector?.surfaceLandmarkPlan?.(sim, minX, maxX, side, rand) || null;
+    const plan = ML.WorldGenDirector?.surfaceLandmarkPlan?.(sim, minX, maxX, side, rand, opts) || null;
     if (ML.WorldGenDirector && !plan) return discoveries;
     if (!ML.WorldGenDirector && !shouldPlaceSurfaceLandmark(sim, minX, maxX, side, rand)) return discoveries;
     const candidates = [];
