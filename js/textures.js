@@ -1099,6 +1099,26 @@
     kc.fillRect(5, 23, 8, 1);
     keeper.refresh();
 
+    // Ambient surface fauna (cosmetic): a bird silhouette for the daytime sky and
+    // a little beetle for the ground. Driven by scene.updateCritters.
+    const bird = freshCanvasTexture("critterBird", 12, 8);
+    const bd = bird.getContext();
+    bd.clearRect(0, 0, 12, 8);
+    bd.fillStyle = "#2c2622";
+    bd.fillRect(1, 3, 2, 1); bd.fillRect(3, 2, 2, 1); // left wing rising
+    bd.fillRect(9, 3, 2, 1); bd.fillRect(7, 2, 2, 1); // right wing rising
+    bd.fillRect(5, 3, 2, 2);                          // body
+    bird.refresh();
+
+    const beetle = freshCanvasTexture("critterBeetle", 9, 6);
+    const be = beetle.getContext();
+    be.clearRect(0, 0, 9, 6);
+    be.fillStyle = "#15100b"; be.fillRect(1, 4, 7, 1); // legs/underside
+    be.fillStyle = "#241c14"; be.fillRect(1, 2, 6, 2); // shell
+    be.fillStyle = "#3a2c1d"; be.fillRect(1, 2, 6, 1); // shell sheen
+    be.fillStyle = "#4a3a26"; be.fillRect(7, 2, 1, 2); // head
+    beetle.refresh();
+
     const orb = freshCanvasTexture("lightOrb", 256, 256);
     const oc = orb.getContext();
     oc.clearRect(0, 0, 256, 256);

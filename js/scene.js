@@ -234,6 +234,12 @@
           .setOrigin(0.5, 1)
       );
       this.nextCampKeeperScanAt = 0;
+      this.critterPool = Array.from({ length: 8 }, () => {
+        const spr = this.add.image(0, 0, "critterBird").setVisible(false).setOrigin(0.5, 0.5);
+        spr.crActive = false;
+        return spr;
+      });
+      this.nextCritterSpawnAt = 0;
       this.watcher = this.add.image(this.player.x, this.player.y, "watcher")
         .setOrigin(0.5, 1)
         .setDepth(82)
@@ -630,6 +636,7 @@
       this.updateHorizontalExpansion();
       this.updateSurfaceDiscoveries();
       this.updatePoiAmbience();
+      this.updateCritters(dt);
       this.updateObserverAwareness(dt, { vx, left, right, up, down, jumpPressed, onFloor, onLadder, pointer });
       this.updateSky();
       this.drawAnimatedTileFx();
@@ -1225,6 +1232,66 @@
       }
       for (let i = used; i < this.campKeeperPool.length; i += 1) {
         this.campKeeperPool[i].setVisible(false);
+      }
+    }
+
+    updateCritters(dt) {
+      // Cosmetic daytime surface life: birds drift across the sky, beetles crawl
+      // the ground; both flee the player. No physics body, no damage — purely
+      // ambient, so it uses Math.random (not the world seed) on purpose.
+      if (!this.critterPool?.length) return;
+      const now = this.time.now || 0;
+      const cam = this.cameras.main;
+      const active = this.surfaceBrightness() > 0.5 && this.depthMeters() < 7;
+      let liveCount = 0;
+      for (const c of this.critterPool) {
+        if (!c.crActive) continue;
+        if (!active || c.x < cam.scrollX - 200 || c.x > cam.scrollX + cam.width + 200) {
+          c.crActive = false;
+          c.setVisible(false);
+          continue;
+        }
+        const pdx = c.x - this.player.x;
+        const fleeing = Math.abs(pdx) < 90 && Math.abs(c.y - this.player.y) < 130;
+        const dir = fleeing ? (Math.sign(pdx) || 1) : c.crDir;
+        c.crDir = dir;
+        const base = c.crKind === "bird" ? 44 : 16;
+        c.x += dir * base * (fleeing ? 2.4 : 1) * dt;
+        if (c.crKind === "bird") {
+          c.crBobT += dt;
+          const targetY = c.crBaseY + Math.sin(c.crBobT * 1.6 + c.crSeed) * 10 - (fleeing ? 20 : 0);
+          c.y += (targetY - c.y) * Math.min(1, dt * 3);
+          c.setScale(1, 0.7 + Math.abs(Math.sin(now / 90 + c.crSeed)) * 0.5); // wing flap
+        } else {
+          const tx = clamp(Math.floor(c.x / TILE), 0, this.worldWidthTiles() - 1);
+          c.y += (((this.sim.surface[tx] || 24) * TILE) - c.y) * Math.min(1, dt * 8);
+        }
+        c.setFlipX(dir < 0);
+        liveCount += 1;
+      }
+      const cap = active ? 5 : 0;
+      if (liveCount < cap && now >= this.nextCritterSpawnAt) {
+        this.nextCritterSpawnAt = now + 600 + Math.random() * 1400;
+        const slot = this.critterPool.find((c) => !c.crActive);
+        if (slot) {
+          const fromLeft = Math.random() < 0.5;
+          const x = fromLeft ? cam.scrollX - 24 : cam.scrollX + cam.width + 24;
+          const tx = clamp(Math.floor(x / TILE), 0, this.worldWidthTiles() - 1);
+          const surfY = (this.sim.surface[tx] || 24) * TILE;
+          const kind = Math.random() < 0.7 ? "bird" : "beetle";
+          slot.crActive = true;
+          slot.crKind = kind;
+          slot.crDir = fromLeft ? 1 : -1;
+          slot.crSeed = Math.random() * 10;
+          slot.crBobT = 0;
+          if (kind === "bird") {
+            slot.crBaseY = surfY - (64 + Math.random() * 90);
+            slot.setTexture("critterBird").setDepth(-2).setPosition(x, slot.crBaseY);
+          } else {
+            slot.setTexture("critterBeetle").setDepth(8.2).setPosition(x, surfY);
+          }
+          slot.setScale(1).setAlpha(0.92).clearTint().setVisible(true);
+        }
       }
     }
 
