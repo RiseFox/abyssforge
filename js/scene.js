@@ -780,11 +780,11 @@
       this.sky = {
         vis: 0,
         glow: this.add.image(0, 0, "skyGlow").setOrigin(0, 0).setScrollFactor(0).setDepth(-40).setDisplaySize(W, H).setVisible(false),
-        // Stars + moon sit ABOVE the screen-space darkness RT (depth 80) so they
-        // are not veiled to black at night; they stay gated by sky.vis (~0
-        // underground) and the night fade, so they only show in the open sky.
-        stars: this.add.tileSprite(0, 0, W, H, "skyStars").setOrigin(0, 0).setScrollFactor(0).setDepth(81).setVisible(false),
-        moon: this.add.image(0, 0, "skyMoon").setScrollFactor(0).setDepth(81).setVisible(false),
+        // Stars + moon live in the sky layer BEHIND the terrain (so they never
+        // draw over blocks). They stay visible at night because drawDarkness
+        // leaves the open sky above the horizon un-veiled (see the banded fill).
+        stars: this.add.tileSprite(0, 0, W, H, "skyStars").setOrigin(0, 0).setScrollFactor(0).setDepth(-39).setVisible(false),
+        moon: this.add.image(0, 0, "skyMoon").setScrollFactor(0).setDepth(-38).setVisible(false),
         sun: this.add.image(0, 0, "skySun").setScrollFactor(0).setDepth(-38).setVisible(false),
         cloudFar: this.add.tileSprite(0, 0, W, 200, "skyCloudFar").setOrigin(0, 0).setScrollFactor(0).setDepth(-36).setVisible(false),
         cloudNear: this.add.tileSprite(0, 0, W, 200, "skyCloudNear").setOrigin(0, 0).setScrollFactor(0).setDepth(-35).setVisible(false)
@@ -1476,7 +1476,25 @@
       };
 
       if (alpha <= 0.03) return;
-      rt.fill(0x040309, alpha);
+      // On the surface, leave the open sky ABOVE the highest terrain un-veiled so
+      // the night sky + stars (which live behind terrain at depth -39) stay
+      // visible; the veil still covers terrain and everything below the horizon.
+      let veilTop = 0;
+      if (this.sky && this.sky.vis > 0.05 && this.sim && this.sim.surface) {
+        const wTiles = this.sim.surface.length;
+        const minXt = clamp(Math.floor(cam.scrollX / TILE), 0, wTiles - 1);
+        const maxXt = clamp(Math.ceil((cam.scrollX + cam.width) / TILE), 0, wTiles - 1);
+        let minSurf = Infinity;
+        for (let x = minXt; x <= maxXt; x += 1) {
+          const s = this.sim.surface[x];
+          if (s != null && s < minSurf) minSurf = s;
+        }
+        if (minSurf < Infinity) {
+          veilTop = clamp(minSurf * TILE - cam.scrollY - 6, 0, cam.height);
+        }
+      }
+      if (veilTop > 0) rt.fill(0x040309, alpha, 0, veilTop, cam.width, cam.height - veilTop);
+      else rt.fill(0x040309, alpha);
       let radius = this.personalLampOutput().radius;
       const playerScreenX = this.player.x - cam.scrollX;
       const playerScreenY = this.player.y - cam.scrollY;
