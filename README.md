@@ -175,6 +175,10 @@ Then open **http://localhost:8741** in your browser. Any static server works —
 e.g. `python -m http.server 8741`. Opening `index.html` directly also runs, just
 with the caveats above.
 
+Keep the game tab focused while playing. Browsers freeze a background tab's
+render loop, so an unfocused tab shows a frozen (often dark) frame until you
+click back into it — this is normal tab throttling, not a crash.
+
 Install dependencies and run the verification suite:
 
 ```bash
