@@ -85,7 +85,10 @@
       if (!Array.isArray(this.surfaceDiscoveries)) this.surfaceDiscoveries = [];
       if (!Array.isArray(this.lights)) this.rebuildLights();
       if (!Array.isArray(this.mobs)) {
-        this.mobs = this.generateMobs();
+        // Seed the load/migration repopulation the same way newWorld does, so a
+        // legacy save without a mobs array reproduces the seed's cave population
+        // instead of a random one.
+        this.mobs = this.generateMobs(mulberry32((this.seed ?? 0) ^ 0x9e3779b9));
         this.mobBaseline = this.mobs.length;
       }
       this.repairMobEcology();
@@ -1320,9 +1323,12 @@
     pickMobKind(depth, roll, context = {}) {
       const biomeId = context.biomeId || "stonewarrens";
       if (depth > 150) {
-        if (biomeId === "obsidianabyss" || biomeId === "deepstone") return roll < 0.46 ? "golem" : roll < 0.7 ? "crawler" : roll < 0.86 ? "bat" : "slime";
-        if (biomeId === "crystalvein") return roll < 0.34 ? "golem" : roll < 0.62 ? "bat" : roll < 0.82 ? "crawler" : "slime";
-        return roll < 0.28 ? "golem" : roll < 0.56 ? "crawler" : roll < 0.8 ? "slime" : "bat";
+        // crawler ends at 150 m and slime at 175 m; below that, only golem + bat
+        // are in contract. crystalvein still hosts slime within its 175 m limit.
+        // Picking only valid species keeps deep rolls from being wasted on
+        // first-picks canSpawnMobAt would reject.
+        if (biomeId === "crystalvein" && depth <= 175) return roll < 0.4 ? "golem" : roll < 0.72 ? "bat" : "slime";
+        return roll < 0.5 ? "golem" : "bat";
       }
       if (depth > 60) {
         if (biomeId === "fungalhollow") return roll < 0.5 ? "slime" : roll < 0.78 ? "crawler" : "bat";
@@ -1334,7 +1340,7 @@
     }
 
     mobCandidatesForDepth(depth) {
-      if (depth > 150) return ["golem", "crawler", "bat", "slime"];
+      if (depth > 150) return ["golem", "bat", "slime"];
       if (depth > 80) return ["crawler", "slime", "bat", "golem"];
       return ["crawler", "slime", "bat"];
     }
