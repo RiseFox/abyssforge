@@ -665,6 +665,15 @@ window.ML = window.ML || {};
         { minPhase: 3, name: "False floor", note: "The shelf below you settles like a door deciding whether to open.", float: "SHIFT" },
         { minPhase: 4, name: "Forge pulse", note: "The whole layer beats once, and loose stone drops where you planned to stand.", float: "PULSE" }
       ]
+    },
+    echoVein: {
+      name: "Ore echo",
+      note: "A resonant pulse rings the nearby seams — metal glints back through the rock.",
+      duration: 6000,
+      variants: [
+        { minPhase: 1, name: "Survey echo", note: "An old survey ping still answers, lighting the seams it once mapped.", float: "ECHO" },
+        { minPhase: 3, name: "Forge ledger", note: "The strata report their ore to you, line by line, as if filing a return.", float: "LEDGER" }
+      ]
     }
   };
 

@@ -3371,9 +3371,13 @@
     chooseCaveEvent() {
       const depth = this.depthMeters();
       const stratum = this.currentStratum();
+      // echoVein is a light beneficial reveal that isn't in the per-stratum weight
+      // tables; give it an occasional roll at depth so it actually shows up.
+      if (depth > 20 && Math.random() < 0.18) return "echoVein";
       const weighted = this.sim.weightedPick?.(stratum?.events, Math.random);
       if (weighted) return weighted;
       const pool = ["oreSurge", "lanternDraft"];
+      if (depth > 20) pool.push("echoVein");
       if (depth > 24) pool.push("swarm");
       if (depth > 58) pool.push("tremor");
       return pool[Math.floor(Math.random() * pool.length)];
@@ -3415,6 +3419,7 @@
         ML.audio.play("rumble");
       }
       if (id === "oreSurge") this.emitDust(this.player.x, this.player.y + 16, 8);
+      if (id === "echoVein") this.pulseOreEcho();
       if (id === "lanternDraft") this.floatText(this.player.x - 22, this.player.y - 40, "DRAFT", "#9edbe2");
       if (copy.float) this.floatText(this.player.x - 30, this.player.y - 56, copy.float, "#9efff0");
 
@@ -3873,6 +3878,27 @@
     emitBlockBurst(tileX, tileY, tint, count = 5) {
       this.sparkEmitter.setParticleTint(tint);
       this.sparkEmitter.explode(count, tileX * TILE + TILE / 2, tileY * TILE + TILE / 2);
+    }
+
+    pulseOreEcho() {
+      // echoVein cave event: ring nearby ore so it glints back through the rock —
+      // a one-shot beneficial reveal (helps spot seams), no balance change.
+      const px = Math.floor(this.player.x / TILE);
+      const py = Math.floor(this.player.y / TILE);
+      const R = 13;
+      const ore = new Set([Tile.COAL, Tile.COPPER, Tile.IRON, Tile.GOLD, Tile.CRYSTAL,
+        Tile.AMBER, Tile.QUARTZ, Tile.EMBER, Tile.VOIDGLASS, Tile.GEODE]);
+      let pinged = 0;
+      for (let y = py - R; y <= py + R && pinged < 20; y += 1) {
+        for (let x = px - R; x <= px + R && pinged < 20; x += 1) {
+          if ((x - px) * (x - px) + (y - py) * (y - py) > R * R) continue;
+          const t = this.sim.tileAt(x, y);
+          if (!ore.has(t)) continue;
+          this.emitBlockBurst(x, y, BLOCK_TINTS[t] || 0x9efff0, 2);
+          pinged += 1;
+        }
+      }
+      this.cameras.main.flash(160, 150, 220, 240, false);
     }
 
     emitDust(x, y, count = 4) {
