@@ -3149,6 +3149,46 @@ canvas:focus { outline: none; }
   }
 }
 
+/* Compact game HUD on small screens: keep only the survival meters visible so
+   the world is not buried. Detail/lore panels (pickaxe stats, contract, biome,
+   mystery, quick-action legend) are non-essential moment to moment and are
+   hidden here — their info still lives in the drawers and on-block prompts. */
+@media (max-width: 860px) {
+  .top-left {
+    width: auto;
+    gap: 5px;
+  }
+  .tool-panel,
+  .action-strip,
+  .objective-panel,
+  .biome-panel,
+  .mystery-panel,
+  .perf-chip {
+    display: none !important;
+  }
+  .brand {
+    padding: 6px 8px;
+    gap: 7px;
+  }
+  .brand strong { font-size: 13px; }
+  .brand span { display: none; }
+  .status-panel {
+    grid-template-columns: repeat(2, minmax(0, 84px));
+    gap: 4px;
+    width: auto;
+    padding: 4px;
+  }
+  .stat {
+    min-height: 0;
+    padding: 4px 6px;
+  }
+  .stat-shadow { display: none; }
+  .stat label { font-size: 9px; }
+  .stat label span:first-child { letter-spacing: 0; }
+  .stat label span:last-child { font-size: 11px; }
+  .bar { height: 6px; margin-top: 4px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .toast,
   button,
