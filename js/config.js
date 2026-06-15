@@ -811,9 +811,9 @@ window.ML = window.ML || {};
       minDepth: 36,
       biomes: ["stonewarrens", "fungalhollow", "ironfault", "deepstone", "crystalvein", "obsidianabyss"],
       ceiling: true,
-      ceilingRange: 6,
+      ceilingRange: 4,
       minAir: 3,
-      note: "Spawns only in enclosed air pockets with ceiling cover, including opened abyss seams."
+      note: "Spawns only in enclosed air pockets with a low ceiling, including opened abyss seams."
     },
     golem: {
       label: "Deep pressure golem",

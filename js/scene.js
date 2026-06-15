@@ -1266,6 +1266,8 @@
       const minY = Math.floor((cam.scrollY - 64) / TILE);
       const maxY = Math.ceil((cam.scrollY + cam.height + 64) / TILE);
       let used = 0;
+      let nearKeeper = null;
+      let nearDist = Infinity;
       for (const light of (this.sim?.lights || [])) {
         if (used >= this.campKeeperPool.length) break;
         if (light.t !== Tile.CAMPFIRE) continue;
@@ -1275,32 +1277,72 @@
         used += 1;
         const side = (light.x % 2 === 0) ? -1 : 1; // stand to one side of the fire
         const bob = Math.sin(now / 620 + light.x * 0.5) * 0.7;
+        const kx = light.x * TILE + TILE / 2 + side * 18;
+        const ky = light.y * TILE + TILE + bob;
         keeper
-          .setPosition(light.x * TILE + TILE / 2 + side * 18, light.y * TILE + TILE + bob)
+          .setPosition(kx, ky)
           // Face the fire: the dwarf sprite faces right by default, so flip it
           // only when standing on the fire's right side.
           .setFlipX(side > 0)
           .setVisible(true);
+        const d = Math.hypot(kx - this.player.x, ky - this.player.y);
+        if (d < nearDist) { nearDist = d; nearKeeper = { x: kx, y: ky }; }
       }
       for (let i = used; i < this.campKeeperPool.length; i += 1) {
         this.campKeeperPool[i].setVisible(false);
       }
+      // The keeper has a voice: an occasional friendly, sometimes state-aware
+      // line when you linger by the fire, so a camp reads as a staffed outpost
+      // rather than just an anchor tile.
+      if (nearKeeper && nearDist < TILE * 3 && now > (this.nextKeeperBarkAt || 0)) {
+        this.nextKeeperBarkAt = now + Phaser.Math.Between(11000, 19000);
+        const lines = [
+          "Rest while the fire holds.",
+          "Warm yourself, miner.",
+          "The deep's restless today.",
+          "Mind your lamp cells.",
+          "Day " + this.dayNumber() + " — still with us.",
+          this.depthMeters() > 40 ? "Back from " + Math.round(this.depthMeters()) + " m? Brave." : "Stay topside while you can.",
+          "The marks run deeper than ore.",
+          "Heard the wayfires answer."
+        ];
+        this.floatText(nearKeeper.x - 30, nearKeeper.y - 40, lines[Math.floor(Math.random() * lines.length)], "#f0d39a");
+      }
     }
 
     updateCritters(dt) {
-      // Cosmetic daytime surface life: birds drift across the sky, beetles crawl
-      // the ground; both flee the player. No physics body, no damage — purely
-      // ambient, so it uses Math.random (not the world seed) on purpose.
+      // Cosmetic ambient life. Surface (daytime): birds drift the sky, beetles
+      // crawl the ground. Underground (shallow-mid caves): bioluminescent
+      // glow-worms drift through the dark. All flee the player; no physics body,
+      // no damage — purely ambient, so it uses Math.random (not the world seed).
       if (!this.critterPool?.length) return;
       const now = this.time.now || 0;
       const cam = this.cameras.main;
-      const active = this.surfaceBrightness() > 0.5 && this.depthMeters() < 7;
-      let liveCount = 0;
+      const depth = this.depthMeters();
+      const surfaceActive = this.surfaceBrightness() > 0.5 && depth < 7;
+      const caveActive = depth >= 8 && depth <= 64;
+      let surfaceLive = 0;
+      let caveLive = 0;
       for (const c of this.critterPool) {
         if (!c.crActive) continue;
-        if (!active || c.x < cam.scrollX - 200 || c.x > cam.scrollX + cam.width + 200) {
+        const isCave = c.crKind === "glowworm";
+        const offScreen = c.x < cam.scrollX - 220 || c.x > cam.scrollX + cam.width + 220
+          || c.y < cam.scrollY - 220 || c.y > cam.scrollY + cam.height + 220;
+        if ((isCave ? !caveActive : !surfaceActive) || offScreen) {
           c.crActive = false;
           c.setVisible(false);
+          continue;
+        }
+        if (isCave) {
+          // Drift slowly, bob, and waft away when the player crowds it.
+          const pdx = c.x - this.player.x;
+          const near = Math.abs(pdx) < 80 && Math.abs(c.y - this.player.y) < 90;
+          c.crDir = near ? (Math.sign(pdx) || 1) : c.crDir;
+          c.x += c.crDir * (near ? 30 : 11) * dt;
+          c.crBobT += dt;
+          c.y += Math.sin(c.crBobT * 1.3 + c.crSeed) * 9 * dt;
+          c.setAlpha(0.45 + 0.4 * Math.abs(Math.sin(now / 680 + c.crSeed)));
+          caveLive += 1;
           continue;
         }
         const pdx = c.x - this.player.x;
@@ -1319,10 +1361,9 @@
           c.y += (((this.sim.surface[tx] || 24) * TILE) - c.y) * Math.min(1, dt * 8);
         }
         c.setFlipX(dir < 0);
-        liveCount += 1;
+        surfaceLive += 1;
       }
-      const cap = active ? 5 : 0;
-      if (liveCount < cap && now >= this.nextCritterSpawnAt) {
+      if (surfaceActive && surfaceLive < 5 && now >= this.nextCritterSpawnAt) {
         this.nextCritterSpawnAt = now + 600 + Math.random() * 1400;
         const slot = this.critterPool.find((c) => !c.crActive);
         if (slot) {
@@ -1342,7 +1383,32 @@
           } else {
             slot.setTexture("critterBeetle").setDepth(8.2).setPosition(x, surfY);
           }
-          slot.setScale(1).setAlpha(0.92).clearTint().setVisible(true);
+          slot.setBlendMode(Phaser.BlendModes.NORMAL).setScale(1).setAlpha(0.92).clearTint().setVisible(true);
+        }
+      } else if (caveActive && caveLive < 6 && now >= this.nextCritterSpawnAt) {
+        this.nextCritterSpawnAt = now + 500 + Math.random() * 1100;
+        const slot = this.critterPool.find((c) => !c.crActive);
+        if (slot) {
+          const px = clamp(Math.floor(this.player.x / TILE), 1, this.worldWidthTiles() - 2);
+          const py = clamp(Math.floor(this.player.y / TILE), 1, this.worldHeightTiles() - 2);
+          let sx = 0; let sy = 0; let found = false;
+          for (let tries = 0; tries < 14; tries += 1) {
+            const ox = clamp(px + Phaser.Math.Between(-9, 9), 1, this.worldWidthTiles() - 2);
+            const oy = clamp(py + Phaser.Math.Between(-6, 6), 1, this.worldHeightTiles() - 2);
+            if (this.sim.tileAt(ox, oy) === AIR) { sx = ox; sy = oy; found = true; break; }
+          }
+          if (found) {
+            slot.crActive = true;
+            slot.crKind = "glowworm";
+            slot.crDir = Math.random() < 0.5 ? -1 : 1;
+            slot.crSeed = Math.random() * 10;
+            slot.crBobT = 0;
+            // Above the darkness veil so it actually glows in the dark; ADD blend
+            // for the bioluminescent pop. Small + sparse, so it reads as a mote.
+            slot.setTexture("critterGlowworm").setDepth(82).setBlendMode(Phaser.BlendModes.ADD)
+              .setPosition(sx * TILE + TILE / 2, sy * TILE + TILE / 2)
+              .setScale(1).setAlpha(0.7).clearTint().setVisible(true);
+          }
         }
       }
     }
@@ -1698,19 +1764,23 @@
       if (now - (this.lastObserverCheckAt || 0) < 220) return;
       this.lastObserverCheckAt = now;
 
+      // Only attempt a moment when the GLOBAL cooldown is also clear — otherwise
+      // triggerObserverMoment silently rejects it while the per-type timer stays
+      // "ready", wasting attempts and making the cadence unpredictable.
+      const globalReady = now >= this.nextObserverMomentAt;
       const idleMs = now - Math.max(this.lastObserverInputAt || 0, this.lastObserverMoveAt || 0);
-      if (idleMs > 6500 && now > this.nextHeroThoughtAt && this.depthMeters() > 8 && !this.hasNearbyDanger()) {
+      if (globalReady && idleMs > 6500 && now > this.nextHeroThoughtAt && this.depthMeters() > 8 && !this.hasNearbyDanger()) {
         this.triggerObserverMoment("idle");
       }
 
       const light = this.playerLight();
-      if (light < 0.28 && (this.shadowPressure || 0) > 42 && now > this.nextHeroThoughtAt) {
+      if (globalReady && light < 0.28 && (this.shadowPressure || 0) > 42 && now > this.nextHeroThoughtAt) {
         this.triggerObserverMoment("lowLight");
       }
 
       const phase = this.observerPhaseIndex();
       const dangerousFrame = (this.shadowPressure || 0) > 62 || this.watcher?.visible || this.caveEvent?.id === "swarm" || this.caveEvent?.id === "tremor";
-      if (phase >= 4 && dangerousFrame && this.depthMeters() > 55 && now > this.nextSpatialRiftAt) {
+      if (globalReady && phase >= 4 && dangerousFrame && this.depthMeters() > 55 && now > this.nextSpatialRiftAt) {
         this.triggerObserverMoment("spatialRift");
       }
     }

@@ -1218,6 +1218,18 @@
     be.fillStyle = "#4a3a26"; be.fillRect(7, 2, 1, 2); // head
     beetle.refresh();
 
+    // Cave glow-worm: a soft bioluminescent mote that drifts in dark caverns.
+    const glowworm = freshCanvasTexture("critterGlowworm", 12, 12);
+    const gw = glowworm.getContext();
+    gw.clearRect(0, 0, 12, 12);
+    const gwg = gw.createRadialGradient(6, 6, 0, 6, 6, 6);
+    gwg.addColorStop(0, "rgba(170,255,224,0.95)");
+    gwg.addColorStop(0.5, "rgba(120,232,182,0.5)");
+    gwg.addColorStop(1, "rgba(120,232,182,0)");
+    gw.fillStyle = gwg; gw.fillRect(0, 0, 12, 12);
+    gw.fillStyle = "#eafff6"; gw.fillRect(5, 5, 2, 2);
+    glowworm.refresh();
+
     const orb = freshCanvasTexture("lightOrb", 256, 256);
     const oc = orb.getContext();
     oc.clearRect(0, 0, 256, 256);
