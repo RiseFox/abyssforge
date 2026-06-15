@@ -262,25 +262,48 @@
         }
       }
 
-      // Cave worms.
-      for (let c = 0; c < 115; c += 1) {
-        let x = Math.floor(rand() * (WORLD_W - 12)) + 6;
-        let y = Math.floor(rand() * (WORLD_H - 70)) + 45;
-        let radius = rand() < 0.72 ? 1 : 2;
-        const steps = 35 + Math.floor(rand() * 90);
+      // Cave worms — density, length, radius and shape all vary by stratum, so
+      // each depth band reads as its own place: tight rootline tunnels, wide
+      // ironfault galleries, branching crystal chambers. Worms carry directional
+      // momentum (some cut vertical shafts or horizontal galleries) and
+      // occasionally swell into a chamber.
+      const carveWorm = (fx, fy, yTop, yBot, stratum) => {
+        const stepScale = stratum?.caveSteps || 1;
+        const steps = Math.round((30 + Math.floor(rand() * 80)) * stepScale);
+        let radius = rand() < 0.7 ? 1 : 2;
+        const mode = rand();
+        let ang = mode < 0.16 ? Math.PI / 2 : mode < 0.3 ? (rand() < 0.5 ? 0 : Math.PI) : rand() * Math.PI * 2;
         for (let i = 0; i < steps; i += 1) {
+          const cxw = Math.round(fx);
+          const cyw = Math.round(fy);
           for (let ox = -radius; ox <= radius; ox += 1) {
             for (let oy = -radius; oy <= radius; oy += 1) {
-              const tx = x + ox;
-              const ty = y + oy;
+              const tx = cxw + ox;
+              const ty = cyw + oy;
               if (tx > 2 && tx < WORLD_W - 3 && ty > surface[tx] + 5 && ty < WORLD_H - 6 && ox * ox + oy * oy <= radius * radius + 0.7) {
                 world[ty][tx] = AIR;
               }
             }
           }
-          x = clamp(x + Math.floor(rand() * 3) - 1, 4, WORLD_W - 5);
-          y = clamp(y + Math.floor(rand() * 3) - 1, 36, WORLD_H - 8);
-          if (rand() < 0.12) radius = radius === 1 ? 2 : 1;
+          ang += (rand() - 0.5) * 0.6;
+          fx = clamp(fx + Math.cos(ang), 4, WORLD_W - 5);
+          fy = clamp(fy + Math.sin(ang) * 0.85, yTop, yBot);
+          if (rand() < 0.1) radius = radius === 1 ? 2 : 1;
+          if (rand() < 0.025) radius = 3;             // occasional chamber
+          else if (radius === 3 && rand() < 0.5) radius = 2;
+        }
+      };
+      const AVG_SURFACE = 26;
+      const strata = ML.STRATA_PROFILES || [];
+      for (let p = 0; p < strata.length; p += 1) {
+        const stratum = strata[p];
+        const next = strata[p + 1];
+        const yTop = Math.max(42, AVG_SURFACE + (stratum.minDepth || 0));
+        const yBot = Math.min(WORLD_H - 8, next ? AVG_SURFACE + (next.minDepth || 0) : WORLD_H - 8);
+        if (yBot - yTop < 6) continue;
+        const worms = Math.round((yBot - yTop) * 0.44 * (stratum.caveWorms || 1));
+        for (let c = 0; c < worms; c += 1) {
+          carveWorm(6 + rand() * (WORLD_W - 12), yTop + rand() * (yBot - yTop), Math.max(40, yTop - 8), yBot, stratum);
         }
       }
 
@@ -376,22 +399,31 @@
         return false;
       };
 
-      // Lava pools on deep cave floors.
-      for (let y = 215; y < WORLD_H - 6; y += 1) {
-        for (let x = 4; x < WORLD_W - 4; x += 1) {
-          if (world[y][x] === AIR && solidAt(x, y + 1) && rand() < 0.05) {
+      // Lava pools on cave floors — frequency and spread scale with the stratum,
+      // so the obsidian abyss runs with lava while the rootline stays mostly dry.
+      // Gated below ~56 deep so the gentle starter descent never opens onto lava.
+      for (let x = 4; x < WORLD_W - 4; x += 1) {
+        for (let y = surface[x] + 56; y < WORLD_H - 6; y += 1) {
+          if (world[y][x] !== AIR || !solidAt(x, y + 1)) continue;
+          const stratum = this.stratumForDepth(y - surface[x]);
+          if (rand() < (stratum?.lavaChance ?? 0.03)) {
             world[y][x] = Tile.LAVA;
-            if (world[y][x + 1] === AIR && solidAt(x + 1, y + 1) && rand() < 0.7) world[y][x + 1] = Tile.LAVA;
-            if (world[y][x - 1] === AIR && solidAt(x - 1, y + 1) && rand() < 0.7) world[y][x - 1] = Tile.LAVA;
+            const spread = stratum?.lavaSpread ?? 0.5;
+            if (world[y][x + 1] === AIR && solidAt(x + 1, y + 1) && rand() < spread) world[y][x + 1] = Tile.LAVA;
+            if (world[y][x - 1] === AIR && solidAt(x - 1, y + 1) && rand() < spread) world[y][x - 1] = Tile.LAVA;
           }
         }
       }
 
-      // Glow caps in caves.
+      // Glow caps — denser in fungal-rich strata, drawn in small patches so they
+      // read as colonies rather than an even sprinkle.
       for (let x = 3; x < WORLD_W - 3; x += 1) {
         for (let y = surface[x] + 12; y < WORLD_H - 8; y += 1) {
-          if (world[y][x] === AIR && solidAt(x, y + 1) && world[y][x] !== Tile.LAVA && rand() < 0.016) {
+          if (world[y][x] !== AIR || !solidAt(x, y + 1)) continue;
+          const stratum = this.stratumForDepth(y - surface[x]);
+          if (rand() < 0.085 * (stratum?.mushroomChance ?? 0.18)) {
             world[y][x] = Tile.MUSHROOM;
+            if (world[y][x + 1] === AIR && solidAt(x + 1, y + 1) && rand() < 0.4) world[y][x + 1] = Tile.MUSHROOM;
           }
         }
       }
@@ -516,7 +548,27 @@
       return entries[entries.length - 1]?.[0] || null;
     }
 
-    deepTileForColumn(y, surfaceY, rand) {
+    // Smooth value-noise field in [0,1], deterministic per (seed, salt). Used to
+    // bias ore into connected veins instead of an even scatter.
+    veinField(x, y, salt = 0) {
+      const s = (this.seed ^ ((Math.imul(salt, 2654435761)) >>> 0)) >>> 0;
+      const hash = (gx, gy) => {
+        let n = (Math.imul(gx, 374761393) + Math.imul(gy, 668265263) + s) >>> 0;
+        n = Math.imul(n ^ (n >>> 13), 1274126177) >>> 0;
+        return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
+      };
+      const cs = 6; // vein cell size in tiles
+      const gx = Math.floor(x / cs);
+      const gy = Math.floor(y / cs);
+      const fx = x / cs - gx;
+      const fy = y / cs - gy;
+      const lerp = (p, q, t) => p + (q - p) * t;
+      const top = lerp(hash(gx, gy), hash(gx + 1, gy), fx);
+      const bot = lerp(hash(gx, gy + 1), hash(gx + 1, gy + 1), fx);
+      return lerp(top, bot, fy);
+    }
+
+    deepTileForColumn(y, surfaceY, rand, x = null) {
       const depth = y - surfaceY;
       const profile = this.stratumForDepth(depth);
       let tile = depth > (profile?.deepAt ?? 210) ? Tile.DEEP : Tile.STONE;
@@ -524,7 +576,15 @@
       for (let i = ores.length - 1; i >= 0; i -= 1) {
         const ore = ores[i];
         if (depth < (ore.minDepth || 0)) continue;
-        if (rand() < (ore.chance || 0)) {
+        // Vein bias: where this ore's noise field peaks, concentrate it; in
+        // between it stays sparse. The average roughly matches the flat chance,
+        // so total richness holds but ore forms seams worth following.
+        let chance = ore.chance || 0;
+        if (x !== null) {
+          const v = this.veinField(x, y, ore.tile);
+          chance *= v > 0.78 ? 4.4 : v > 0.62 ? 1.6 : 0.4;
+        }
+        if (rand() < chance) {
           tile = ore.tile;
           break;
         }
@@ -533,7 +593,7 @@
     }
 
     deepTileFor(x, y, rand, surfaceOverride = this.surface) {
-      return this.deepTileForColumn(y, surfaceOverride?.[x] || 24, rand);
+      return this.deepTileForColumn(y, surfaceOverride?.[x] || 24, rand, x);
     }
 
     carveAirCircle(cx, cy, radius, minY = 1, maxY = this.worldHeight() - 2) {
