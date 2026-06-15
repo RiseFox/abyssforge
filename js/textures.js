@@ -776,8 +776,6 @@
     slc.fillRect(18, 17, 3, 2);
     slime.refresh();
 
-    ML.ExternalAssets?.makeRuntimeTextures?.(scene);
-
     const golem = freshCanvasTexture("golem", 32, 36);
     const gc = golem.getContext();
     gc.clearRect(0, 0, 32, 36);
@@ -1177,6 +1175,11 @@
     oc.fillStyle = og;
     oc.fillRect(0, 0, 256, 256);
     orb.refresh();
+
+    // Override canvas textures with normalized external CC0 art AFTER every
+    // canvas texture exists — otherwise late canvases (golem/warden/broodmother/
+    // campKeeper) would clobber the override.
+    ML.ExternalAssets?.makeRuntimeTextures?.(scene);
   }
 
   ML.makeTextures = makeTextures;

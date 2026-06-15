@@ -34,7 +34,8 @@
     dtGoblin: "0x72_DungeonTilesetII/frames/goblin_idle_anim_f0.png",
     dtOgre: "0x72_DungeonTilesetII/frames/ogre_idle_anim_f0.png",
     dtBigDemon: "0x72_DungeonTilesetII/frames/big_demon_idle_anim_f0.png",
-    dtBigZombie: "0x72_DungeonTilesetII/frames/big_zombie_idle_anim_f0.png"
+    dtBigZombie: "0x72_DungeonTilesetII/frames/big_zombie_idle_anim_f0.png",
+    dtDwarf: "0x72_DungeonTilesetII/frames/dwarf_m_idle_anim_f0.png"
   };
 
   const ITEM_ICON_ASSETS = {
@@ -232,6 +233,9 @@
     createNormalizedTexture(scene, "golem", "dtOgre", 32, 36, { pad: 2, scale: 1.0, alignY: 0.6, shadow: true });
     createNormalizedTexture(scene, "warden", "dtBigDemon", 56, 64, { pad: 3, scale: 0.96, alignY: 0.58, shadow: true });
     createNormalizedTexture(scene, "broodmother", "dtBigZombie", 56, 42, { pad: 3, scale: 1.0, alignY: 0.6, shadow: true });
+    // Camp keeper = a stout dwarf settler (fits a mining guild camp) instead of
+    // the hand-drawn hooded figure. Bottom-aligned so it stands on the ground.
+    createNormalizedTexture(scene, "campKeeper", "dtDwarf", 18, 28, { pad: 1, scale: 1.0, alignY: 1, shadow: true });
     createNormalizedTexture(scene, "asset-bone-drop", "skeleton", 24, 22, { pad: 2, scale: 1.08, alignY: 0.62, shadow: true });
     createNormalizedTexture(scene, "asset-heart-full", "fullHeart", 18, 18, { pad: 1, scale: 1.1, alignY: 0.5 });
     createNormalizedTexture(scene, "asset-heart-empty", "emptyHeart", 18, 18, { pad: 1, scale: 1.1, alignY: 0.5 });

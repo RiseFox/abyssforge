@@ -301,6 +301,16 @@
       "localPath": "assets/external/0x72_DungeonTilesetII/frames/big_zombie_idle_anim_f0.png",
       "bytes": 489,
       "sha256": "cfa24e832f4dd2c205af5a01470d1f1d046346138f43e8340ff740eff15d954c"
+    },
+    {
+      "sourceId": "0x72-dungeontileset-ii",
+      "assetId": "dwarf_m_idle_anim_f0",
+      "role": "camp keeper NPC sprite",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://0x72.itch.io/dungeontileset-ii",
+      "localPath": "assets/external/0x72_DungeonTilesetII/frames/dwarf_m_idle_anim_f0.png",
+      "bytes": 399,
+      "sha256": "726c1dc703449dbdad57b8d7de9505eca6a350e202dca3e7d6366e04227d31e5"
     }
   ]
 }
