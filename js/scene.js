@@ -98,6 +98,9 @@
       this.watcherUntil = 0;
       this.watcherState = null;
       this.watcherTraceMarks = [];
+      // One "attention" scalar both the Watcher and the Observer moments feed and
+      // read — the mine's single, escalating awareness of the player.
+      this.observerAttention = 0;
       this.caveEvent = null;
       this.nextCaveEventAt = 0;
       this.eventPulseAt = 0;
@@ -1582,6 +1585,7 @@
       if (cfg.stat) this.sim.stats[cfg.stat] = (this.sim.stats[cfg.stat] || 0) + 1;
       this.observerPulseStart = now;
       this.observerPulseUntil = now + (cfg.pulse || 900);
+      this.observerAttention = clamp((this.observerAttention || 0) + 12, 0, 100);
 
       const min = cfg.cooldownMin || 16000;
       const max = Math.max(min, cfg.cooldownMax || min);
@@ -3642,6 +3646,14 @@
         this.spawnWatcherSighting();
       }
 
+      // Single "attention" quantity: rises with the dark/pressure and a visible
+      // Watcher, relieved at camps and in bright light (mirrors shadowPressure).
+      const att = this.observerAttention || 0;
+      const attDelta = (nearCamp || light > 0.58)
+        ? -dt * (nearCamp ? 34 : 18)
+        : dt * (1.5 + (this.shadowPressure / 100) * 9 + (this.watcher?.visible ? 7 : 0));
+      this.observerAttention = clamp(att + attDelta, 0, 100);
+
       this.sim.shadowPressure = this.shadowPressure;
       this.updateWatcherSprite(dt, light);
     }
@@ -3778,6 +3790,18 @@
       if (reason !== "timeout" || (this.shadowPressure || 0) > 46) {
         this.leaveWatcherTrace(wx, wy, reason);
       }
+      // Meeting its gaze up close can leave a watcher-token — the live silhouette
+      // finally paying off into the token economy (rare).
+      if (reason === "noticed" && state.noticed && !state.tokenDropped) {
+        const dist = Phaser.Math.Distance.Between(wx, wy, this.player.x, this.player.y);
+        if (dist < 185 && Math.random() < 0.4) {
+          state.tokenDropped = true;
+          this.sim.addItem("watcherToken", 1);
+          this.spawnPickupFx(Math.floor(wx / TILE), Math.floor(wy / TILE), "watcherToken");
+          this.floatText(wx - 26, wy - 30, "WATCHER TOKEN", "#a985ff");
+          ML.audio.play("secret");
+        }
+      }
       this.tweens.killTweensOf(this.watcher);
       this.tweens.add({
         targets: this.watcher,
@@ -3801,12 +3825,24 @@
       if (!spot || !this.watcher) return false;
 
       const firstSighting = (this.sim.stats.watcherSightings || 0) === 0;
-      const noticed = options.silent ? false : (firstSighting || (this.shadowPressure || 0) > 82 || Math.random() < 0.24);
+      const att = this.observerAttention || 0;
+      const noticed = options.silent ? false : (firstSighting || (this.shadowPressure || 0) > 82 || att > 70 || Math.random() < 0.18 + att / 360);
       const lifetime = options.force ? 5200 : Phaser.Math.Between(5200, 9000);
+      // The Watcher leans toward the nearest wayfire it is "counting".
+      let anchorX = null;
+      let bestAnchor = Infinity;
+      for (const fire of this.sim.lights || []) {
+        if (fire.t !== Tile.CAMPFIRE) continue;
+        const fx = fire.x * TILE + TILE / 2;
+        const d = Math.abs(fx - spot.x);
+        if (d < bestAnchor) { bestAnchor = d; anchorX = fx; }
+      }
       this.tweens.killTweensOf(this.watcher);
       this.watcherState = {
         homeX: spot.x,
         homeY: spot.y,
+        spawnX: spot.x,
+        anchorX,
         appearedAt: now,
         vanishAt: now + lifetime,
         side: spot.side,
@@ -3866,12 +3902,20 @@
         return;
       }
 
+      // Lean slowly toward the nearest wayfire (capped ~4 tiles from spawn); the
+      // dark won't let it reach the light — strong local light still dismisses it.
+      if (state.anchorX != null) {
+        const target = state.spawnX + clamp(state.anchorX - state.spawnX, -4 * TILE, 4 * TILE);
+        state.homeX = Phaser.Math.Linear(state.homeX, target, clamp(dt * 0.5, 0, 0.04));
+      }
       const wobble = Math.sin(now / 820 + state.pulse);
       this.watcher.x = Phaser.Math.Linear(this.watcher.x, state.homeX + wobble * 3, clamp(dt * 2.6, 0, 1));
       this.watcher.y = Phaser.Math.Linear(this.watcher.y, state.homeY + Math.sin(now / 1180 + state.pulse) * 2, clamp(dt * 2.3, 0, 1));
       this.watcher.setFlipX(this.watcher.x < this.player.x);
-      const darknessAlpha = clamp((this.shadowPressure - 24) / 130, 0.18, state.noticed ? 0.5 : 0.38);
-      const targetAlpha = clamp(darknessAlpha * (1 - localLight * 0.42), 0.12, 0.52);
+      // More present the more the mine has been paying attention.
+      const attBoost = (this.observerAttention || 0) / 100 * 0.12;
+      const darknessAlpha = clamp((this.shadowPressure - 24) / 130, 0.18, (state.noticed ? 0.5 : 0.38) + attBoost);
+      const targetAlpha = clamp(darknessAlpha * (1 - localLight * 0.42), 0.12, 0.6);
       this.watcher.setAlpha(Phaser.Math.Linear(this.watcher.alpha, targetAlpha, clamp(dt * 1.7, 0, 1)));
     }
 
