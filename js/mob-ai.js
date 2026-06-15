@@ -29,6 +29,9 @@
     const playerDistance = sensor?.playerDistance ?? Math.max(1, Math.hypot(scene.player.x - enemy.x, scene.player.y - enemy.y));
     const dir = sensor?.dir ?? (Math.sign(dx) || 1);
     const localLight = sensor?.localLight ?? scene.lightLevelAt(enemy.x, enemy.y);
+    // Placed/ambient light only (torches, lamps, glow-caps, sky) — deliberately
+    // NOT the player's own headlamp, so a headlamp doesn't trivially repel mobs.
+    const externalLight = scene.externalLightAt ? scene.externalLightAt(enemy.x, enemy.y) : localLight;
     const hpRatio = ML.clamp((enemy.hp || 1) / Math.max(1, enemy.maxHp || 1), 0, 1);
     const playerWeak = (scene.sim.health / Math.max(1, scene.sim.maxHealth) < 0.34)
       || (scene.sim.energy / Math.max(1, scene.sim.maxEnergy) < 0.24)
@@ -71,10 +74,11 @@
       mode = "watch";
     } else if (hpRatio < 0.38 && (ai.courage || 0.5) < 0.75 && localLight > 0.34) {
       mode = "retreat";
-    } else if ((ai.lightFear || 0) > 0.3 && localLight > (0.45 + (ai.courage || 0.5) * 0.2) && !playerWeak) {
-      // Light genuinely deters light-fearing mobs: they back out of bright
-      // pools, so a placed lamp or torch becomes a real tactical tool.
-      mode = "retreat";
+    } else if ((ai.lightFear || 0) > 0.3 && externalLight > (0.45 + (ai.courage || 0.5) * 0.2) && !playerWeak) {
+      // PLACED light deters light-fearing mobs, so lighting an area is a real
+      // tactical tool. Harriers (bats) orbit the edge of the glow; the cautious
+      // (mossling/slime) back out of it entirely.
+      mode = ai.mind === "harrier" ? "circle" : "retreat";
     } else if (ai.mind === "ambusher" && playerDistance > 125 && !playerWeak) {
       mode = "wait";
     } else if (ai.mind === "guardian" && playerDistance > 230) {
