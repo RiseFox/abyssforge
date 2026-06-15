@@ -13,3 +13,11 @@ playwright-report/
 
 .DS_Store
 Thumbs.db
+
+# Large CC0 source packs dropped in for evaluation — only the specific frames
+# referenced by asset-lock.json are force-added (the rest would bloat the repo;
+# the used art is also embedded in js/asset-data.js).
+assets/external/0x72_16x16DungeonTileset/
+assets/external/0x72_DungeonTilesetII/
+assets/external/Pixel Adventure/
+assets/external/Fantasy_Tileset_Expansion_byKingBell.png
