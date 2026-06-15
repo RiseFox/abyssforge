@@ -68,9 +68,11 @@ No hard game-over — it matches the open-expedition tone.
 ## Implemented vs remaining
 
 Implemented: the whole phase ladder, 19 notes, 8 goals, Observer moments, the
-Watcher entity, the monotonic latch, the felt vignette, the finale + choice, and
-the surfaced forge-locks.
+Watcher entity, the monotonic latch, the felt vignette, the finale + choice, the
+surfaced forge-locks, a unified `observerAttention` scalar both systems feed and
+read (rises in the deep dark, decays at camp), and Watcher agency — it leans
+toward the nearest wayfire it is "counting" and can leave a watcher-token when
+you meet its gaze up close.
 
-Remaining polish (optional): unify the Watcher + Observer behind one shared
-`attention` scalar; give the Watcher agency (drift toward anchors, drop a
-watcher-token when you meet its gaze); a full New Game+ that re-themes contracts.
+Remaining (optional): a full New Game+ that re-themes contracts/world from the
+`lore.newGamePlus` flag (the flag is already set when you complete the rescue).
