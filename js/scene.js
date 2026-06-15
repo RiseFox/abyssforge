@@ -2607,7 +2607,19 @@
       ML.audio.play(secret ? "secret" : "chest");
       const label = secret ? "Secret cache" : rolled?.label || cacheProfile?.label || "Chest";
       this.floatText(x * TILE, y * TILE - 6, `${label}!`, secret ? "#d8b6ff" : "#ffe49a");
-      ML.showToast(`${label}: ${parts.join(", ")}.`, 3600);
+      // Concise, game-like loot line: name the standout find (rare/surprise) plus
+      // "+N more", else a count + coins — not a long "+N, +N" technical list (the
+      // pickup icons already show every item entering the inventory).
+      const coins = loot.coin || 0;
+      const NOTABLE = new Set(["relic", "core", "clockwork", "mirrorShard", "strangeKey",
+        "oldCompass", "sealedLetter", "watcherToken", "mapScrap", "gold", "crystal", "obsidian"]);
+      const standout = Object.keys(loot).find((it) => loot[it] && NOTABLE.has(it));
+      const finds = parts.length;
+      const summary = standout
+        ? `${ITEM_META[standout]?.name || standout}${finds > 1 ? ` + ${finds - 1} more` : ""}`
+        : coins ? `${finds} find${finds === 1 ? "" : "s"}, +${coins} coins`
+          : `${finds} find${finds === 1 ? "" : "s"}`;
+      ML.showToast(`${label}: ${summary}.`, 2600);
       this.sim.stats.chests += 1;
       this.checkContract();
       this.checkAchievements();
