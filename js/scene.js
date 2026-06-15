@@ -2387,7 +2387,9 @@
       this.setAction("World opens", 1600);
       this.checkAchievements();
       ML.audio.play("rumble");
-      ML.showToast(`${result.stratumName || "New stratum"} opened: ${result.from}m-${result.to}m.`, 4200);
+      // Atmospheric cue only — no dev-stat numbers (the ABYSS SEAM float + action
+      // already mark the event).
+      ML.showToast(`The ${result.stratumName || "deep"} opens beneath you.`, 3000);
       return true;
     }
 
@@ -2445,7 +2447,8 @@
       this.floatText(this.player.x - 42, this.player.y - 50, side === "left" ? "WEST OPENS" : "EAST OPENS", "#9efff0");
       this.setAction("Horizon opens", 1500);
       ML.audio.play("rumble");
-      ML.showToast(`${side === "left" ? "Western" : "Eastern"} horizon opened: +${result.columns} columns, ${result.chests} caches, ${result.mobs} mobs.`, 3600);
+      // No dev-stat toast (+columns/caches/mobs); the WEST/EAST OPENS float +
+      // action cue the seamless expansion already.
       this.checkAchievements();
       ML.renderAll(this.sim);
       this.saveGame();

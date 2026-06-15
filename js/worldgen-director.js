@@ -393,16 +393,17 @@
   }
 
   function placeRoadBits(sim, spot, rand) {
-    // A flush plank boardwalk laid ON the surface. (Previously it set PLATFORM one
-    // tile ABOVE the ground — a floating run — plus a free-floating WOOD cube: the
-    // classic "random junk in an odd spot" artifact.) Replace the grass cap where
-    // there is solid support and clear air above.
+    // A flush cobbled path on the surface, laid in SOLID stone. (It used to be a
+    // floating PLATFORM run; making it a drop-through platform AS the ground was
+    // worse — standing on it and pressing down dropped the player through the
+    // surface. The ground must stay solid.) Replace the grass cap where there is
+    // solid support and clear air above.
     const len = 3 + Math.floor(rand() * 5);
     for (let i = 0; i < len; i += 1) {
       const x = spot.x + i;
       const y = sim.surfaceFloorY?.(x) ?? spot.y;
       if (!solidAt(sim, x, y) || !clearAbove(sim, x, y, 3)) continue;
-      setTile(sim, x, y, Tile.PLATFORM);
+      setTile(sim, x, y, Tile.STONE);
     }
     return { type: "road", chests: 0, camps: 0 };
   }
