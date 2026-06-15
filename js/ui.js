@@ -888,9 +888,15 @@
     const text = progress
       ? `${progress.current}/${progress.target} ${progress.unit}`
       : `${intel.noteCount}/${intel.totalNotes} notes`;
-    const note = intel.done
+    let note = intel.done
       ? "The mine was built to survive a collapse, not to feed the guild."
       : (goal?.hint || intel.last?.body || "The contracts are not the whole story.");
+    // Once the descent turns (abyss phase), surface the finale gate so there is a
+    // long-term direction toward the truth — the five forge locks.
+    if (!intel.done && intel.phaseIndex >= 4 && ML.LoreSystem.truthProgress) {
+      const locks = ML.LoreSystem.truthProgress(sim);
+      note = `${note}  ·  Forge locks ${locks.current}/${locks.target}`;
+    }
     const width = Math.round((progress?.ratio || 0) * 100);
     const sig = `${title}|${text}|${note}|${width}|${intel.done ? 1 : 0}`;
     if (renderCache.mystery === sig) return;
