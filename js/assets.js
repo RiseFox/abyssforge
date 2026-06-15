@@ -30,7 +30,11 @@
     medipack: "sparklinlabs/ninja-adventure/items/medipack.png",
     hammer: "sparklinlabs/ninja-adventure/weapons/hammer.png",
     dungeonItems: "opengameart/dungeon-items/DungeonItems.png",
-    chestStrip: "opengameart/chest/chest_plain_open_anim-sheet.png"
+    chestStrip: "opengameart/chest/chest_plain_open_anim-sheet.png",
+    dtGoblin: "0x72_DungeonTilesetII/frames/goblin_idle_anim_f0.png",
+    dtOgre: "0x72_DungeonTilesetII/frames/ogre_idle_anim_f0.png",
+    dtBigDemon: "0x72_DungeonTilesetII/frames/big_demon_idle_anim_f0.png",
+    dtBigZombie: "0x72_DungeonTilesetII/frames/big_zombie_idle_anim_f0.png"
   };
 
   const ITEM_ICON_ASSETS = {
@@ -221,6 +225,13 @@
     createNormalizedTexture(scene, "bat", "bat", 26, 20, { pad: 2, scale: 1.16, alignY: 0.5 });
     createNormalizedTexture(scene, "slime", "slime", 28, 20, { pad: 2, scale: 1.3, alignY: 0.68, shadow: true });
     createNormalizedTexture(scene, "crawler", "snake", 30, 18, { pad: 1, scale: 1.05, alignY: 0.68, shadow: true });
+    // Cave bestiary upgraded to 0x72 DungeonTileset II (CC0). Each override keeps
+    // the mob's original canvas frame size so the configured body offsets stay
+    // aligned; only the artwork changes.
+    createNormalizedTexture(scene, "mossling", "dtGoblin", 28, 18, { pad: 2, scale: 1.04, alignY: 0.74, shadow: true });
+    createNormalizedTexture(scene, "golem", "dtOgre", 32, 36, { pad: 2, scale: 1.0, alignY: 0.6, shadow: true });
+    createNormalizedTexture(scene, "warden", "dtBigDemon", 56, 64, { pad: 3, scale: 0.96, alignY: 0.58, shadow: true });
+    createNormalizedTexture(scene, "broodmother", "dtBigZombie", 56, 42, { pad: 3, scale: 1.0, alignY: 0.6, shadow: true });
     createNormalizedTexture(scene, "asset-bone-drop", "skeleton", 24, 22, { pad: 2, scale: 1.08, alignY: 0.62, shadow: true });
     createNormalizedTexture(scene, "asset-heart-full", "fullHeart", 18, 18, { pad: 1, scale: 1.1, alignY: 0.5 });
     createNormalizedTexture(scene, "asset-heart-empty", "emptyHeart", 18, 18, { pad: 1, scale: 1.1, alignY: 0.5 });

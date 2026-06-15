@@ -261,6 +261,46 @@
       "localPath": "assets/external/opengameart/chest/chest_plain_open_anim-sheet.png",
       "bytes": 359,
       "sha256": "60a1ee42896ce034ec457c77630c71276dfcfd5e9cf12344c47e67f0d338ccc3"
+    },
+    {
+      "sourceId": "0x72-dungeontileset-ii",
+      "assetId": "goblin_idle_anim_f0",
+      "role": "cave mob sprite (mossling)",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://0x72.itch.io/dungeontileset-ii",
+      "localPath": "assets/external/0x72_DungeonTilesetII/frames/goblin_idle_anim_f0.png",
+      "bytes": 204,
+      "sha256": "9700edcd1ccde34594a8b3f53304c99e7d627a63835e4133c9679ace04646ce3"
+    },
+    {
+      "sourceId": "0x72-dungeontileset-ii",
+      "assetId": "ogre_idle_anim_f0",
+      "role": "cave mob sprite (golem)",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://0x72.itch.io/dungeontileset-ii",
+      "localPath": "assets/external/0x72_DungeonTilesetII/frames/ogre_idle_anim_f0.png",
+      "bytes": 512,
+      "sha256": "de35e6fe827711e401d568ebee296316869a0d7e3ed15d4f1aa6e0dddb171d10"
+    },
+    {
+      "sourceId": "0x72-dungeontileset-ii",
+      "assetId": "big_demon_idle_anim_f0",
+      "role": "boss sprite (warden)",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://0x72.itch.io/dungeontileset-ii",
+      "localPath": "assets/external/0x72_DungeonTilesetII/frames/big_demon_idle_anim_f0.png",
+      "bytes": 497,
+      "sha256": "d02abfd145917ac647e99b3182762ff3ab966543b7b132ae9191f063d416b4f2"
+    },
+    {
+      "sourceId": "0x72-dungeontileset-ii",
+      "assetId": "big_zombie_idle_anim_f0",
+      "role": "boss sprite (broodmother)",
+      "license": "CC0-1.0",
+      "sourceUrl": "https://0x72.itch.io/dungeontileset-ii",
+      "localPath": "assets/external/0x72_DungeonTilesetII/frames/big_zombie_idle_anim_f0.png",
+      "bytes": 489,
+      "sha256": "cfa24e832f4dd2c205af5a01470d1f1d046346138f43e8340ff740eff15d954c"
     }
   ]
 }
