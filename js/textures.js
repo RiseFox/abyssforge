@@ -281,24 +281,23 @@
     ctx.fillRect(mushX + 19, 12, 4, 3);
 
     const chestX = Tile.CHEST * TILE;
-    ctx.fillStyle = "#6b4a2a";
-    ctx.fillRect(chestX, 2, TILE, TILE - 2);
-    ctx.fillStyle = "#52351c";
-    ctx.fillRect(chestX, 2, TILE, 4);
-    ctx.fillRect(chestX, 14, TILE, 3);
-    ctx.fillStyle = "#d8b25c";
-    ctx.fillRect(chestX + 12, 11, 8, 9);
-    ctx.fillStyle = "#7a5a22";
-    ctx.fillRect(chestX + 14, 14, 4, 4);
-    ctx.strokeStyle = "rgba(0,0,0,0.4)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(chestX + 1, 3, TILE - 2, TILE - 4);
-    ML.ExternalAssets?.drawRawInto?.(scene, ctx, "chestClosed", chestX, 0, TILE, TILE, {
-      pad: 4,
-      scale: 1.18,
-      alignY: 0.66,
-      shadow: true
-    });
+    // Hand-drawn wooden chest (crisp pixel art; the CC0 overlay normalized into
+    // an unreadable blob, so it is gone). The cache prop sprites use matching art.
+    ctx.clearRect(chestX, 0, TILE, TILE);
+    ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.fillRect(chestX + 5, 29, 22, 2);
+    ctx.fillStyle = "#7a4f28"; ctx.fillRect(chestX + 5, 17, 22, 11);          // body
+    ctx.fillStyle = "#5d3b1d"; ctx.fillRect(chestX + 5, 26, 22, 2);           // body shadow
+    ctx.fillRect(chestX + 12, 17, 1, 11); ctx.fillRect(chestX + 20, 17, 1, 11); // plank seams
+    ctx.fillStyle = "#7a4f28"; ctx.fillRect(chestX + 4, 9, 24, 8);            // lid
+    ctx.fillStyle = "#9a6836"; ctx.fillRect(chestX + 4, 9, 24, 1);            // lid highlight
+    ctx.fillStyle = "#5d3b1d"; ctx.fillRect(chestX + 4, 15, 24, 2);           // lid-body seam
+    ctx.fillStyle = "#3a3942"; ctx.fillRect(chestX + 7, 9, 3, 19); ctx.fillRect(chestX + 22, 9, 3, 19); // iron bands
+    ctx.fillStyle = "#5b5a64"; ctx.fillRect(chestX + 7, 9, 1, 19); ctx.fillRect(chestX + 22, 9, 1, 19); // band light
+    ctx.fillStyle = "#d8b25c"; ctx.fillRect(chestX + 13, 13, 6, 7);           // brass lock
+    ctx.fillStyle = "#9c7a2e"; ctx.fillRect(chestX + 13, 13, 6, 1);
+    ctx.fillStyle = "#241608"; ctx.fillRect(chestX + 15, 16, 2, 3);           // keyhole
+    ctx.strokeStyle = "rgba(28,18,10,0.85)"; ctx.lineWidth = 1;
+    ctx.strokeRect(chestX + 4.5, 9.5, 23, 7); ctx.strokeRect(chestX + 5.5, 17.5, 21, 10);
 
     const campX = Tile.CAMPFIRE * TILE;
     ctx.clearRect(campX, 0, TILE, TILE);
@@ -1250,6 +1249,81 @@
     // canvas texture exists — otherwise late canvases (golem/warden/broodmother/
     // campKeeper) would clobber the override.
     ML.ExternalAssets?.makeRuntimeTextures?.(scene);
+
+    // Crisp hand-drawn loot caches override the CC0-normalized sprites (which
+    // scaled up into unreadable blobs). One 32x32 canvas per variant + open
+    // state, registered under the same asset-cache-* keys the prop pool uses.
+    {
+      const px = (g, c, x, y, w, h) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
+      const outline = (g, x, y, w, h) => { g.strokeStyle = "rgba(28,18,10,0.85)"; g.lineWidth = 1; g.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1); };
+      const cacheTex = (key, draw) => {
+        const t = freshCanvasTexture(key, 32, 32);
+        const g = t.getContext();
+        g.clearRect(0, 0, 32, 32);
+        g.fillStyle = "rgba(0,0,0,0.25)";
+        g.beginPath(); g.ellipse(16, 30, 11, 2.6, 0, 0, Math.PI * 2); g.fill();
+        draw(g);
+        t.refresh();
+      };
+      const drawChest = (g, p, open) => {
+        px(g, p.body, 5, 17, 22, 11);
+        px(g, p.bodyD, 5, 26, 22, 2);
+        px(g, p.bodyD, 12, 17, 1, 11); px(g, p.bodyD, 20, 17, 1, 11);
+        outline(g, 5, 17, 22, 11);
+        if (open) {
+          px(g, "#1a1109", 7, 12, 18, 6);
+          px(g, p.glint, 11, 14, 3, 3); px(g, "#fff7d6", 12, 14, 1, 1);
+          px(g, p.body, 4, 7, 24, 4); px(g, p.bodyL, 4, 7, 24, 1);
+          outline(g, 4, 7, 24, 4);
+        } else {
+          px(g, p.body, 4, 9, 24, 8);
+          px(g, p.bodyL, 4, 9, 24, 1);
+          px(g, p.bodyD, 4, 15, 24, 2);
+          outline(g, 4, 9, 24, 8);
+          px(g, "#3a3942", 7, 9, 3, 19); px(g, "#3a3942", 22, 9, 3, 19);
+          px(g, "#5b5a64", 7, 9, 1, 19); px(g, "#5b5a64", 22, 9, 1, 19);
+          px(g, p.lock, 13, 13, 6, 7); px(g, p.lockD, 13, 13, 6, 1);
+          px(g, "#241608", 15, 16, 2, 3);
+        }
+      };
+      const WOOD = { body: "#7a4f28", bodyD: "#5d3b1d", bodyL: "#9a6836", lock: "#d8b25c", lockD: "#9c7a2e", glint: "#ffe49a" };
+      const GOLD = { body: "#c79234", bodyD: "#9a6e1f", bodyL: "#ecc063", lock: "#fff0a8", lockD: "#c79a3a", glint: "#bff6ff" };
+      cacheTex("asset-cache-chest", g => drawChest(g, WOOD, false));
+      cacheTex("asset-cache-chest-open", g => drawChest(g, WOOD, true));
+      cacheTex("asset-cache-rare", g => drawChest(g, GOLD, false));
+      cacheTex("asset-cache-rare-open", g => drawChest(g, GOLD, true));
+
+      const drawCrate = (g, open) => {
+        const wood = "#9a6f3c", woodD = "#6f4d27", woodL = "#b98a4f";
+        px(g, wood, 5, 7, 22, 21);
+        px(g, woodL, 5, 7, 22, 1); px(g, woodD, 5, 26, 22, 2);
+        px(g, woodD, 5, 7, 22, 2); px(g, woodD, 5, 14, 22, 2); px(g, woodD, 5, 20, 22, 2);
+        px(g, woodD, 5, 7, 2, 21); px(g, woodD, 25, 7, 2, 21);
+        g.strokeStyle = woodL; g.lineWidth = 2;
+        g.beginPath(); g.moveTo(8, 9); g.lineTo(24, 25); g.moveTo(24, 9); g.lineTo(8, 25); g.stroke();
+        outline(g, 5, 7, 22, 21);
+        if (open) { px(g, "#1a1109", 8, 8, 16, 6); px(g, "#ffe49a", 11, 9, 3, 3); }
+      };
+      cacheTex("asset-cache-crate", g => drawCrate(g, false));
+      cacheTex("asset-cache-crate-open", g => drawCrate(g, true));
+
+      const drawBarrel = (g, open) => {
+        const wood = "#8a5e30", woodD = "#5f3f1f", woodL = "#a9783f", hoop = "#4a4751", hoopL = "#6c6873";
+        for (let y = 6; y < 29; y += 1) {
+          const t = (y - 6) / 22, bulge = Math.sin(t * Math.PI) * 2.4;
+          px(g, wood, Math.round(8 - bulge), y, Math.round(16 + bulge * 2), 1);
+        }
+        px(g, woodD, 8, 7, 2, 21); px(g, woodL, 15, 7, 2, 21);
+        px(g, woodD, 13, 7, 1, 21); px(g, woodD, 19, 7, 1, 21);
+        px(g, hoop, 6, 10, 20, 2); px(g, hoopL, 6, 10, 20, 1);
+        px(g, hoop, 6, 22, 20, 2); px(g, hoopL, 6, 22, 20, 1);
+        g.fillStyle = open ? "#1a1109" : woodL;
+        g.beginPath(); g.ellipse(16, 7, 8, 2.4, 0, 0, Math.PI * 2); g.fill();
+        if (open) { px(g, "#ffe49a", 14, 6, 3, 2); }
+      };
+      cacheTex("asset-cache-barrel", g => drawBarrel(g, false));
+      cacheTex("asset-cache-barrel-open", g => drawBarrel(g, true));
+    }
   }
 
   ML.makeTextures = makeTextures;

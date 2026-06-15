@@ -977,6 +977,16 @@
         this.lampDemand = 0;
         return;
       }
+      // Under the open sky (at or above the surface line) the headlamp runs FREE:
+      // it still lights the way at night, it just never burns cells up here — only
+      // roofed-in darkness below the surface actually drains the battery.
+      const col = clamp(Math.floor(this.player.x / TILE), 0, this.worldWidthTiles() - 1);
+      const playerRow = Math.floor(this.player.y / TILE);
+      const surfRow = this.sim.surface?.[col] ?? 24;
+      if (playerRow <= surfRow) {
+        this.lampDemand = 0;
+        return;
+      }
 
       const eventRelief = this.caveEvent?.id === "lanternDraft" ? 0.55 : 1;
       const demand = clamp((0.52 + depth / 260 + Math.max(0, 0.52 - outsideLight) * 1.15) * eventRelief, 0.2, 1.55);

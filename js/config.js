@@ -8,7 +8,7 @@ window.ML = window.ML || {};
   const WORLD_H = 300;
   const HORIZONTAL_EXPAND_COLUMNS = 96;
   const AIR = -1;
-  const DAY_LENGTH = 240; // seconds for a full day/night cycle
+  const DAY_LENGTH = 600; // seconds for a full day/night cycle (~5 min day, ~5 min night)
 
   const Tile = {
     GRASS: 0,
