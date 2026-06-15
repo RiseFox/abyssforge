@@ -3523,12 +3523,13 @@
       const depth = this.depthMeters();
       const stratum = this.currentStratum();
       // echoVein is a light beneficial reveal that isn't in the per-stratum weight
-      // tables; give it an occasional roll at depth so it actually shows up.
-      if (depth > 20 && Math.random() < 0.18) return "echoVein";
+      // tables; give it an occasional roll, available early so the first stretch
+      // has more than two event types and new diggers get a helpful seam ping.
+      if (depth > 10 && Math.random() < 0.18) return "echoVein";
       const weighted = this.sim.weightedPick?.(stratum?.events, Math.random);
       if (weighted) return weighted;
       const pool = ["oreSurge", "lanternDraft"];
-      if (depth > 20) pool.push("echoVein");
+      if (depth > 10) pool.push("echoVein");
       if (depth > 24) pool.push("swarm");
       if (depth > 58) pool.push("tremor");
       return pool[Math.floor(Math.random() * pool.length)];
@@ -3574,7 +3575,8 @@
       if (id === "lanternDraft") this.floatText(this.player.x - 22, this.player.y - 40, "DRAFT", "#9edbe2");
       if (copy.float) this.floatText(this.player.x - 30, this.player.y - 56, copy.float, "#9efff0");
 
-      ML.audio.play("event");
+      // echoVein gets the discovery ping (a seam reveal), not the generic event tone.
+      ML.audio.play(id === "echoVein" ? "secret" : "event");
       ML.showToast(`${copy.name}: ${copy.note}`, 3900);
       ML.renderEvent(this);
       this.checkAchievements();
