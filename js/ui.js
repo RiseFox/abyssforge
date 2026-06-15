@@ -116,6 +116,8 @@
   const mobile = { left: false, right: false, jumpTap: false, mineTap: false, placeTap: false, attackTap: false };
 
   let toastTimer = 0;
+  let lastToastMessage = "";
+  let lastToastAt = 0;
   let craftTab = "tools";
   let minimapOpen = false;
   let lastFlashAt = 0;
@@ -264,8 +266,14 @@
     }
   }
 
-  function showToast(message, ms = 2000) {
+  function showToast(message, ms = 2600) {
     if (!ui.toast) return;
+    const now = performance.now();
+    // Dedupe: don't re-show the same message back to back (kills the "same hint
+    // every 2-3s" churn) but never block a different, possibly-important toast.
+    if (message === lastToastMessage && now - lastToastAt < 6000) return;
+    lastToastMessage = message;
+    lastToastAt = now;
     ui.toast.textContent = message;
     ui.toast.classList.add("visible");
     clearTimeout(toastTimer);

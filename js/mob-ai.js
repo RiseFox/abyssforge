@@ -8,6 +8,15 @@
   "use strict";
   const ML = window.ML;
 
+  // Short, varied, lowercase callouts — atmospheric, not a "SEES/HEARS" stream.
+  const MOB_BARKS = {
+    pressure: ["closing in", "it lunges", "scents blood", "no escape"],
+    retreat: ["it recoils", "backing off", "thinks twice"],
+    stalk: ["it heard that", "on your trail", "drawn closer"],
+    study: ["it studies you", "curious", "drawn to it"],
+    guard: ["it bristles", "warding the find"]
+  };
+
   function decide(scene, enemy, now = scene.time.now) {
     const ENEMIES = ML.ENEMIES;
     if (enemy.nextThinkAt && now < enemy.nextThinkAt && enemy.intent) return enemy.intent;
@@ -101,18 +110,25 @@
       targetY
     };
     enemy.nextThinkAt = now + Phaser.Math.Between(240, 420);
-    if (enemy.lastIntentMode !== mode && now > (enemy.intentToastAt || 0)) {
-      enemy.intentToastAt = now + 4200;
-      enemy.lastIntentMode = mode;
-      if (mode === "stalk" && sensor?.heardNoise && playerDistance < 320) scene.floatText(enemy.x - 18, enemy.y - 24, "HEARS", "#d8b6ff");
-      if (poiCurious && playerDistance < 360) scene.floatText(enemy.x - 20, enemy.y - 25, mode === "guard" ? "GUARDS" : "STUDIES", "#9efff0");
-      if (mode === "pressure" && playerDistance < 260) scene.floatText(enemy.x - 18, enemy.y - 26, "HUNTS", "#f0c75e");
-      if (mode === "retreat" && playerDistance < 220) scene.floatText(enemy.x - 16, enemy.y - 24, "FLEES", "#9efff0");
-      if (mode === "watch") {
-        scene.floatText(enemy.x - 24, enemy.y - 28, "SEES", "#d8b6ff");
-        scene.triggerObserverMoment("mobStare", { enemy });
+    // Bark sparingly: at most one short, varied callout every several seconds
+    // across ALL mobs (a global cooldown), only for a nearby mob on a real new
+    // intent — never the old per-mob "SEES/HEARS" stream, and no sound.
+    const changed = enemy.lastIntentMode !== mode;
+    enemy.lastIntentMode = mode;
+    if (changed && playerDistance < 230 && now > (scene.nextMobBarkAt || 0)) {
+      let pool = null;
+      let color = "#d8b6ff";
+      if (mode === "pressure") { pool = MOB_BARKS.pressure; color = "#f0c75e"; }
+      else if (mode === "retreat") { pool = MOB_BARKS.retreat; color = "#9efff0"; }
+      else if (mode === "stalk" && sensor?.heardNoise) { pool = MOB_BARKS.stalk; }
+      else if (poiCurious) { pool = mode === "guard" ? MOB_BARKS.guard : MOB_BARKS.study; color = "#9efff0"; }
+      if (pool) {
+        scene.nextMobBarkAt = now + Phaser.Math.Between(7000, 12000);
+        scene.floatText(enemy.x - 20, enemy.y - 26, pool[Math.floor(Math.random() * pool.length)], color);
       }
     }
+    // The Watcher "stare" rides its own rare observer cadence (no bark spam).
+    if (mode === "watch" && changed) scene.triggerObserverMoment("mobStare", { enemy });
     return enemy.intent;
   }
 
