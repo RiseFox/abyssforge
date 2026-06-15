@@ -33,11 +33,12 @@ The player should always have a practical reason to continue: a better pick, a s
 | Depth strata | 5 strata |
 | Surface regions | 6 region types |
 | Chest loot tables | 12 contextual tables |
-| Cave events | 4 event families |
+| Cave events | 5 event families |
 | Enemy archetypes | 7 mob/boss types |
-| Hidden lore | 19 notes, 8 goals |
-| External asset layer | 25 packed CC0 image assets, 48 normalized runtime textures, 24 derived UI item icons |
-| Animated world props | Pooled cache, ore glint, campfire, torch, glow-cap, and mob-wake overlays |
+| Hidden lore | 19 notes, 8 goals, 7 story phases |
+| Meta / fourth-wall | 5 Observer moments, 5-lock forge finale with a soft reveal + choice |
+| External asset layer | 30 packed CC0 image assets, 53 normalized runtime textures, 24 derived UI item icons |
+| Animated world props | Pooled cache, ore glint, campfire, torch, glow-cap, mob-wake, and surface-critter overlays |
 
 ## Game Pillars
 
@@ -66,6 +67,8 @@ Biomes are runtime systems, not decorative names. They affect light floors, reco
 ### 5. The Mine Watches Back
 
 The hidden story is intentionally not frontloaded. Field notes unlock through suspicious depths, secret caches, strange biomes, campfire anchors, boss progress, and Watcher sightings. The Watcher does not attack. It appears at the edge of vision, retreats from strong light and camps, leaves traces, and slowly reframes the mine as something built for more than ore.
+
+Underneath the Watcher sits a slower fourth-wall arc. A single "attention" — the broken rescue engine mistaking the only hand that still moves the dark for the rescue it was built to wait for — surfaces as three faces: the **Watcher** (the attention given a body), the **Observer moments** (the same attention leaking *through the screen* to address the real player, made felt as a closing screen vignette), and the **Warden** (a separate in-world boss). The story runs a monotonic phase ladder (`contract → signal → witness → conspiracy → abyss → frame → truth`) and ends with a soft reveal: when all five **forge locks** click, the forge addresses the player directly and offers a choice — complete the rescue, or keep mining. No hard game-over. The full design is recorded in [docs/META.md](docs/META.md).
 
 ![AbyssForge hidden Watcher lore](docs/images/abyssforge-hidden-lore.png)
 
@@ -119,6 +122,7 @@ AbyssForge now uses a dedicated **WorldGen Director** instead of scattering ever
 
 ## Core Systems
 
+- **Movement:** run, sprint, climb, and a base **double jump** (a third jump unlocks with crafted Cave boots), plus drop-through on normal platforms. Locomotion lives in its own `js/character.js` module.
 - **Mining and placement:** blocks, ladders, platforms, torches, charges, glow caps, and usable kits.
 - **Crafting progression:** recipe visibility opens through discovery, not a full catalog dump on spawn.
 - **Backpack and quick belt:** the bottom bar is immediate access; the backpack is the larger material memory.
@@ -128,10 +132,12 @@ AbyssForge now uses a dedicated **WorldGen Director** instead of scattering ever
 - **Campfires:** rest, heal, recover energy, set respawn anchors, and support recall routes.
 - **Contracts:** short expedition orders provide direction and rewards.
 - **Achievements:** unlocks track survival, depth, crafting, exploration, secrets, lore, and anomalies.
-- **Enemy ecology:** cave mobs, surface mobs, bosses, and ambushes have spawn rules by layer, depth, biome, and sightline.
+- **Enemy ecology:** cave mobs, surface mobs, bosses, and ambushes have spawn rules by layer, depth, biome, and sightline; deeper mobs use packed CC0 sprites for distinct silhouettes.
 - **Smarter mobs:** enemies react to light, noise, weakness, allies, line of sight, nearby POI, and their own health.
-- **Cave events:** ore surge, lantern draft, depth swarm, and tremor events vary with story phase.
-- **Hidden lore:** field notes, mystery panel, wayfire goals, cache marks, Warden clues, and Watcher sightings.
+- **Surface life:** ambient critters (birds, beetles) and a camp keeper give the overworld inhabitants instead of empty terrain.
+- **Underground setpieces:** geodes, bone beds, fossils, derelict pumps, shrines, and forge marks surface as readable deep objects, not just ore.
+- **Cave events:** ore surge, lantern draft, depth swarm, tremor, and echo-vein events vary with story phase.
+- **Hidden lore:** field notes, mystery panel, wayfire goals, cache marks, Warden clues, Watcher sightings, Observer moments, and the forge-lock finale.
 - **Situational music:** surface, night, cave, danger, treasure, camp, deep, and boss moods.
 - **Performance guardrails:** cached HUD rendering, throttled lightmap redraws, and Playwright FPS/frame-time checks.
 
@@ -140,7 +146,7 @@ AbyssForge now uses a dedicated **WorldGen Director** instead of scattering ever
 | Input | Action |
 | --- | --- |
 | `A` / `D` | Move left and right |
-| `W` / `Space` | Jump or climb up |
+| `W` / `Space` | Jump or climb up (double jump in the air; triple with Cave boots) |
 | `S` | Climb down ladders or drop through normal platforms |
 | `Shift` | Sprint while energy allows |
 | Left mouse | Mine blocks or hit an enemy under the cursor |
@@ -192,6 +198,8 @@ npm run assets:all
 - `js/worldgen-director.js` - surface regions, landmark pacing, chest loot tables, and spawn budgets.
 - `js/progression.js` - item knowledge, hotbar disclosure, recipe gates, and discovery signatures.
 - `js/sim.js` - pure world simulation, generation, saves, inventory, crafting, contracts, mobs, and spawn repair.
+- `js/character.js` - player locomotion: walk, sprint, jump (double/triple), ladder climbing, and lava interaction.
+- `js/lore.js` - story phases, field notes, hidden goals, Observer moments, and the monotonic reveal ladder.
 - `js/biomes.js` - biome definitions, detection, lore, and gameplay properties.
 - `js/poi.js` - surface and underground discoveries, readable marks, and placement rules.
 - `js/camp.js` - campfire proximity, anchors, respawn, recall, and services.
@@ -207,6 +215,7 @@ npm run assets:all
 - `scripts/verify-asset-visuals.js` - runtime visual smoke gate for external cache props and recover FX.
 - `scripts/capture-readme-images.js` - repeatable screenshot capture for README images.
 - `docs/ASSET_PIPELINE.md` - production bar for source intake, normalization, derived icons, and asset gates.
+- `docs/META.md` - the Observer / story-phase / goal / finale design and what is implemented.
 
 ## Direction
 
