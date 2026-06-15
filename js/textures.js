@@ -377,6 +377,43 @@
     ctx.fillRect(fossilX + 13, 14, 2, 4);
     bevel(Tile.FOSSIL, "rgba(255,220,150,0.12)", "rgba(0,0,0,0.42)");
 
+    // --- Underground POI markers (distinct focal objects per discovery type) ---
+    // Old pump: a rusty machine with a valve and gauge.
+    const pumpX = Tile.PUMP * TILE;
+    ctx.clearRect(pumpX, 0, TILE, TILE);
+    ctx.fillStyle = "rgba(0,0,0,0.24)"; ctx.fillRect(pumpX + 5, 28, 22, 3);
+    ctx.fillStyle = "#5d6970"; ctx.fillRect(pumpX + 8, 12, 16, 16);
+    ctx.fillStyle = "#76848c"; ctx.fillRect(pumpX + 8, 12, 16, 3);
+    ctx.fillStyle = "#3f484e"; ctx.fillRect(pumpX + 8, 25, 16, 3);
+    ctx.fillStyle = "#8a5a32"; ctx.fillRect(pumpX + 10, 16, 2, 8); ctx.fillRect(pumpX + 20, 15, 2, 9); // rust
+    ctx.fillStyle = "#4a545a"; ctx.fillRect(pumpX + 14, 5, 4, 8); // pipe
+    ctx.fillStyle = "#2d3338"; ctx.fillRect(pumpX + 11, 6, 10, 2); ctx.fillRect(pumpX + 15, 3, 2, 6); // valve
+    ctx.fillStyle = "#9aa6ad"; ctx.fillRect(pumpX + 13, 18, 6, 3); // gauge
+    ctx.fillStyle = "#e0533a"; ctx.fillRect(pumpX + 15, 18, 1, 3);
+
+    // Wayfire shrine: a soot-marked stone altar with a small flame (glows).
+    const shrineX = Tile.SHRINE * TILE;
+    ctx.clearRect(shrineX, 0, TILE, TILE);
+    ctx.fillStyle = "rgba(0,0,0,0.24)"; ctx.fillRect(shrineX + 6, 28, 20, 3);
+    ctx.fillStyle = "#6e6b63"; ctx.fillRect(shrineX + 8, 18, 16, 10);
+    ctx.fillStyle = "#827e74"; ctx.fillRect(shrineX + 8, 18, 16, 2);
+    ctx.fillStyle = "#4f4c45"; ctx.fillRect(shrineX + 8, 26, 16, 2);
+    ctx.fillStyle = "#3a372f"; ctx.fillRect(shrineX + 11, 15, 10, 4); // bowl
+    ctx.fillStyle = "#f7d276"; ctx.fillRect(shrineX + 14, 8, 4, 8); // flame core
+    ctx.fillStyle = "#f0883c"; ctx.fillRect(shrineX + 12, 11, 3, 5); ctx.fillRect(shrineX + 17, 10, 3, 6);
+    ctx.fillStyle = "#9d3a24"; ctx.fillRect(shrineX + 15, 12, 2, 4);
+    ctx.fillStyle = "#2a2620"; ctx.fillRect(shrineX + 10, 22, 2, 2); ctx.fillRect(shrineX + 20, 23, 2, 2); // soot
+
+    // Forge cache mark: a plaque on a post stamped with the forge sigil.
+    const fmX = Tile.FORGEMARK * TILE;
+    ctx.clearRect(fmX, 0, TILE, TILE);
+    ctx.fillStyle = "rgba(0,0,0,0.24)"; ctx.fillRect(fmX + 8, 28, 16, 3);
+    ctx.fillStyle = "#6e431f"; ctx.fillRect(fmX + 14, 14, 5, 15); // post
+    ctx.fillStyle = "#b8923f"; ctx.fillRect(fmX + 6, 6, 20, 12); // plaque
+    ctx.fillStyle = "#8a6a28"; ctx.fillRect(fmX + 6, 6, 20, 2); ctx.fillRect(fmX + 6, 16, 20, 2);
+    ctx.fillStyle = "#3a2c14"; ctx.fillRect(fmX + 11, 9, 10, 3); ctx.fillRect(fmX + 14, 9, 4, 6); // forge stamp
+    ctx.fillStyle = "#f0c75e"; ctx.fillRect(fmX + 12, 10, 2, 1);
+
     tiles.refresh();
 
     const drawLightPropTextures = () => {

@@ -38,7 +38,10 @@ window.ML = window.ML || {};
     VOIDGLASS: 24,
     GEODE: 25,
     BONES: 26,
-    FOSSIL: 27
+    FOSSIL: 27,
+    PUMP: 28,
+    SHRINE: 29,
+    FORGEMARK: 30
   };
 
   // light: glow radius in tiles for the lightmap; hazard: damage per second on contact.
@@ -70,7 +73,10 @@ window.ML = window.ML || {};
     [Tile.VOIDGLASS]: { name: "Voidglass seam", drop: "voidglass", hardness: 3.35, tier: 5, solid: true, light: 0.45 },
     [Tile.GEODE]: { name: "Geode pocket", drop: "crystal", hardness: 2.1, tier: 3, solid: true, light: 0.7 },
     [Tile.BONES]: { name: "Lost miner", drop: "coin", hardness: 0.55, tier: 1, solid: true },
-    [Tile.FOSSIL]: { name: "Amber fossil", drop: "amber", hardness: 1.4, tier: 2, solid: true }
+    [Tile.FOSSIL]: { name: "Amber fossil", drop: "amber", hardness: 1.4, tier: 2, solid: true },
+    [Tile.PUMP]: { name: "Old pump", drop: "iron", hardness: 0.7, tier: 1, solid: false, readable: true },
+    [Tile.SHRINE]: { name: "Wayfire shrine", drop: "stone", hardness: 0.7, tier: 1, solid: false, readable: true, light: 1.4 },
+    [Tile.FORGEMARK]: { name: "Forge cache mark", drop: "wood", hardness: 0.35, tier: 1, solid: false, readable: true }
   };
 
   const SOLID_TILES = Object.keys(BLOCKS).map(Number).filter((id) => BLOCKS[id].solid);
@@ -104,7 +110,10 @@ window.ML = window.ML || {};
     [Tile.VOIDGLASS]: 0x6f63ff,
     [Tile.GEODE]: 0x9efff0,
     [Tile.BONES]: 0xcfc8b0,
-    [Tile.FOSSIL]: 0xe1a84d
+    [Tile.FOSSIL]: 0xe1a84d,
+    [Tile.PUMP]: 0x7a8a93,
+    [Tile.SHRINE]: 0xf0a84d,
+    [Tile.FORGEMARK]: 0xc7924c
   };
 
   // Minimap pixel colors.
@@ -136,7 +145,10 @@ window.ML = window.ML || {};
     [Tile.VOIDGLASS]: "#5244b8",
     [Tile.GEODE]: "#7be3d4",
     [Tile.BONES]: "#cfc8b0",
-    [Tile.FOSSIL]: "#d69445"
+    [Tile.FOSSIL]: "#d69445",
+    [Tile.PUMP]: "#6f7d86",
+    [Tile.SHRINE]: "#caa258",
+    [Tile.FORGEMARK]: "#b88a4a"
   };
 
   const ITEM_META = {

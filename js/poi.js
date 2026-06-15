@@ -86,7 +86,7 @@
     const x = clamp(Math.floor(options.x), 2, Math.max(2, widthOf(sim) - 3));
     const y = clamp(Math.floor(options.y), 2, Math.max(2, heightOf(sim) - 3));
     if (!solidAt(sim, x, y + 1) || !hasClearance(sim, x, y, 3)) return null;
-    setTile(sim, x, y, Tile.SIGN);
+    setTile(sim, x, y, options.tile || Tile.SIGN);
     const discovery = {
       id: discoveryId(sim, options.scope || "surface", options.type || "sign", x, y, rand),
       scope: options.scope || "surface",
@@ -314,6 +314,12 @@
     if (type !== "shrine") placeIfOpen(sim, chestX, room.y, Tile.CHEST);
     if (type === "cache") placeIfOpen(sim, room.left + 1, room.y, Tile.TORCH);
 
+    // Distinct focal tile per POI type so survey/pump/shrine/cache read
+    // differently in-world instead of all being the same sign.
+    const poiTile = type === "pump" ? Tile.PUMP
+      : type === "shrine" ? Tile.SHRINE
+        : type === "cache" ? Tile.FORGEMARK
+          : Tile.SIGN;
     return addDiscovery(sim, {
       scope: "underground",
       type,
@@ -323,6 +329,7 @@
       x: signX,
       y: room.y,
       source: ctx.source || "depth",
+      tile: poiTile,
       rand: ctx.rand || Math.random
     });
   }

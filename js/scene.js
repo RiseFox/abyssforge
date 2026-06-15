@@ -1862,7 +1862,7 @@
         }, chest.distance, 0.08);
       }
 
-      const sign = this.nearestTileObject((tile) => tile === Tile.SIGN, INTERACT_RANGE_TILES);
+      const sign = this.nearestTileObject((tile) => BLOCKS[tile]?.readable, INTERACT_RANGE_TILES);
       if (sign) {
         const discovery = this.sim.surfaceDiscoveryAt?.(sign.x, sign.y);
         pushCandidate({
@@ -1982,7 +1982,7 @@
       const py = this.player.y / TILE;
       const visible = [];
       for (const discovery of this.sim.surfaceDiscoveries) {
-        if (this.sim.tileAt(discovery.x, discovery.y) !== Tile.SIGN) continue;
+        if (!BLOCKS[this.sim.tileAt(discovery.x, discovery.y)]?.readable) continue;
         if (discovery.x < minX || discovery.x > maxX || discovery.y < minY || discovery.y > maxY) continue;
         const distance = Math.hypot(discovery.x + 0.5 - px, discovery.y + 0.5 - py);
         visible.push({ discovery, distance });
@@ -2893,7 +2893,7 @@
       let bestDistance = Infinity;
       for (const discovery of this.sim.surfaceDiscoveries) {
         if (discovery.scope !== "underground" || discovery.read) continue;
-        if (this.sim.tileAt(discovery.x, discovery.y) !== Tile.SIGN) continue;
+        if (!BLOCKS[this.sim.tileAt(discovery.x, discovery.y)]?.readable) continue;
         const wx = discovery.x * TILE + TILE / 2;
         const wy = discovery.y * TILE + TILE / 2;
         const distance = Phaser.Math.Distance.Between(enemy.x, enemy.y, wx, wy);
