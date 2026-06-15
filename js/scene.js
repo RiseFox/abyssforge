@@ -895,6 +895,14 @@
       return this.sim.stratumAt(Math.floor(this.player.x / TILE), Math.floor(this.player.y / TILE));
     }
 
+    activeMobCap() {
+      // Active-on-screen cap derived from the current stratum's resident mobCap
+      // (18..30) so the per-depth difficulty curve actually reaches the player,
+      // instead of a flat magic 12. Clamped to a sane on-screen range.
+      const cap = this.currentStratum()?.mobCap;
+      return cap ? clamp(Math.round(cap * 0.5), 10, 16) : 12;
+    }
+
     biomeName() {
       return this.currentBiome()?.name || "Surface";
     }
@@ -2950,7 +2958,7 @@
     }
 
     summonMinion(enemy, kind) {
-      if (this.enemies.countActive(true) >= 12) return;
+      if (this.enemies.countActive(true) >= this.activeMobCap() + 2) return;
       const dir = this.player.x < enemy.x ? -1 : 1;
       const tx = clamp(Math.floor(enemy.x / TILE) + dir * 2, 2, this.worldWidthTiles() - 3);
       const ty = clamp(Math.floor(enemy.y / TILE), 2, this.worldHeightTiles() - 3);
@@ -2997,6 +3005,36 @@
       if (this.surfaceBrightness() >= 0.46) this.despawnSurfaceMobs(); // raiders burrow away as day breaks
       else this.maybeNightRaid();
       this.refreshMobActivation();
+      this.maybeAmbientSpawn();
+    }
+
+    maybeAmbientSpawn() {
+      // Near-player presence floor: deep exploration thinned out into long empty
+      // stretches once you killed the local residents (permanent death + far,
+      // slow repop). When the area is sparse, quietly stage ONE resident-style
+      // mob just off-screen so it's never feast-or-famine — without bursting.
+      if (this.depthMeters() < 14) return;            // surface/shallow uses night raids
+      if (this.caveEvent || this.hasActiveBoss?.()) return; // events/bosses crowd on their own
+      const cap = this.activeMobCap();
+      const active = this.enemies.countActive(true) + this.pendingMobSpawns.size;
+      if (active >= Math.max(2, Math.round(cap * 0.3))) return;
+      const now = this.time.now || 0;
+      if (now < (this.nextAmbientSpawnAt || 0)) return;
+      this.nextAmbientSpawnAt = now + 3500;
+      const px = Math.floor(this.player.x / TILE);
+      const py = Math.floor(this.player.y / TILE);
+      for (let tries = 0; tries < 24; tries += 1) {
+        const dir = Math.random() < 0.5 ? -1 : 1;
+        const x = clamp(px + dir * Phaser.Math.Between(20, 30), 3, this.worldWidthTiles() - 4);
+        const y = clamp(py + Phaser.Math.Between(-6, 8), 5, this.worldHeightTiles() - 6);
+        const picked = this.sim.pickMobForSpot(x, y, Math.random, {});
+        if (!picked) continue;
+        const mob = this.sim.addMob(x, picked.y, picked.kind, {});
+        const spot = this.findMobSpot(mob);
+        if (!spot) { this.sim.mobs = this.sim.mobs.filter((m) => m.id !== mob.id); continue; }
+        this.queueMobMaterialize(mob, spot, { delay: Phaser.Math.Between(900, 1300), reason: "ambient" });
+        return;
+      }
     }
 
     refreshMobActivation() {
@@ -3020,7 +3058,7 @@
 
       // Wake dormant mobs whose homes are just off-screen.
       for (const mob of this.sim.mobs) {
-        if (this.enemies.countActive(true) + this.pendingMobSpawns.size >= 12) break;
+        if (this.enemies.countActive(true) + this.pendingMobSpawns.size >= this.activeMobCap()) break;
         if (this.activeMobIds.has(mob.id)) continue;
         if (this.pendingMobSpawns.has(mob.id)) continue;
         if (Math.abs(mob.x - px) > wakeX || Math.abs(mob.y - py) > wakeY) continue;
@@ -3184,7 +3222,7 @@
           }
         }
         if (this.time.now < pending.readyAt) continue;
-        if (this.enemies.countActive(true) >= 12) continue;
+        if (this.enemies.countActive(true) >= this.activeMobCap()) continue;
         this.cancelPendingMobSpawn(id, false);
         this.materializeMob(pending.mob, { spot: pending.spot, staged: true });
       }
@@ -3439,7 +3477,7 @@
     }
 
     spawnEventMob(kind, elite = false) {
-      if (this.enemies.countActive(true) >= 14) return false;
+      if (this.enemies.countActive(true) >= this.activeMobCap() + 2) return false;
       const px = Math.floor(this.player.x / TILE);
       const py = Math.floor(this.player.y / TILE);
       for (let tries = 0; tries < 32; tries += 1) {
