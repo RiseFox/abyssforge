@@ -245,6 +245,15 @@
         .setDepth(82)
         .setVisible(false)
         .setAlpha(0);
+      // The game's "attention" made felt: a screen-space vignette that closes in
+      // when an Observer moment fires (driven by observerPulseUntil). Above the
+      // darkness RT (80) so it reads as the frame itself reacting.
+      this.reducedMotion = Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      this.observerVignette = this.add.image(this.scale.width / 2, this.scale.height / 2, "observerVignette")
+        .setScrollFactor(0)
+        .setDepth(85)
+        .setVisible(false)
+        .setAlpha(0);
 
       // Screen-space darkness with holes punched out around light sources.
       this.darknessRT = this.add.renderTexture(0, 0, this.scale.width, this.scale.height)
@@ -645,6 +654,7 @@
       this.updateCampKeepers();
       this.updateChestProps();
       this.updateDarkness();
+      this.updateObserverPulse();
       this.updatePickaxeVisual(Boolean(this.mineTarget));
 
       this.lastHudUpdate += delta;
@@ -1570,7 +1580,8 @@
       const line = this.observerMomentLine(kind, cfg, phase);
       this.sim.stats.observerAnomalies = (this.sim.stats.observerAnomalies || 0) + 1;
       if (cfg.stat) this.sim.stats[cfg.stat] = (this.sim.stats[cfg.stat] || 0) + 1;
-      this.observerPulseUntil = Math.max(this.observerPulseUntil || 0, now + (cfg.pulse || 900));
+      this.observerPulseStart = now;
+      this.observerPulseUntil = now + (cfg.pulse || 900);
 
       const min = cfg.cooldownMin || 16000;
       const max = Math.max(min, cfg.cooldownMax || min);
@@ -1595,13 +1606,35 @@
         const fxY = options.enemy?.y ?? this.player.y;
         this.floatText(fxX - 34, fxY - 42, line.float || cfg.action || "SEEN", kind === "pain" ? "#ffb36a" : "#9efff0");
         if (line.note) ML.showToast(line.note, 3300);
-        if (cfg.camera) this.cameras.main.shake(140, cfg.camera);
+        if (cfg.camera && !this.reducedMotion) this.cameras.main.shake(140, cfg.camera);
         ML.audio.play(cfg.audio || "event");
       }
 
       this.checkLore(kind, { observer: true, spatialRift: kind === "spatialRift", silent: options.silent });
       this.checkAchievements();
       return true;
+    }
+
+    updateObserverPulse() {
+      // Drives the dormant observerPulseUntil into a felt effect: the vignette
+      // closes in (sin in-out) for the pulse window when the game notices you.
+      const v = this.observerVignette;
+      if (!v) return;
+      const now = this.time.now || 0;
+      const start = this.observerPulseStart || 0;
+      const until = this.observerPulseUntil || 0;
+      if (now >= until || until <= start) {
+        if (v.visible) v.setVisible(false).setAlpha(0);
+        return;
+      }
+      const cam = this.cameras.main;
+      const p = clamp((now - start) / (until - start), 0, 1);
+      let a = (this.reducedMotion ? 0.22 : 0.4) * Math.sin(Math.PI * p); // 0 -> peak -> 0
+      if (!this.reducedMotion) a *= 0.86 + 0.14 * Math.sin(now / 60); // faint breathing flicker
+      v.setVisible(true)
+        .setPosition(cam.width / 2, cam.height / 2)
+        .setDisplaySize(cam.width + 4, cam.height + 4)
+        .setAlpha(clamp(a, 0, 0.55));
     }
 
     isEnemyObserved(enemy) {

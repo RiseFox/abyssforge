@@ -1212,6 +1212,19 @@
     oc.fillRect(0, 0, 256, 256);
     orb.refresh();
 
+    // Observer "noticed you" vignette: transparent centre -> dark edges that
+    // close in when the game's attention pulses (scene.updateObserverPulse).
+    const vig = freshCanvasTexture("observerVignette", 256, 256);
+    const vctx = vig.getContext();
+    vctx.clearRect(0, 0, 256, 256);
+    const vgrad = vctx.createRadialGradient(128, 128, 58, 128, 128, 150);
+    vgrad.addColorStop(0, "rgba(9,5,16,0)");
+    vgrad.addColorStop(0.6, "rgba(9,5,16,0)");
+    vgrad.addColorStop(1, "rgba(9,5,16,0.94)");
+    vctx.fillStyle = vgrad;
+    vctx.fillRect(0, 0, 256, 256);
+    vig.refresh();
+
     // Override canvas textures with normalized external CC0 art AFTER every
     // canvas texture exists — otherwise late canvases (golem/warden/broodmother/
     // campKeeper) would clobber the override.

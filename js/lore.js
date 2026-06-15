@@ -284,7 +284,9 @@
       awakened: false,
       notes: {},
       lastNoteId: null,
-      completedGoals: {}
+      completedGoals: {},
+      phaseIndex: 0,
+      truthRevealed: false
     };
   }
 
@@ -317,6 +319,12 @@
       const phase = STORY_PHASES[i];
       if (phase.condition?.(sim)) index = i;
     }
+    // Latch the reveal: the meta only deepens. Volatile stats (shadow pressure,
+    // anomalies, watcher sightings) can dip, but the gated escalation (observer
+    // lines, event variants, "looks back") must never visibly regress.
+    const lore = ensure(sim);
+    index = Math.max(index, lore.phaseIndex || 0);
+    lore.phaseIndex = index;
     return index;
   }
 
